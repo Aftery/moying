@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 import '../models/book.dart';
 import '../models/media_ref.dart';
 import '../providers/library_provider.dart';
@@ -249,20 +249,20 @@ class _BookEditScreenState extends State<BookEditScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceHigh,
-        title: const Text(
+        backgroundColor: context.colors.surfaceHigh,
+        title:  Text(
           '回退阅读进度？',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+          style: TextStyle(color: context.colors.textPrimary, fontSize: 18),
         ),
         content: Text(
           '该书已有完成记录（${_fmtDate(_finishedAt!)}），继续回退将清除完成记录并回到「在读」。',
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          style:  TextStyle(color: context.colors.textSecondary, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消',
-                style: TextStyle(color: AppColors.textMuted)),
+            child:  Text('取消',
+                style: TextStyle(color: context.colors.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -317,20 +317,20 @@ class _BookEditScreenState extends State<BookEditScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceHigh,
-        title: const Text(
+        backgroundColor: context.colors.surfaceHigh,
+        title:  Text(
           '删除这本书？',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+          style: TextStyle(color: context.colors.textPrimary, fontSize: 18),
         ),
         content: Text(
           '《${book.title}》将从书库中移除，此操作不可撤销。',
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          style:  TextStyle(color: context.colors.textSecondary, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             child:
-                const Text('取消', style: TextStyle(color: AppColors.textMuted)),
+                 Text('取消', style: TextStyle(color: context.colors.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -352,15 +352,15 @@ class _BookEditScreenState extends State<BookEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
         title: Text(_isAddMode ? '添加图书' : '编辑图书'),
         backgroundColor: Colors.transparent,
       ),
       body: !_isAddMode && _notFound
-          ? const Center(
+          ?  Center(
               child:
-                  Text('未找到该书', style: TextStyle(color: AppColors.textMuted)),
+                  Text('未找到该书', style: TextStyle(color: context.colors.textMuted)),
             )
           : SafeArea(
               top: false,
@@ -462,15 +462,15 @@ class _BookEditScreenState extends State<BookEditScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceHigh,
+                    color: context.colors.surfaceHigh,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Row(
+                  child:  Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.photo_library_outlined,
-                          size: 13, color: AppColors.textSecondary),
-                      SizedBox(width: 4),
+                          size: 13, color: context.colors.textSecondary),
+                      const SizedBox(width: 4),
                       Flexible(
                         child: Text(
                           '更换封面',
@@ -478,7 +478,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 11,
-                            color: AppColors.textSecondary,
+                            color: context.colors.textSecondary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -531,24 +531,24 @@ class _BookEditScreenState extends State<BookEditScreen> {
     final lib = context.read<LibraryProvider>();
     final action = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: context.colors.surfaceHigh,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (lib.canPickImage)
               ListTile(
-                leading: const Icon(Icons.photo_library_outlined,
-                    color: AppColors.textSecondary),
-                title: const Text('从相册选择',
-                    style: TextStyle(color: AppColors.textPrimary)),
+                leading:  Icon(Icons.photo_library_outlined,
+                    color: context.colors.textSecondary),
+                title:  Text('从相册选择',
+                    style: TextStyle(color: context.colors.textPrimary)),
                 onTap: () => Navigator.of(ctx).pop('pick'),
               ),
             ListTile(
-              leading: const Icon(Icons.link_rounded,
-                  color: AppColors.textSecondary),
-              title: const Text('粘贴网络图片链接',
-                  style: TextStyle(color: AppColors.textPrimary)),
+              leading:  Icon(Icons.link_rounded,
+                  color: context.colors.textSecondary),
+              title:  Text('粘贴网络图片链接',
+                  style: TextStyle(color: context.colors.textPrimary)),
               onTap: () => Navigator.of(ctx).pop('url'),
             ),
             ListTile(
@@ -595,27 +595,27 @@ class _BookEditScreenState extends State<BookEditScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceHigh,
-        title: const Text('网络图片链接',
+        backgroundColor: context.colors.surfaceHigh,
+        title:  Text('网络图片链接',
             style: TextStyle(
-                color: AppColors.textPrimary,
+                color: context.colors.textPrimary,
                 fontSize: 17,
                 fontWeight: FontWeight.w700)),
         content: TextField(
           autofocus: true,
           keyboardType: TextInputType.url,
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-          cursorColor: AppColors.accent,
+          style:  TextStyle(color: context.colors.textPrimary, fontSize: 14),
+          cursorColor: context.colors.accent,
           decoration: InputDecoration(
             hintText: 'https://…',
             hintStyle:
-                const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                 TextStyle(color: context.colors.textMuted, fontSize: 13),
             filled: true,
-            fillColor: AppColors.surface,
+            fillColor: context.colors.surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide:
-                  const BorderSide(color: AppColors.outline, width: 0.8),
+                   BorderSide(color: context.colors.outline, width: 0.8),
             ),
           ),
           onChanged: (s) => url = s,
@@ -624,14 +624,14 @@ class _BookEditScreenState extends State<BookEditScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('取消',
-                style: TextStyle(color: AppColors.textMuted)),
+            child:  Text('取消',
+                style: TextStyle(color: context.colors.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(url),
-            child: const Text('确定',
+            child:  Text('确定',
                 style: TextStyle(
-                    color: AppColors.accent, fontWeight: FontWeight.w700)),
+                    color: context.colors.accent, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -662,28 +662,28 @@ class _BookEditScreenState extends State<BookEditScreen> {
           ? null
           : (_) => onSubmitted(),
       focusNode: focusNode,
-      style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
-      cursorColor: AppColors.accent,
+      style:  TextStyle(color: context.colors.textPrimary, fontSize: 15),
+      cursorColor: context.colors.accent,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+        labelStyle:  TextStyle(color: context.colors.textMuted, fontSize: 13),
         hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
+        hintStyle:  TextStyle(color: context.colors.textMuted, fontSize: 14),
         filled: true,
-        fillColor: AppColors.surfaceHigh,
+        fillColor: context.colors.surfaceHigh,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.outline, width: 0.8),
+          borderSide:  BorderSide(color: context.colors.outline, width: 0.8),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.outline, width: 0.8),
+          borderSide:  BorderSide(color: context.colors.outline, width: 0.8),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.accent, width: 1.3),
+          borderSide:  BorderSide(color: context.colors.accent, width: 1.3),
         ),
       ),
     );
@@ -694,8 +694,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
   Widget _sectionTitle(String text) {
     return Text(
       text,
-      style: const TextStyle(
-        color: AppColors.textPrimary,
+      style:  TextStyle(
+        color: context.colors.textPrimary,
         fontSize: 15,
         fontWeight: FontWeight.w700,
       ),
@@ -709,7 +709,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: context.colors.surfaceHigh,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -717,16 +717,16 @@ class _BookEditScreenState extends State<BookEditScreen> {
         children: [
           Row(
             children: [
-              const Text(
+               Text(
                 '已完成',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                style: TextStyle(color: context.colors.textSecondary, fontSize: 13),
               ),
               const Spacer(),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  gradient: AppColors.readingGradient,
+                  gradient: context.colors.readingGradient,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
@@ -744,10 +744,10 @@ class _BookEditScreenState extends State<BookEditScreen> {
           SliderTheme(
             data: SliderThemeData(
               trackHeight: 6,
-              activeTrackColor: AppColors.readingStart,
-              inactiveTrackColor: AppColors.outline,
+              activeTrackColor: context.colors.readingStart,
+              inactiveTrackColor: context.colors.outline,
               thumbColor: Colors.white,
-              overlayColor: AppColors.readingStart.withOpacity(0.15),
+              overlayColor: context.colors.readingStart.withOpacity(0.15),
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
             ),
@@ -760,7 +760,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
           const SizedBox(height: 2),
           Text(
             '状态：${_statusFromProgress.label} · ${(_progress * _effectiveTotalPages).round()} / $_effectiveTotalPages 页',
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+            style:  TextStyle(color: context.colors.textMuted, fontSize: 12),
           ),
         ],
       ),
@@ -811,7 +811,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
   }) {
     final hasValue = date != null;
     return Material(
-      color: AppColors.surfaceHigh,
+      color: context.colors.surfaceHigh,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -823,7 +823,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
               Icon(
                 hasValue ? Icons.event_available_rounded : Icons.event_outlined,
                 size: 20,
-                color: hasValue ? AppColors.readingStart : AppColors.textMuted,
+                color: hasValue ? context.colors.readingStart : context.colors.textMuted,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -832,16 +832,16 @@ class _BookEditScreenState extends State<BookEditScreen> {
                   children: [
                     Text(
                       label,
-                      style: const TextStyle(
-                          color: AppColors.textMuted, fontSize: 11),
+                      style:  TextStyle(
+                          color: context.colors.textMuted, fontSize: 11),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       date != null ? _fmtDate(date) : hint,
                       style: TextStyle(
                         color: hasValue
-                            ? AppColors.textPrimary
-                            : AppColors.textMuted,
+                            ? context.colors.textPrimary
+                            : context.colors.textMuted,
                         fontSize: 14,
                         fontWeight: hasValue ? FontWeight.w600 : FontWeight.w400,
                       ),
@@ -853,15 +853,15 @@ class _BookEditScreenState extends State<BookEditScreen> {
                 GestureDetector(
                   onTap: onClear,
                   behavior: HitTestBehavior.opaque,
-                  child: const Padding(
-                    padding: EdgeInsets.all(4),
+                  child:  Padding(
+                    padding: const EdgeInsets.all(4),
                     child: Icon(Icons.close_rounded,
-                        size: 18, color: AppColors.textMuted),
+                        size: 18, color: context.colors.textMuted),
                   ),
                 )
               else
-                const Icon(Icons.edit_calendar_outlined,
-                    size: 18, color: AppColors.textSecondary),
+                 Icon(Icons.edit_calendar_outlined,
+                    size: 18, color: context.colors.textSecondary),
             ],
           ),
         ),
@@ -906,7 +906,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
         return Align(
           alignment: Alignment.topLeft,
           child: Material(
-            color: AppColors.surface,
+            color: context.colors.surface,
             elevation: 6,
             borderRadius: BorderRadius.circular(14),
             child: ConstrainedBox(
@@ -924,8 +924,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
                           horizontal: 16, vertical: 10),
                       child: Text(
                         option,
-                        style: const TextStyle(
-                            color: AppColors.textPrimary, fontSize: 14),
+                        style:  TextStyle(
+                            color: context.colors.textPrimary, fontSize: 14),
                       ),
                     ),
                   );
@@ -950,26 +950,26 @@ class _BookEditScreenState extends State<BookEditScreen> {
       controller: controller,
       maxLines: maxLines,
       minLines: minLines,
-      style: const TextStyle(
-          color: AppColors.textPrimary, fontSize: 14, height: 1.5),
-      cursorColor: AppColors.accent,
+      style:  TextStyle(
+          color: context.colors.textPrimary, fontSize: 14, height: 1.5),
+      cursorColor: context.colors.accent,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
+        hintStyle:  TextStyle(color: context.colors.textMuted, fontSize: 14),
         filled: true,
-        fillColor: AppColors.surfaceHigh,
+        fillColor: context.colors.surfaceHigh,
         alignLabelWithHint: true,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.outline, width: 0.8),
+          borderSide:  BorderSide(color: context.colors.outline, width: 0.8),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.outline, width: 0.8),
+          borderSide:  BorderSide(color: context.colors.outline, width: 0.8),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.accent, width: 1.3),
+          borderSide:  BorderSide(color: context.colors.accent, width: 1.3),
         ),
       ),
     );
@@ -986,11 +986,11 @@ class _BookEditScreenState extends State<BookEditScreen> {
           height: 52,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              gradient: AppColors.readingGradient,
+              gradient: context.colors.readingGradient,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.readingStart.withOpacity(0.35),
+                  color: context.colors.readingStart.withOpacity(0.35),
                   blurRadius: 14,
                   offset: const Offset(0, 5),
                 ),
@@ -1025,8 +1025,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
               ? OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
-                    side: const BorderSide(color: AppColors.outline, width: 1),
+                    foregroundColor: context.colors.textSecondary,
+                    side:  BorderSide(color: context.colors.outline, width: 1),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -1039,9 +1039,9 @@ class _BookEditScreenState extends State<BookEditScreen> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textSecondary,
+                          foregroundColor: context.colors.textSecondary,
                           side:
-                              const BorderSide(color: AppColors.outline, width: 1),
+                               BorderSide(color: context.colors.outline, width: 1),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),

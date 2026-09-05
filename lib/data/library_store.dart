@@ -4,6 +4,7 @@ import 'dart:io';
 import '../models/actor.dart';
 import '../models/book.dart';
 import '../models/movie.dart';
+import '../models/user_profile.dart';
 
 /// 三集合数据快照（内存形态与磁盘形态之间的统一载体）
 ///
@@ -57,6 +58,7 @@ class LibraryStore {
   static const String _booksFile = 'books.json';
   static const String _moviesFile = 'movies.json';
   static const String _actorsFile = 'actors.json';
+  static const String _profileFile = 'profile.json';
 
   /// images 子目录（上传图片复制目标，MediaRef.localFile 相对此目录）
   Directory get imagesDir => Directory(_join('images'));
@@ -118,6 +120,24 @@ class LibraryStore {
   /// 保存演员集合（合并写 + 原子写；返回后该次数据已落盘）
   Future<void> saveActors(List<Actor> actors) =>
       _enqueueSave(_actorsFile, actors.map((a) => a.toJson()).toList());
+
+  /// 加载用户档案（单例集合：profile.json items 恒 0/1 元素）
+  ///
+  /// 缺文件 → 默认档案写盘（与其他集合的 seed 语义一致）。
+  Future<UserProfile> loadProfile() async {
+    await dataDir.create(recursive: true);
+    final items = await _loadList<UserProfile>(
+      _profileFile,
+      const [UserProfile()],
+      (p) => p.toJson(),
+      UserProfile.fromJson,
+    );
+    return items.isEmpty ? const UserProfile() : items.first;
+  }
+
+  /// 保存用户档案（合并写 + 原子写；返回后该次数据已落盘）
+  Future<void> saveProfile(UserProfile profile) =>
+      _enqueueSave(_profileFile, [profile.toJson()]);
 
   /// 立即冲刷未落盘的合并写（App 生命周期挂起/退出、测试断言前调用）
   ///

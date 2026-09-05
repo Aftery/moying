@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 
 /// 五星评分展示（支持小数，例如 4.2 → 四颗满星 + 一颗部分填充）
 class RatingStars extends StatelessWidget {
@@ -8,7 +8,7 @@ class RatingStars extends StatelessWidget {
     super.key,
     required this.rating,
     this.size = 14,
-    this.color = AppColors.star,
+    this.color,
     this.showValue = false,
     this.valueStyle,
   });
@@ -19,8 +19,8 @@ class RatingStars extends StatelessWidget {
   /// 单颗星尺寸
   final double size;
 
-  /// 星星颜色
-  final Color color;
+  /// 星星颜色（null 时用主题功能星色）
+  final Color? color;
 
   /// 是否在星后附带数字（如 “4.2/5”）
   final bool showValue;
@@ -31,6 +31,7 @@ class RatingStars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final clamped = rating.clamp(0, 5);
+    final starColor = color ?? context.colors.star;
     final fullStars = clamped.floor();
     final hasHalf =
         (clamped - fullStars) >= 0.25 && (clamped - fullStars) < 0.75;
@@ -49,7 +50,7 @@ class RatingStars extends StatelessWidget {
                         ? Icons.star_half_rounded
                         : Icons.star_outline_rounded,
             size: size,
-            color: color,
+            color: starColor,
           ),
         if (showValue) ...[
           const SizedBox(width: 6),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 
 /// 统一的占位空态视图（书籍/电影/个人页复用）
 class PlaceholderView extends StatelessWidget {
@@ -27,7 +27,7 @@ class PlaceholderView extends StatelessWidget {
               width: 96,
               height: 96,
               decoration: BoxDecoration(
-                gradient: AppColors.readingGradient,
+                gradient: context.colors.readingGradient,
                 borderRadius: BorderRadius.circular(28),
               ),
               child: Icon(icon, color: Colors.white, size: 46),
@@ -35,20 +35,20 @@ class PlaceholderView extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               title,
-              style: const TextStyle(
+              style:  TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: context.colors.textPrimary,
               ),
             ),
             const SizedBox(height: 10),
             Text(
               description,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style:  TextStyle(
                 fontSize: 14,
                 height: 1.6,
-                color: AppColors.textMuted,
+                color: context.colors.textMuted,
               ),
             ),
           ],

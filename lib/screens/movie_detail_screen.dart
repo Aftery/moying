@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 import '../models/actor.dart';
 import '../models/movie.dart';
 import '../providers/library_provider.dart';
@@ -54,23 +54,23 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             : library.actorsByIds(movie.actorIds!));
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         actions: [
           IconButton(
             tooltip: '编辑',
-            icon: const Icon(Icons.edit_rounded, color: AppColors.textPrimary),
+            icon:  Icon(Icons.edit_rounded, color: context.colors.textPrimary),
             onPressed: movie == null ? null : () => _openEditor(context),
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: movie == null
-          ? const Center(
+          ?  Center(
               child: Text(
                 '这部电影已从电影库移除',
-                style: TextStyle(color: AppColors.textMuted),
+                style: TextStyle(color: context.colors.textMuted),
               ),
             )
           : SafeArea(
@@ -86,8 +86,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     Text(
                       movie.title,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
+                      style:  TextStyle(
+                        color: context.colors.textPrimary,
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
                       ),
@@ -98,8 +98,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       Text(
                         movie.englishTitle!,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.textMuted,
+                        style:  TextStyle(
+                          color: context.colors.textMuted,
                           fontSize: 13,
                           letterSpacing: 0.5,
                         ),
@@ -110,8 +110,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       Text(
                         movie.director!,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
+                        style:  TextStyle(
+                          color: context.colors.textSecondary,
                           fontSize: 14,
                         ),
                       ),
@@ -124,10 +124,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                           rating: movie.rating!,
                           size: 22,
                           showValue: true,
-                          valueStyle: const TextStyle(
+                          valueStyle:  TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                            color: context.colors.textPrimary,
                           ),
                         ),
                       ),
@@ -206,9 +206,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.outline, width: 0.7),
+        border: Border.all(color: context.colors.outline, width: 0.7),
       ),
       child: Column(
         children: [
@@ -301,8 +301,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
+                    style:  TextStyle(
+                      color: context.colors.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -324,9 +324,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: context.colors.surfaceHigh,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outline, width: 0.7),
+        border: Border.all(color: context.colors.outline, width: 0.7),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,26 +342,26 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                           const SizedBox(width: 8),
                           Text(
                             '${movie.rating!.toStringAsFixed(1)}/5',
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
+                            style:  TextStyle(
+                              color: context.colors.textSecondary,
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
                       )
-                    : const Text(
+                    :  Text(
                         '尚未评分',
                         style: TextStyle(
-                            color: AppColors.textMuted, fontSize: 13),
+                            color: context.colors.textMuted, fontSize: 13),
                       ),
               ),
               OutlinedButton.icon(
                 onPressed: () => _openEditor(context),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.accent,
-                  side: const BorderSide(
-                      color: AppColors.accent, width: 1),
+                  foregroundColor: context.colors.accent,
+                  side:  BorderSide(
+                      color: context.colors.accent, width: 1),
                   padding: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 6),
                   minimumSize: const Size(0, 32),
@@ -379,23 +379,23 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           const SizedBox(height: 14),
           // 影评文本
           if (review == null || review.isEmpty)
-            const Row(
+             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.edit_note_rounded,
-                    size: 16, color: AppColors.textMuted),
-                SizedBox(width: 6),
+                    size: 16, color: context.colors.textMuted),
+                const SizedBox(width: 6),
                 Text(
                   '还没有写下影评',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                  style: TextStyle(color: context.colors.textMuted, fontSize: 13),
                 ),
               ],
             )
           else
             Text(
               review,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style:  TextStyle(
+                color: context.colors.textSecondary,
                 fontSize: 14,
                 height: 1.7,
               ),
@@ -448,15 +448,15 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           width: 4,
           height: 16,
           decoration: BoxDecoration(
-            gradient: AppColors.movieGradient,
+            gradient: context.colors.movieGradient,
             borderRadius: BorderRadius.circular(4),
           ),
         ),
         const SizedBox(width: 8),
         Text(
           text,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style:  TextStyle(
+            color: context.colors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
@@ -483,7 +483,7 @@ class _MetaCell extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: context.colors.surfaceHigh,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -491,15 +491,15 @@ class _MetaCell extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 15, color: AppColors.movieStart),
+              Icon(icon, size: 15, color: context.colors.movieStart),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textMuted,
+                  style:  TextStyle(
+                    color: context.colors.textMuted,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                   ),
@@ -512,8 +512,8 @@ class _MetaCell extends StatelessWidget {
             value,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
+            style:  TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w700,
               height: 1.3,
@@ -559,18 +559,18 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: context.colors.surfaceHigh,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outline, width: 0.7),
+        border: Border.all(color: context.colors.outline, width: 0.7),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           if (!_measured) {
             _measured = true;
-            const style = TextStyle(
+            final style = TextStyle(
               fontSize: 14,
               height: 1.7,
-              color: AppColors.textSecondary,
+              color: context.colors.textSecondary,
             );
             final span = TextSpan(text: widget.text, style: style);
             final collapsed = TextPainter(
@@ -599,10 +599,10 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
                 widget.text,
                 maxLines: _expanded ? null : _foldLines,
                 overflow: _expanded ? null : TextOverflow.ellipsis,
-                style: const TextStyle(
+                style:  TextStyle(
                   fontSize: 14,
                   height: 1.7,
-                  color: AppColors.textSecondary,
+                  color: context.colors.textSecondary,
                 ),
               ),
               if (_overflow)
@@ -618,10 +618,10 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
                         children: [
                           Text(
                             _expanded ? '收起' : '展开全部',
-                            style: const TextStyle(
+                            style:  TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.accent,
+                              color: context.colors.accent,
                             ),
                           ),
                           Icon(
@@ -629,7 +629,7 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
                                 ? Icons.expand_less_rounded
                                 : Icons.expand_more_rounded,
                             size: 16,
-                            color: AppColors.accent,
+                            color: context.colors.accent,
                           ),
                         ],
                       ),

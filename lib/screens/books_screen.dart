@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 import '../models/book.dart';
 import '../providers/library_provider.dart';
 import '../widgets/book_list_card.dart';
@@ -62,7 +62,7 @@ class _BooksScreenState extends State<BooksScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: const Text(
@@ -74,7 +74,7 @@ class _BooksScreenState extends State<BooksScreen> {
         onPressed: _openCreate,
         // 唯一 heroTag：避免与电影列表页 FAB 在 IndexedStack 同一 Hero 子树中默认 tag 冲突
         heroTag: 'books-add-fab',
-        backgroundColor: AppColors.readingStart,
+        backgroundColor: context.colors.readingStart,
         foregroundColor: Colors.white,
         elevation: 4,
         icon: const Icon(Icons.add_rounded),
@@ -132,8 +132,8 @@ class _BooksScreenState extends State<BooksScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 22),
               child: Text(
                 '共 ${books.length} 本',
-                style: const TextStyle(
-                  color: AppColors.textMuted,
+                style:  TextStyle(
+                  color: context.colors.textMuted,
                   fontSize: 12,
                 ),
               ),
@@ -211,13 +211,13 @@ class _BooksScreenState extends State<BooksScreen> {
           Icon(
             hasFilter ? Icons.search_off_rounded : Icons.menu_book_rounded,
             size: 52,
-            color: AppColors.textMuted.withOpacity(0.5),
+            color: context.colors.textMuted.withOpacity(0.5),
           ),
           const SizedBox(height: 14),
           Text(
             hasFilter ? '没有找到匹配的图书' : '书库空空如也',
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style:  TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 15,
               fontWeight: FontWeight.w600,
             ),
@@ -268,21 +268,21 @@ class _FilterDropdown<T> extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: AppColors.surfaceHigh,
+          color: context.colors.surfaceHigh,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.outline, width: 0.8),
+          border: Border.all(color: context.colors.outline, width: 0.8),
         ),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<T>(
             value: value,
             isExpanded: true,
             isDense: true,
-            dropdownColor: AppColors.surfaceHigh,
+            dropdownColor: context.colors.surfaceHigh,
             borderRadius: BorderRadius.circular(14),
-            icon: const Icon(Icons.expand_more_rounded,
-                color: AppColors.textSecondary),
-            style: const TextStyle(
-              color: AppColors.textPrimary,
+            icon:  Icon(Icons.expand_more_rounded,
+                color: context.colors.textSecondary),
+            style:  TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -292,7 +292,7 @@ class _FilterDropdown<T> extends StatelessWidget {
                   value: item.value,
                   child: Row(
                     children: [
-                      Icon(icon, size: 16, color: AppColors.textMuted),
+                      Icon(icon, size: 16, color: context.colors.textMuted),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(

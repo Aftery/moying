@@ -10,6 +10,7 @@ import '../models/book.dart';
 import '../models/media_ref.dart';
 import '../models/movie.dart';
 import '../models/stats.dart';
+import '../models/user_profile.dart';
 import '../services/image_pick_service.dart';
 
 /// 全局书影库状态（ChangeNotifier，配合 Provider 使用）
@@ -48,6 +49,9 @@ class LibraryProvider extends ChangeNotifier {
   /// 演员实体集合（actors.json，电影通过 actorIds 单向引用）
   List<Actor> _actors = List.of(kActors);
 
+  /// 用户档案（profile.json 单例；内存模式用默认档案）
+  UserProfile _userProfile = const UserProfile();
+
   /// 从存储加载全部数据（持久模式初始化入口，内存模式为 no-op）。
   ///
   /// main() 中 `await` 完成后再 runApp，避免启动闪现 seed 数据。
@@ -58,11 +62,34 @@ class LibraryProvider extends ChangeNotifier {
     _books = List.of(snap.books);
     _movieList = List.of(snap.movies);
     _actors = List.of(snap.actors);
+    _userProfile = await store.loadProfile();
     notifyListeners();
   }
 
   /// 立即把未落盘的合并写冲盘（App 生命周期挂起/退出前调用）
   Future<void> flush() async => _store?.flush();
+
+  // ==================== 用户档案与主题偏好 ====================
+
+  /// 当前用户档案（单例，profile.json）
+  UserProfile get userProfile => _userProfile;
+
+  /// 更新用户档案（头像变更时回收旧图；持久模式落盘 profile.json）
+  Future<void> updateProfile(UserProfile updated) async {
+    _recycleImage(_userProfile.avatar, updated.avatar);
+    _userProfile = updated;
+    notifyListeners();
+    await _store?.saveProfile(updated);
+  }
+
+  /// 主题偏好（'dark' / 'light' / 'system'，随档案持久化）
+  String get themeMode => _userProfile.themeMode;
+
+  /// 切换主题偏好（内部复用 updateProfile 落盘）
+  Future<void> setThemeMode(String mode) async {
+    if (mode == _userProfile.themeMode) return;
+    await updateProfile(_userProfile.copyWith(themeMode: mode));
+  }
 
   // ==================== 图片管线（P4） ====================
 

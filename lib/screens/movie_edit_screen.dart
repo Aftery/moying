@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 import '../models/actor.dart';
 import '../models/media_ref.dart';
 import '../models/movie.dart';
@@ -135,11 +135,11 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
       confirmText: '确定',
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: AppColors.movieStart,
+          colorScheme:  ColorScheme.dark(
+            primary: context.colors.movieStart,
             onPrimary: Colors.white,
-            surface: AppColors.surfaceHigh,
-            onSurface: AppColors.textPrimary,
+            surface: context.colors.surfaceHigh,
+            onSurface: context.colors.textPrimary,
           ),
         ),
         child: child!,
@@ -260,20 +260,20 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceHigh,
-        title: const Text(
+        backgroundColor: context.colors.surfaceHigh,
+        title:  Text(
           '删除这部电影？',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+          style: TextStyle(color: context.colors.textPrimary, fontSize: 18),
         ),
         content: Text(
           '《${movie.title}》将从电影库中移除，此操作不可撤销。',
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          style:  TextStyle(color: context.colors.textSecondary, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             child:
-                const Text('取消', style: TextStyle(color: AppColors.textMuted)),
+                 Text('取消', style: TextStyle(color: context.colors.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -297,7 +297,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
         title: Text(_isEditMode ? '修改电影' : '添加电影'),
         backgroundColor: Colors.transparent,
@@ -357,20 +357,20 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
               TextField(
                 controller: _durationCtrl,
                 keyboardType: TextInputType.number,
-                style: const TextStyle(
-                    color: AppColors.textPrimary, fontSize: 15),
-                cursorColor: AppColors.accent,
+                style:  TextStyle(
+                    color: context.colors.textPrimary, fontSize: 15),
+                cursorColor: context.colors.accent,
                 decoration: InputDecoration(
                   labelText: '片长',
                   labelStyle:
-                      const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                       TextStyle(color: context.colors.textMuted, fontSize: 13),
                   suffixIcon: Padding(
                     padding: const EdgeInsets.only(right: 14),
                     child: Center(
                       child: Text(
                         '分钟',
                         style: TextStyle(
-                          color: AppColors.textMuted.withOpacity(0.8),
+                          color: context.colors.textMuted.withOpacity(0.8),
                           fontSize: 13,
                         ),
                       ),
@@ -378,25 +378,25 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                   ),
                   hintText: '如 169',
                   hintStyle:
-                      const TextStyle(color: AppColors.textMuted, fontSize: 14),
+                       TextStyle(color: context.colors.textMuted, fontSize: 14),
                   filled: true,
-                  fillColor: AppColors.surfaceHigh,
+                  fillColor: context.colors.surfaceHigh,
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 14, vertical: 13),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide:
-                        const BorderSide(color: AppColors.outline, width: 0.8),
+                         BorderSide(color: context.colors.outline, width: 0.8),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide:
-                        const BorderSide(color: AppColors.outline, width: 0.8),
+                         BorderSide(color: context.colors.outline, width: 0.8),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide:
-                        const BorderSide(color: AppColors.accent, width: 1.3),
+                         BorderSide(color: context.colors.accent, width: 1.3),
                   ),
                 ),
               ),
@@ -442,24 +442,24 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     final lib = context.read<LibraryProvider>();
     final action = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: context.colors.surfaceHigh,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (lib.canPickImage)
               ListTile(
-                leading: const Icon(Icons.photo_library_outlined,
-                    color: AppColors.textSecondary),
-                title: const Text('从相册选择',
-                    style: TextStyle(color: AppColors.textPrimary)),
+                leading:  Icon(Icons.photo_library_outlined,
+                    color: context.colors.textSecondary),
+                title:  Text('从相册选择',
+                    style: TextStyle(color: context.colors.textPrimary)),
                 onTap: () => Navigator.of(ctx).pop('pick'),
               ),
             ListTile(
-              leading: const Icon(Icons.link_rounded,
-                  color: AppColors.textSecondary),
-              title: const Text('粘贴网络图片链接',
-                  style: TextStyle(color: AppColors.textPrimary)),
+              leading:  Icon(Icons.link_rounded,
+                  color: context.colors.textSecondary),
+              title:  Text('粘贴网络图片链接',
+                  style: TextStyle(color: context.colors.textPrimary)),
               onTap: () => Navigator.of(ctx).pop('url'),
             ),
             ListTile(
@@ -504,27 +504,27 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceHigh,
-        title: const Text('网络图片链接',
+        backgroundColor: context.colors.surfaceHigh,
+        title:  Text('网络图片链接',
             style: TextStyle(
-                color: AppColors.textPrimary,
+                color: context.colors.textPrimary,
                 fontSize: 17,
                 fontWeight: FontWeight.w700)),
         content: TextField(
           autofocus: true,
           keyboardType: TextInputType.url,
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-          cursorColor: AppColors.accent,
+          style:  TextStyle(color: context.colors.textPrimary, fontSize: 14),
+          cursorColor: context.colors.accent,
           decoration: InputDecoration(
             hintText: 'https://…',
             hintStyle:
-                const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                 TextStyle(color: context.colors.textMuted, fontSize: 13),
             filled: true,
-            fillColor: AppColors.surface,
+            fillColor: context.colors.surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide:
-                  const BorderSide(color: AppColors.outline, width: 0.8),
+                   BorderSide(color: context.colors.outline, width: 0.8),
             ),
           ),
           onChanged: (s) => url = s,
@@ -533,14 +533,14 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('取消',
-                style: TextStyle(color: AppColors.textMuted)),
+            child:  Text('取消',
+                style: TextStyle(color: context.colors.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(url),
-            child: const Text('确定',
+            child:  Text('确定',
                 style: TextStyle(
-                    color: AppColors.accent, fontWeight: FontWeight.w700)),
+                    color: context.colors.accent, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -630,27 +630,27 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
   }) {
     return TextField(
       controller: controller,
-      style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
-      cursorColor: AppColors.accent,
+      style:  TextStyle(color: context.colors.textPrimary, fontSize: 15),
+      cursorColor: context.colors.accent,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+        labelStyle:  TextStyle(color: context.colors.textMuted, fontSize: 13),
         hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
+        hintStyle:  TextStyle(color: context.colors.textMuted, fontSize: 14),
         filled: true,
-        fillColor: AppColors.surfaceHigh,
+        fillColor: context.colors.surfaceHigh,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.outline, width: 0.8),
+          borderSide:  BorderSide(color: context.colors.outline, width: 0.8),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.outline, width: 0.8),
+          borderSide:  BorderSide(color: context.colors.outline, width: 0.8),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.accent, width: 1.3),
+          borderSide:  BorderSide(color: context.colors.accent, width: 1.3),
         ),
       ),
     );
@@ -670,21 +670,21 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         decoration: BoxDecoration(
-          color: AppColors.surfaceHigh,
+          color: context.colors.surfaceHigh,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.outline, width: 0.8),
+          border: Border.all(color: context.colors.outline, width: 0.8),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: AppColors.textMuted),
+            Icon(icon, size: 18, color: context.colors.textMuted),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 value ?? '选择日期（可跳过）',
                 style: TextStyle(
                   color: value == null
-                      ? AppColors.textMuted
-                      : AppColors.textPrimary,
+                      ? context.colors.textMuted
+                      : context.colors.textPrimary,
                   fontSize: 15,
                   fontWeight: value == null ? FontWeight.normal : FontWeight.w600,
                 ),
@@ -695,7 +695,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                   ? Icons.expand_more_rounded
                   : Icons.close_rounded,
               size: 18,
-              color: value == null ? AppColors.textMuted : AppColors.textSecondary,
+              color: value == null ? context.colors.textMuted : context.colors.textSecondary,
             ),
           ],
         ),
@@ -721,18 +721,18 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                 _selectedGenres.remove(g);
               }
             }),
-            selectedColor: AppColors.movieStart.withOpacity(0.28),
-            backgroundColor: AppColors.surfaceHigh,
+            selectedColor: context.colors.movieStart.withOpacity(0.28),
+            backgroundColor: context.colors.surfaceHigh,
             side: BorderSide(
               color: _selectedGenres.contains(g)
-                  ? AppColors.movieStart
-                  : AppColors.outline,
+                  ? context.colors.movieStart
+                  : context.colors.outline,
               width: 1,
             ),
             labelStyle: TextStyle(
               color: _selectedGenres.contains(g)
-                  ? AppColors.movieEnd
-                  : AppColors.textSecondary,
+                  ? context.colors.movieEnd
+                  : context.colors.textSecondary,
               fontSize: 13,
               fontWeight:
                   _selectedGenres.contains(g) ? FontWeight.w700 : FontWeight.w500,
@@ -752,24 +752,24 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: context.colors.surfaceHigh,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outline, width: 0.8),
+        border: Border.all(color: context.colors.outline, width: 0.8),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text(
+               Text(
                 '我的评分',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                style: TextStyle(color: context.colors.textSecondary, fontSize: 13),
               ),
               const Spacer(),
               Text(
                 _rating > 0 ? '${_rating.toStringAsFixed(1)} 分' : '未评分',
                 style: TextStyle(
-                  color: _rating > 0 ? AppColors.star : AppColors.textMuted,
+                  color: _rating > 0 ? context.colors.star : context.colors.textMuted,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                 ),
@@ -781,10 +781,10 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
           SliderTheme(
             data: SliderThemeData(
               trackHeight: 6,
-              activeTrackColor: AppColors.movieStart,
-              inactiveTrackColor: AppColors.outline,
+              activeTrackColor: context.colors.movieStart,
+              inactiveTrackColor: context.colors.outline,
               thumbColor: Colors.white,
-              overlayColor: AppColors.movieStart.withOpacity(0.15),
+              overlayColor: context.colors.movieStart.withOpacity(0.15),
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
             ),
@@ -808,7 +808,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                         : Icons.star_outline_rounded,
                     size: 24,
                     color:
-                        _rating >= i - 0.25 ? AppColors.star : AppColors.textMuted.withOpacity(0.4),
+                        _rating >= i - 0.25 ? context.colors.star : context.colors.textMuted.withOpacity(0.4),
                   ),
               ],
             ),
@@ -831,14 +831,14 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.surfaceHigh,
+              color: context.colors.surfaceHigh,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.outline, width: 0.8),
+              border: Border.all(color: context.colors.outline, width: 0.8),
             ),
-            child: const Center(
+            child:  Center(
               child: Text(
                 '还没有演员，点击下方「添加演员」，输入姓名联想选择或新建',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                style: TextStyle(color: context.colors.textMuted, fontSize: 13),
               ),
             ),
           )
@@ -890,7 +890,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
           child: TextButton.icon(
             onPressed: () => setState(() => _actorSlots.add(ActorSlot())),
             style: TextButton.styleFrom(
-              foregroundColor: AppColors.accent,
+              foregroundColor: context.colors.accent,
             ),
             icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
             label: const Text('添加演员',
@@ -937,30 +937,30 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
           focusNode: focusNode,
           onChanged: (_) => setState(() {}),
           onSubmitted: (_) => onFieldSubmitted(),
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-          cursorColor: AppColors.accent,
+          style:  TextStyle(color: context.colors.textPrimary, fontSize: 14),
+          cursorColor: context.colors.accent,
           decoration: InputDecoration(
             hintText: '输入姓名联想选择或新建',
-            hintStyle: const TextStyle(
-                color: AppColors.textMuted, fontSize: 13),
+            hintStyle:  TextStyle(
+                color: context.colors.textMuted, fontSize: 13),
             filled: true,
-            fillColor: AppColors.surface,
+            fillColor: context.colors.surface,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                  color: AppColors.outline, width: 0.8),
+              borderSide:  BorderSide(
+                  color: context.colors.outline, width: 0.8),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                  color: AppColors.outline, width: 0.8),
+              borderSide:  BorderSide(
+                  color: context.colors.outline, width: 0.8),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                  color: AppColors.accent, width: 1.2),
+              borderSide:  BorderSide(
+                  color: context.colors.accent, width: 1.2),
             ),
           ),
         );
@@ -969,7 +969,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
         return Align(
           alignment: Alignment.topLeft,
           child: Material(
-            color: AppColors.surface,
+            color: context.colors.surface,
             elevation: 6,
             borderRadius: BorderRadius.circular(14),
             child: ConstrainedBox(
@@ -989,16 +989,16 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                       child: Row(
                         children: [
                           if (isCreate) ...[
-                            const Icon(Icons.person_add_alt_1_rounded,
-                                size: 17, color: AppColors.accent),
+                             Icon(Icons.person_add_alt_1_rounded,
+                                size: 17, color: context.colors.accent),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 '新建演员「${actor.name}」',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: AppColors.accent,
+                                style:  TextStyle(
+                                  color: context.colors.accent,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -1028,8 +1028,8 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                                 actor.name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    color: AppColors.textPrimary,
+                                style:  TextStyle(
+                                    color: context.colors.textPrimary,
                                     fontSize: 14),
                               ),
                             ),
@@ -1126,28 +1126,28 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
           minLines: 4,
           maxLength: _reviewMaxChars,
           onChanged: (_) => setState(() {}),
-          style: const TextStyle(
-              color: AppColors.textPrimary, fontSize: 14, height: 1.5),
-          cursorColor: AppColors.accent,
+          style:  TextStyle(
+              color: context.colors.textPrimary, fontSize: 14, height: 1.5),
+          cursorColor: context.colors.accent,
           decoration: InputDecoration(
             hintText: '写下你的观影感受…',
             hintStyle:
-                const TextStyle(color: AppColors.textMuted, fontSize: 14),
+                 TextStyle(color: context.colors.textMuted, fontSize: 14),
             filled: true,
-            fillColor: AppColors.surfaceHigh,
+            fillColor: context.colors.surfaceHigh,
             alignLabelWithHint: true,
             counterText: '',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.outline, width: 0.8),
+              borderSide:  BorderSide(color: context.colors.outline, width: 0.8),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.outline, width: 0.8),
+              borderSide:  BorderSide(color: context.colors.outline, width: 0.8),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.accent, width: 1.3),
+              borderSide:  BorderSide(color: context.colors.accent, width: 1.3),
             ),
           ),
         ),
@@ -1159,7 +1159,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
             style: TextStyle(
               color: _reviewCtrl.text.length >= _reviewMaxChars
                   ? const Color(0xFFFF6B6B)
-                  : AppColors.textMuted,
+                  : context.colors.textMuted,
               fontSize: 12,
             ),
           ),
@@ -1171,7 +1171,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
   // ---------- 底部操作栏 ----------
 
   Widget _buildActions() {
-    const gradient = AppColors.movieGradient;
+    final gradient = context.colors.movieGradient;
     return Column(
       children: [
         // 保存修改（主操作，渐变高亮）
@@ -1184,7 +1184,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.movieStart.withOpacity(0.35),
+                  color: context.colors.movieStart.withOpacity(0.35),
                   blurRadius: 14,
                   offset: const Offset(0, 5),
                 ),
@@ -1220,8 +1220,8 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                 child: OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
-                    side: const BorderSide(color: AppColors.outline, width: 1),
+                    foregroundColor: context.colors.textSecondary,
+                    side:  BorderSide(color: context.colors.outline, width: 1),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -1270,8 +1270,8 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
   Widget _sectionTitle(String text) {
     return Text(
       text,
-      style: const TextStyle(
-        color: AppColors.textPrimary,
+      style:  TextStyle(
+        color: context.colors.textPrimary,
         fontSize: 15,
         fontWeight: FontWeight.w700,
       ),

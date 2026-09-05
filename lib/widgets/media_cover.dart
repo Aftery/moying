@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 import '../models/media_ref.dart';
 import '../providers/library_provider.dart';
 import 'cover_placeholder.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 import '../models/media_ref.dart';
 import 'media_cover.dart';
 
@@ -49,7 +49,7 @@ class MediaTile extends StatelessWidget {
     return Container(
       width: 132,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       clipBehavior: Clip.antiAlias,
@@ -78,10 +78,10 @@ class MediaTile extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style:  TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: context.colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -89,9 +89,9 @@ class MediaTile extends StatelessWidget {
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style:  TextStyle(
                     fontSize: 11,
-                    color: AppColors.textMuted,
+                    color: context.colors.textMuted,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -103,9 +103,9 @@ class MediaTile extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: progress,
                           minHeight: 5,
-                          backgroundColor: AppColors.outline,
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            AppColors.readingStart,
+                          backgroundColor: context.colors.outline,
+                          valueColor:  AlwaysStoppedAnimation<Color>(
+                            context.colors.readingStart,
                           ),
                         ),
                       ),
@@ -115,9 +115,9 @@ class MediaTile extends StatelessWidget {
                           width: double.infinity,
                           child: Text(
                             pageText!,
-                            style: const TextStyle(
+                            style:  TextStyle(
                               fontSize: 10,
-                              color: AppColors.textMuted,
+                              color: context.colors.textMuted,
                             ),
                           ),
                         ),
@@ -126,18 +126,18 @@ class MediaTile extends StatelessWidget {
                 if (isBook && rating != null)
                   Row(
                     children: [
-                      const Icon(
+                       Icon(
                         Icons.star_rounded,
                         size: 13,
-                        color: AppColors.star,
+                        color: context.colors.star,
                       ),
                       const SizedBox(width: 2),
                       Text(
                         rating!.toStringAsFixed(1),
-                        style: const TextStyle(
+                        style:  TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
+                          color: context.colors.textSecondary,
                         ),
                       ),
                     ],

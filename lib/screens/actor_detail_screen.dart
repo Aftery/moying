@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 import '../models/actor.dart';
 import '../models/media_ref.dart';
 import '../models/movie.dart';
@@ -87,18 +87,18 @@ class ActorDetailScreen extends StatelessWidget {
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: AppColors.surfaceHigh,
-          title: const Text(
+          backgroundColor: context.colors.surfaceHigh,
+          title:  Text(
             '暂不能删除',
             style: TextStyle(
-                color: AppColors.textPrimary,
+                color: context.colors.textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w700),
           ),
           content: Text(
             '${actor.name} 参演了$more$titles。\n\n请先在这些电影的编辑页移除 TA 的演员条目，再回来删除。',
-            style: const TextStyle(
-                color: AppColors.textSecondary,
+            style:  TextStyle(
+                color: context.colors.textSecondary,
                 fontSize: 13.5,
                 height: 1.6),
           ),
@@ -106,7 +106,7 @@ class ActorDetailScreen extends StatelessWidget {
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
               child:
-                  const Text('知道了', style: TextStyle(color: AppColors.textMuted)),
+                   Text('知道了', style: TextStyle(color: context.colors.textMuted)),
             ),
           ],
         ),
@@ -116,23 +116,23 @@ class ActorDetailScreen extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceHigh,
-        title: const Text(
+        backgroundColor: context.colors.surfaceHigh,
+        title:  Text(
           '删除这位演员？',
           style: TextStyle(
-              color: AppColors.textPrimary,
+              color: context.colors.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w700),
         ),
         content: Text(
           '${actor.name} 当前没有参演任何电影，删除后不可恢复。',
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          style:  TextStyle(color: context.colors.textSecondary, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             child:
-                const Text('取消', style: TextStyle(color: AppColors.textMuted)),
+                 Text('取消', style: TextStyle(color: context.colors.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -161,7 +161,7 @@ class ActorDetailScreen extends StatelessWidget {
     final works = actor == null ? const <Movie>[] : lib.moviesByActor(actor.id);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         actions: actor == null
@@ -169,24 +169,24 @@ class ActorDetailScreen extends StatelessWidget {
             : [
                 IconButton(
                   tooltip: '编辑资料',
-                  icon: const Icon(Icons.edit_rounded,
-                      color: AppColors.textPrimary),
+                  icon:  Icon(Icons.edit_rounded,
+                      color: context.colors.textPrimary),
                   onPressed: () => _openEditor(context, lib, actor),
                 ),
                 IconButton(
                   tooltip: '删除演员',
-                  icon: const Icon(Icons.delete_outline_rounded,
-                      color: AppColors.textPrimary),
+                  icon:  Icon(Icons.delete_outline_rounded,
+                      color: context.colors.textPrimary),
                   onPressed: () => _confirmDelete(context, lib, actor),
                 ),
                 const SizedBox(width: 8),
               ],
       ),
       body: actor == null
-          ? const Center(
+          ?  Center(
               child: Text(
                 '这位演员已从演员库移除',
-                style: TextStyle(color: AppColors.textMuted),
+                style: TextStyle(color: context.colors.textMuted),
               ),
             )
           : SafeArea(
@@ -203,7 +203,7 @@ class ActorDetailScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                            color: AppColors.outline, width: 0.8),
+                            color: context.colors.outline, width: 0.8),
                       ),
                       child: MediaCover(
                         circular: true,
@@ -218,8 +218,8 @@ class ActorDetailScreen extends StatelessWidget {
                   Text(
                     actor.name,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
+                    style:  TextStyle(
+                      color: context.colors.textPrimary,
                       fontSize: 23,
                       fontWeight: FontWeight.w800,
                     ),
@@ -230,28 +230,28 @@ class ActorDetailScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceHigh,
+                      color: context.colors.surfaceHigh,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.outline, width: 0.7),
+                      border: Border.all(color: context.colors.outline, width: 0.7),
                     ),
                     child: actor.bio == null || actor.bio!.isEmpty
-                        ? const Row(
+                        ?  Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.auto_awesome_outlined,
-                                  size: 15, color: AppColors.textMuted),
-                              SizedBox(width: 6),
+                                  size: 15, color: context.colors.textMuted),
+                              const SizedBox(width: 6),
                               Text(
                                 '暂无简介，点击右上角补充',
                                 style: TextStyle(
-                                    color: AppColors.textMuted, fontSize: 13),
+                                    color: context.colors.textMuted, fontSize: 13),
                               ),
                             ],
                           )
                         : Text(
                             actor.bio!,
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
+                            style:  TextStyle(
+                              color: context.colors.textSecondary,
                               fontSize: 14,
                               height: 1.7,
                             ),
@@ -265,16 +265,16 @@ class ActorDetailScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: context.colors.surface,
                         borderRadius: BorderRadius.circular(16),
                         border:
-                            Border.all(color: AppColors.outline, width: 0.7),
+                            Border.all(color: context.colors.outline, width: 0.7),
                       ),
-                      child: const Center(
+                      child:  Center(
                         child: Text(
                           '还没有参演记录',
                           style:
-                              TextStyle(color: AppColors.textMuted, fontSize: 13),
+                              TextStyle(color: context.colors.textMuted, fontSize: 13),
                         ),
                       ),
                     )
@@ -295,7 +295,7 @@ class ActorDetailScreen extends StatelessWidget {
 
   Widget _buildWorkTile(BuildContext context, Movie movie) {
     return Material(
-      color: AppColors.surface,
+      color: context.colors.surface,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -330,8 +330,8 @@ class ActorDetailScreen extends StatelessWidget {
                       movie.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
+                      style:  TextStyle(
+                        color: context.colors.textPrimary,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
@@ -339,14 +339,14 @@ class ActorDetailScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       '${movie.year}${movie.rating != null ? ' · ${movie.rating!.toStringAsFixed(1)} 分' : ''}',
-                      style: const TextStyle(
-                          color: AppColors.textMuted, fontSize: 12),
+                      style:  TextStyle(
+                          color: context.colors.textMuted, fontSize: 12),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded,
-                  size: 20, color: AppColors.textMuted),
+               Icon(Icons.chevron_right_rounded,
+                  size: 20, color: context.colors.textMuted),
             ],
           ),
         ),
@@ -363,15 +363,15 @@ class ActorDetailScreen extends StatelessWidget {
           width: 4,
           height: 16,
           decoration: BoxDecoration(
-            gradient: AppColors.movieGradient,
+            gradient: context.colors.movieGradient,
             borderRadius: BorderRadius.circular(4),
           ),
         ),
         const SizedBox(width: 8),
         Text(
           text,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style:  TextStyle(
+            color: context.colors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
@@ -486,26 +486,26 @@ class _ActorEditDialogState extends State<_ActorEditDialog> {
     });
   }
 
-  static InputDecoration _dec(String label, String hint) {
+  InputDecoration _dec(String label, String hint) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+      labelStyle:  TextStyle(color: context.colors.textMuted, fontSize: 13),
       hintText: hint,
-      hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+      hintStyle:  TextStyle(color: context.colors.textMuted, fontSize: 13),
       filled: true,
-      fillColor: AppColors.surface,
+      fillColor: context.colors.surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.outline, width: 0.8),
+        borderSide:  BorderSide(color: context.colors.outline, width: 0.8),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.outline, width: 0.8),
+        borderSide:  BorderSide(color: context.colors.outline, width: 0.8),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.accent, width: 1.2),
+        borderSide:  BorderSide(color: context.colors.accent, width: 1.2),
       ),
     );
   }
@@ -515,11 +515,11 @@ class _ActorEditDialogState extends State<_ActorEditDialog> {
     final previewName =
         _nameCtrl.text.trim().isEmpty ? '演员' : _nameCtrl.text.trim();
     return AlertDialog(
-      backgroundColor: AppColors.surfaceHigh,
-      title: const Text(
+      backgroundColor: context.colors.surfaceHigh,
+      title:  Text(
         '编辑演员资料',
         style: TextStyle(
-            color: AppColors.textPrimary,
+            color: context.colors.textPrimary,
             fontSize: 17,
             fontWeight: FontWeight.w700),
       ),
@@ -552,7 +552,7 @@ class _ActorEditDialogState extends State<_ActorEditDialog> {
                         TextButton.icon(
                           onPressed: _pickFromGallery,
                           style: TextButton.styleFrom(
-                            foregroundColor: AppColors.textSecondary,
+                            foregroundColor: context.colors.textSecondary,
                             padding: EdgeInsets.zero,
                             minimumSize: const Size(0, 36),
                           ),
@@ -595,16 +595,16 @@ class _ActorEditDialogState extends State<_ActorEditDialog> {
                 _picked = null;
               }),
               style:
-                  const TextStyle(color: AppColors.textPrimary, fontSize: 13),
-              cursorColor: AppColors.accent,
+                   TextStyle(color: context.colors.textPrimary, fontSize: 13),
+              cursorColor: context.colors.accent,
               decoration: _dec('网络头像链接', 'https://…（可选）'),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _nameCtrl,
               onChanged: (_) => setState(() {}),
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
-              cursorColor: AppColors.accent,
+              style:  TextStyle(color: context.colors.textPrimary, fontSize: 15),
+              cursorColor: context.colors.accent,
               decoration: _dec('姓名', '演员姓名'),
             ),
             const SizedBox(height: 10),
@@ -613,8 +613,8 @@ class _ActorEditDialogState extends State<_ActorEditDialog> {
               minLines: 2,
               maxLines: 4,
               style:
-                  const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-              cursorColor: AppColors.accent,
+                   TextStyle(color: context.colors.textPrimary, fontSize: 14),
+              cursorColor: context.colors.accent,
               decoration: _dec('简介', '一句话介绍 TA（可选）'),
             ),
           ],
@@ -624,7 +624,7 @@ class _ActorEditDialogState extends State<_ActorEditDialog> {
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child:
-              const Text('取消', style: TextStyle(color: AppColors.textMuted)),
+               Text('取消', style: TextStyle(color: context.colors.textMuted)),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(_ActorEditResult(
@@ -634,10 +634,10 @@ class _ActorEditDialogState extends State<_ActorEditDialog> {
             avatarUrl: _avatarUrlCtrl.text.trim(),
             avatarTouched: _avatarTouched,
           )),
-          child: const Text(
+          child:  Text(
             '保存',
             style: TextStyle(
-                color: AppColors.accent, fontWeight: FontWeight.w700),
+                color: context.colors.accent, fontWeight: FontWeight.w700),
           ),
         ),
       ],

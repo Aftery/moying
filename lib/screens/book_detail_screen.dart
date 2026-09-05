@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 import '../models/book.dart';
 import '../providers/library_provider.dart';
 import '../widgets/media_cover.dart';
@@ -38,23 +38,23 @@ class BookDetailScreen extends StatelessWidget {
     final book = matches.isEmpty ? null : matches.first;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         actions: [
           IconButton(
             tooltip: '编辑',
-            icon: const Icon(Icons.edit_rounded, color: AppColors.textPrimary),
+            icon:  Icon(Icons.edit_rounded, color: context.colors.textPrimary),
             onPressed: book == null ? null : () => _openEditor(context),
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: book == null
-          ? const Center(
+          ?  Center(
               child: Text(
                 '这本书已从书库移除',
-                style: TextStyle(color: AppColors.textMuted),
+                style: TextStyle(color: context.colors.textMuted),
               ),
             )
           : SafeArea(
@@ -97,8 +97,8 @@ class BookDetailScreen extends StatelessWidget {
                     Text(
                       book.title,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
+                      style:  TextStyle(
+                        color: context.colors.textPrimary,
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
                       ),
@@ -123,15 +123,15 @@ class BookDetailScreen extends StatelessWidget {
                               child: Text(
                                 book.author,
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
+                                style:  TextStyle(
+                                  color: context.colors.textSecondary,
                                   fontSize: 15,
                                 ),
                               ),
                             ),
                             const SizedBox(width: 6),
-                            const Icon(Icons.manage_search_rounded,
-                                size: 15, color: AppColors.textMuted),
+                             Icon(Icons.manage_search_rounded,
+                                size: 15, color: context.colors.textMuted),
                           ],
                         ),
                       ),
@@ -148,8 +148,8 @@ class BookDetailScreen extends StatelessWidget {
                         if (book.year != null)
                           Text(
                             '${book.year}',
-                            style: const TextStyle(
-                              color: AppColors.textMuted,
+                            style:  TextStyle(
+                              color: context.colors.textMuted,
                               fontSize: 13,
                             ),
                           ),
@@ -165,23 +165,23 @@ class BookDetailScreen extends StatelessWidget {
                       const SizedBox(height: 26),
                     ],
                     // ---------- 评分区 ----------
-                    _buildRatingArea(book),
+                    _buildRatingArea(context, book),
                     const SizedBox(height: 22),
                     // ---------- 大型进度条 ----------
-                    _buildProgressCard(book),
+                    _buildProgressCard(context, book),
                     // ---------- 阅读时间信息卡（无任何时间记录时隐藏）----------
-                    ..._readingTimeCard(book),
+                    ..._readingTimeCard(context, book),
                     const SizedBox(height: 26),
                     // ---------- 阅读感悟显示框 ----------
                     _sectionTitle(context, '阅读感悟'),
                     const SizedBox(height: 10),
-                    _buildNotesBox(book),
+                    _buildNotesBox(context, book),
                     const SizedBox(height: 14),
                     Text(
                       '点击右上角编辑图标可更新评分、进度与感悟',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: AppColors.textMuted.withOpacity(0.7),
+                        color: context.colors.textMuted.withOpacity(0.7),
                         fontSize: 11,
                       ),
                     ),
@@ -194,14 +194,14 @@ class BookDetailScreen extends StatelessWidget {
 
   // ---------- 评分区 ----------
 
-  Widget _buildRatingArea(Book book) {
+  Widget _buildRatingArea(BuildContext context, Book book) {
     final rating = book.rating;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.outline, width: 0.7),
+        border: Border.all(color: context.colors.outline, width: 0.7),
       ),
       child: Column(
         children: [
@@ -213,18 +213,18 @@ class BookDetailScreen extends StatelessWidget {
               children: [
                 Text(
                   rating.toStringAsFixed(1),
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style:  TextStyle(
+                    color: context.colors.textPrimary,
                     fontSize: 40,
                     fontWeight: FontWeight.w800,
                     height: 1,
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.only(left: 6),
+                 Padding(
+                  padding: const EdgeInsets.only(left: 6),
                   child: Text(
                     '/ 5',
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 15),
+                    style: TextStyle(color: context.colors.textMuted, fontSize: 15),
                   ),
                 ),
               ],
@@ -232,12 +232,12 @@ class BookDetailScreen extends StatelessWidget {
             const SizedBox(height: 10),
             RatingStars(rating: rating, size: 30),
           ] else ...[
-            const Icon(Icons.star_border_rounded,
-                color: AppColors.textMuted, size: 40),
+             Icon(Icons.star_border_rounded,
+                color: context.colors.textMuted, size: 40),
             const SizedBox(height: 6),
-            const Text(
+             Text(
               '还没有评分',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+              style: TextStyle(color: context.colors.textMuted, fontSize: 13),
             ),
           ],
         ],
@@ -247,16 +247,16 @@ class BookDetailScreen extends StatelessWidget {
 
   // ---------- 渐变进度大卡 ----------
 
-  Widget _buildProgressCard(Book book) {
+  Widget _buildProgressCard(BuildContext context, Book book) {
     final percent = book.progressPercent;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
       decoration: BoxDecoration(
-        gradient: AppColors.readingGradient,
+        gradient: context.colors.readingGradient,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.readingStart.withOpacity(0.35),
+            color: context.colors.readingStart.withOpacity(0.35),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -347,21 +347,21 @@ class BookDetailScreen extends StatelessWidget {
   // ---------- 阅读时间信息卡 ----------
 
   /// 返回阅读时间卡片片段（开始/完成均无记录时返回空，整块隐藏）
-  List<Widget> _readingTimeCard(Book book) {
+  List<Widget> _readingTimeCard(BuildContext context, Book book) {
     final start = book.startedAt;
     final finish = book.finishedAt;
     if (start == null && finish == null) return const [];
 
     final rows = <Widget>[];
     if (start != null) {
-      rows.add(_timeRow(
+      rows.add(_timeRow(context,
         icon: Icons.play_circle_outline_rounded,
         label: '开始阅读',
         value: _fmtYmd(start),
       ));
     }
     if (finish != null) {
-      rows.add(_timeRow(
+      rows.add(_timeRow(context,
         icon: Icons.check_circle_outline_rounded,
         label: '阅读完成',
         value: _fmtYmd(finish),
@@ -375,9 +375,9 @@ class BookDetailScreen extends StatelessWidget {
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: context.colors.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.outline, width: 0.7),
+          border: Border.all(color: context.colors.outline, width: 0.7),
         ),
         child: Column(
           children: [
@@ -391,7 +391,7 @@ class BookDetailScreen extends StatelessWidget {
     ];
   }
 
-  Widget _timeRow({
+  Widget _timeRow(BuildContext context, {
     required IconData icon,
     required String label,
     required String value,
@@ -399,17 +399,17 @@ class BookDetailScreen extends StatelessWidget {
   }) {
     return Row(
       children: [
-        Icon(icon, size: 17, color: AppColors.readingStart),
+        Icon(icon, size: 17, color: context.colors.readingStart),
         const SizedBox(width: 10),
         Text(
           label,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          style:  TextStyle(color: context.colors.textSecondary, fontSize: 13),
         ),
         const Spacer(),
         Text(
           value,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style:  TextStyle(
+            color: context.colors.textPrimary,
             fontSize: 13.5,
             fontWeight: FontWeight.w600,
           ),
@@ -419,13 +419,13 @@ class BookDetailScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: AppColors.readingStart.withOpacity(0.15),
+              color: context.colors.readingStart.withOpacity(0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               trailing,
               style: TextStyle(
-                color: AppColors.readingStart.withOpacity(0.9),
+                color: context.colors.readingStart.withOpacity(0.9),
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
@@ -441,33 +441,33 @@ class BookDetailScreen extends StatelessWidget {
 
   // ---------- 感悟显示框 ----------
 
-  Widget _buildNotesBox(Book book) {
+  Widget _buildNotesBox(BuildContext context, Book book) {
     final notes = book.notes;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding:  const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: context.colors.surfaceHigh,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outline, width: 0.7),
+        border: Border.all(color: context.colors.outline, width: 0.7),
       ),
       child: notes == null || notes.isEmpty
-          ? const Row(
+          ?  Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.edit_note_rounded,
-                    size: 16, color: AppColors.textMuted),
-                SizedBox(width: 6),
+                    size: 16, color: context.colors.textMuted),
+                const SizedBox(width: 6),
                 Text(
                   '还没有写下感悟',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                  style: TextStyle(color: context.colors.textMuted, fontSize: 13),
                 ),
               ],
             )
           : Text(
               notes,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style:  TextStyle(
+                color: context.colors.textSecondary,
                 fontSize: 14,
                 height: 1.7,
               ),
@@ -484,15 +484,15 @@ class BookDetailScreen extends StatelessWidget {
           width: 4,
           height: 16,
           decoration: BoxDecoration(
-            gradient: AppColors.readingGradient,
+            gradient: context.colors.readingGradient,
             borderRadius: BorderRadius.circular(4),
           ),
         ),
         const SizedBox(width: 8),
         Text(
           text,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style:  TextStyle(
+            color: context.colors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
@@ -513,15 +513,15 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.accent.withOpacity(0.16),
+        color: context.colors.accent.withOpacity(0.16),
         borderRadius: BorderRadius.circular(20),
         border:
-            Border.all(color: AppColors.accent.withOpacity(0.35), width: 0.8),
+            Border.all(color: context.colors.accent.withOpacity(0.35), width: 0.8),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: AppColors.accent,
+        style:  TextStyle(
+          color: context.colors.accent,
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
@@ -564,18 +564,18 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: context.colors.surfaceHigh,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outline, width: 0.7),
+        border: Border.all(color: context.colors.outline, width: 0.7),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           if (!_measured) {
             _measured = true;
-            const style = TextStyle(
+            final style = TextStyle(
               fontSize: 14,
               height: 1.7,
-              color: AppColors.textSecondary,
+              color: context.colors.textSecondary,
             );
             final span = TextSpan(text: widget.text, style: style);
             final collapsed = TextPainter(
@@ -604,10 +604,10 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
                 widget.text,
                 maxLines: _expanded ? null : _foldLines,
                 overflow: _expanded ? null : TextOverflow.ellipsis,
-                style: const TextStyle(
+                style:  TextStyle(
                   fontSize: 14,
                   height: 1.7,
-                  color: AppColors.textSecondary,
+                  color: context.colors.textSecondary,
                 ),
               ),
               if (_overflow)
@@ -623,10 +623,10 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
                         children: [
                           Text(
                             _expanded ? '收起' : '展开全部',
-                            style: const TextStyle(
+                            style:  TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.accent,
+                              color: context.colors.accent,
                             ),
                           ),
                           Icon(
@@ -634,7 +634,7 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
                                 ? Icons.expand_less_rounded
                                 : Icons.expand_more_rounded,
                             size: 16,
-                            color: AppColors.accent,
+                            color: context.colors.accent,
                           ),
                         ],
                       ),

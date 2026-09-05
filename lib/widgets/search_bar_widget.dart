@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 
 /// 暗色圆角搜索栏（图书列表页顶部）
 ///
@@ -28,17 +28,17 @@ class SearchBarWidget extends StatelessWidget {
     return TextField(
       controller: controller,
       onChanged: onChanged,
-      style: const TextStyle(
-        color: AppColors.textPrimary,
+      style:  TextStyle(
+        color: context.colors.textPrimary,
         fontSize: 14,
       ),
-      cursorColor: AppColors.accent,
+      cursorColor: context.colors.accent,
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
-        prefixIcon: const Icon(
+        hintStyle:  TextStyle(color: context.colors.textMuted, fontSize: 14),
+        prefixIcon:  Icon(
           Icons.search_rounded,
-          color: AppColors.textMuted,
+          color: context.colors.textMuted,
           size: 22,
         ),
         // 清除按钮（无内容时不占位）
@@ -48,9 +48,9 @@ class SearchBarWidget extends StatelessWidget {
                 builder: (_, value, __) => value.text.isEmpty
                     ? const SizedBox.shrink()
                     : IconButton(
-                        icon: const Icon(
+                        icon:  Icon(
                           Icons.close_rounded,
-                          color: AppColors.textMuted,
+                          color: context.colors.textMuted,
                           size: 20,
                         ),
                         onPressed: () {
@@ -61,7 +61,7 @@ class SearchBarWidget extends StatelessWidget {
               )
             : null,
         filled: true,
-        fillColor: AppColors.surfaceHigh,
+        fillColor: context.colors.surfaceHigh,
         contentPadding: const EdgeInsets.symmetric(vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -69,11 +69,11 @@ class SearchBarWidget extends StatelessWidget {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.outline, width: 0.8),
+          borderSide:  BorderSide(color: context.colors.outline, width: 0.8),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.accent, width: 1.4),
+          borderSide:  BorderSide(color: context.colors.accent, width: 1.4),
         ),
       ),
     );

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 
 /// 区块标题（主标题 + 可选副标题/操作）
 class SectionHeader extends StatelessWidget {
@@ -30,7 +30,7 @@ class SectionHeader extends StatelessWidget {
             width: 4,
             height: 18,
             decoration: BoxDecoration(
-              gradient: AppColors.readingGradient,
+              gradient: context.colors.readingGradient,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -38,10 +38,10 @@ class SectionHeader extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
+              style:  TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: context.colors.textPrimary,
               ),
             ),
           ),
@@ -52,10 +52,10 @@ class SectionHeader extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 child: DefaultTextStyle.merge(
-                  style: const TextStyle(
+                  style:  TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.accent,
+                    color: context.colors.accent,
                   ),
                   child: trailing!,
                 ),

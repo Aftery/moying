@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 
 /// 交互式五星评分选择器（编辑页使用）
 ///
@@ -45,8 +45,8 @@ class StarRatingPicker extends StatelessWidget {
                 i <= rounded ? Icons.star_rounded : Icons.star_outline_rounded,
                 size: size,
                 color: i <= rounded
-                    ? AppColors.star
-                    : AppColors.textMuted.withOpacity(0.5),
+                    ? context.colors.star
+                    : context.colors.textMuted.withOpacity(0.5),
               ),
             ),
           ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 import '../models/book.dart';
 import 'media_cover.dart';
 import 'rating_stars.dart';
@@ -31,7 +31,7 @@ class BookListCard extends StatelessWidget {
     final finished = book.status == BookStatus.finished;
 
     return Material(
-      color: AppColors.surface,
+      color: context.colors.surface,
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -80,10 +80,10 @@ class BookListCard extends StatelessWidget {
                     book.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style:  TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -91,9 +91,9 @@ class BookListCard extends StatelessWidget {
                     book.author,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style:  TextStyle(
                       fontSize: 11,
-                      color: AppColors.textMuted,
+                      color: context.colors.textMuted,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -103,11 +103,11 @@ class BookListCard extends StatelessWidget {
                       if (book.rating != null)
                         RatingStars(rating: book.rating!, size: 14)
                       else
-                        const Text(
+                         Text(
                           '未评分',
                           style: TextStyle(
                             fontSize: 11,
-                            color: AppColors.textMuted,
+                            color: context.colors.textMuted,
                           ),
                         ),
                       const Spacer(),
@@ -117,8 +117,8 @@ class BookListCard extends StatelessWidget {
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: finished
-                              ? AppColors.success
-                              : AppColors.readingStart,
+                              ? context.colors.success
+                              : context.colors.readingStart,
                         ),
                       ),
                     ],
@@ -128,7 +128,7 @@ class BookListCard extends StatelessWidget {
                   _GradientBar(
                     progress: book.progress,
                     color:
-                        finished ? AppColors.success : AppColors.readingStart,
+                        finished ? context.colors.success : context.colors.readingStart,
                   ),
                 ],
               ),
@@ -149,9 +149,9 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (status) {
-      BookStatus.reading => AppColors.readingStart,
-      BookStatus.finished => AppColors.success,
-      BookStatus.planToRead => AppColors.accent,
+      BookStatus.reading => context.colors.readingStart,
+      BookStatus.finished => context.colors.success,
+      BookStatus.planToRead => context.colors.accent,
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -211,7 +211,7 @@ class _GradientBar extends StatelessWidget {
     return Container(
       height: 5,
       decoration: BoxDecoration(
-        color: AppColors.outline,
+        color: context.colors.outline,
         borderRadius: BorderRadius.circular(4),
       ),
       child: FractionallySizedBox(

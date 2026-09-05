@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 import '../models/book.dart';
 import '../models/movie.dart';
 import '../providers/library_provider.dart';
@@ -119,7 +119,7 @@ class _Header extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              gradient: AppColors.readingGradient,
+              gradient: context.colors.readingGradient,
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(Icons.auto_stories_rounded,
@@ -127,7 +127,7 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           // 标题区占满剩余空间（窄屏超长时自动省略，避免溢出）
-          const Expanded(
+           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -138,18 +138,18 @@ class _Header extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
+                    color: context.colors.textPrimary,
                     height: 1.1,
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
                   'My Media Tracker · 书影记录',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.textMuted,
+                    color: context.colors.textMuted,
                   ),
                 ),
               ],
@@ -157,14 +157,14 @@ class _Header extends StatelessWidget {
           ),
           IconButton(
             onPressed: () {},
-            icon: const Icon(Icons.search_rounded,
-                color: AppColors.textSecondary),
+            icon:  Icon(Icons.search_rounded,
+                color: context.colors.textSecondary),
             tooltip: '搜索',
           ),
           IconButton(
             onPressed: () {},
-            icon: const Icon(Icons.notifications_none_rounded,
-                color: AppColors.textSecondary),
+            icon:  Icon(Icons.notifications_none_rounded,
+                color: context.colors.textSecondary),
             tooltip: '通知',
           ),
         ],
@@ -366,7 +366,7 @@ class _InlineEmpty extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: context.colors.surfaceHigh,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -377,28 +377,28 @@ class _InlineEmpty extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: context.colors.surface,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(icon, color: AppColors.textMuted, size: 28),
+            child: Icon(icon, color: context.colors.textMuted, size: 28),
           ),
           const SizedBox(height: 14),
           Text(
             title,
-            style: const TextStyle(
+            style:  TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: context.colors.textPrimary,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style:  TextStyle(
               fontSize: 13,
               height: 1.55,
-              color: AppColors.textMuted,
+              color: context.colors.textMuted,
             ),
           ),
         ],

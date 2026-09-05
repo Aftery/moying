@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 import '../models/stats.dart';
 import 'progress_ring.dart';
 
@@ -32,7 +32,7 @@ class StatsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isReading = type == StatsCardType.reading;
     final gradient =
-        isReading ? AppColors.readingGradient : AppColors.movieGradient;
+        isReading ? context.colors.readingGradient : context.colors.movieGradient;
 
     return Container(
       padding: const EdgeInsets.all(18),

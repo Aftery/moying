@@ -1,83 +1,99 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
+import 'app_palette.dart';
 
-/// 全局暗色主题构建器
-ThemeData buildAppTheme() {
-  const colorScheme = ColorScheme.dark(
-    primary: AppColors.accent,
-    secondary: AppColors.movieEnd,
-    surface: AppColors.surface,
-    onPrimary: Colors.white,
-    onSurface: AppColors.textPrimary,
-    error: Color(0xFFFF6B6B),
-  );
+/// 全局主题构建器（按色板生成，暗/浅共用一套结构）
+///
+/// - [AppPalette.dark] → ColorScheme.dark（原始暗色设计）
+/// - [AppPalette.light] → ColorScheme.light（浅色反推）
+///
+/// 色板经 `extensions` 挂入 ThemeData，widget 内统一用 `context.colors` 取色。
+ThemeData buildAppTheme(AppPalette palette) {
+  final isDark = palette.background.computeLuminance() < 0.5;
+  final colorScheme = isDark
+      ? ColorScheme.dark(
+          primary: palette.accent,
+          secondary: palette.movieEnd,
+          surface: palette.surface,
+          onPrimary: Colors.white,
+          onSurface: palette.textPrimary,
+          error: const Color(0xFFFF6B6B),
+        )
+      : ColorScheme.light(
+          primary: palette.accent,
+          secondary: palette.movieEnd,
+          surface: palette.surface,
+          onPrimary: Colors.white,
+          onSurface: palette.textPrimary,
+          error: const Color(0xFFFF6B6B),
+        );
 
   return ThemeData(
     useMaterial3: true,
-    brightness: Brightness.dark,
+    brightness: isDark ? Brightness.dark : Brightness.light,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: AppColors.background,
+    extensions: [palette],
+    scaffoldBackgroundColor: palette.background,
 
     // 文字排版
-    textTheme: const TextTheme(
+    textTheme: TextTheme(
       headlineMedium: TextStyle(
         fontSize: 28,
         fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
+        color: palette.textPrimary,
         letterSpacing: 0.5,
       ),
       titleLarge: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
+        color: palette.textPrimary,
       ),
       titleMedium: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
+        color: palette.textPrimary,
       ),
       bodyMedium: TextStyle(
         fontSize: 14,
-        color: AppColors.textSecondary,
+        color: palette.textSecondary,
       ),
       bodySmall: TextStyle(
         fontSize: 12,
-        color: AppColors.textMuted,
+        color: palette.textMuted,
       ),
       labelMedium: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w500,
-        color: AppColors.textSecondary,
+        color: palette.textSecondary,
       ),
     ),
 
     // 卡片默认样式
-    cardTheme: const CardTheme(
-      color: AppColors.surface,
+    cardTheme: CardTheme(
+      color: palette.surface,
       elevation: 0,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
     ),
 
     // AppBar
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       backgroundColor: Colors.transparent,
       elevation: 0,
       centerTitle: false,
       titleTextStyle: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
+        color: palette.textPrimary,
       ),
-      iconTheme: IconThemeData(color: AppColors.textPrimary),
+      iconTheme: IconThemeData(color: palette.textPrimary),
     ),
 
     // 底部导航
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: AppColors.surface,
-      indicatorColor: AppColors.accent.withOpacity(0.22),
+      backgroundColor: palette.surface,
+      indicatorColor: palette.accent.withOpacity(0.22),
       height: 68,
       labelTextStyle: WidgetStateProperty.resolveWith(
         (states) => TextStyle(
@@ -86,22 +102,22 @@ ThemeData buildAppTheme() {
               ? FontWeight.w600
               : FontWeight.w400,
           color: states.contains(WidgetState.selected)
-              ? AppColors.textPrimary
-              : AppColors.textMuted,
+              ? palette.textPrimary
+              : palette.textMuted,
         ),
       ),
       iconTheme: WidgetStateProperty.resolveWith(
         (states) => IconThemeData(
           color: states.contains(WidgetState.selected)
-              ? AppColors.accent
-              : AppColors.textMuted,
+              ? palette.accent
+              : palette.textMuted,
         ),
       ),
     ),
 
     // 分割线
-    dividerTheme: const DividerThemeData(
-      color: AppColors.outline,
+    dividerTheme: DividerThemeData(
+      color: palette.outline,
       thickness: 1,
     ),
   );

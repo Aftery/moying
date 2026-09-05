@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 import '../models/media_ref.dart';
 import 'media_cover.dart';
 
@@ -51,7 +51,7 @@ class GridItemCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: context.colors.surface,
           borderRadius: BorderRadius.circular(16),
         ),
         clipBehavior: Clip.antiAlias,
@@ -104,10 +104,10 @@ class GridItemCard extends StatelessWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style:  TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -115,27 +115,27 @@ class GridItemCard extends StatelessWidget {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style:  TextStyle(
                       fontSize: 11,
-                      color: AppColors.textMuted,
+                      color: context.colors.textMuted,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       if (rating != null) ...[
-                        const Icon(
+                         Icon(
                           Icons.star_rounded,
                           size: 15,
-                          color: AppColors.star,
+                          color: context.colors.star,
                         ),
                         const SizedBox(width: 3),
                         Text(
                           rating!.toStringAsFixed(1),
-                          style: const TextStyle(
+                          style:  TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                            color: context.colors.textPrimary,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -144,7 +144,7 @@ class GridItemCard extends StatelessWidget {
                         child: Container(
                           height: 3,
                           decoration: BoxDecoration(
-                            color: AppColors.outline,
+                            color: context.colors.outline,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),

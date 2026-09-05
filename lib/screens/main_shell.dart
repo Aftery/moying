@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 import 'books_screen.dart';
 import 'dashboard_screen.dart';
 import 'library_screens.dart';
@@ -30,10 +30,10 @@ class _MainShellState extends State<MainShell> {
       // IndexedStack 保持各 Tab 状态（滚动位置等）
       body: IndexedStack(index: _index, children: _pages),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
+        decoration:  BoxDecoration(
+          color: context.colors.surface,
           border: Border(
-            top: BorderSide(color: AppColors.outline, width: 0.6),
+            top: BorderSide(color: context.colors.outline, width: 0.6),
           ),
         ),
         child: SafeArea(

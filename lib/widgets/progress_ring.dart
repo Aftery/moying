@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../config/app_colors.dart';
+import '../config/app_palette.dart';
 
 /// 圆形进度环
 ///
@@ -13,7 +13,7 @@ class ProgressRing extends StatelessWidget {
     required this.progress,
     this.size = 56,
     this.strokeWidth = 5,
-    this.colors = const [AppColors.readingStart, AppColors.readingEnd],
+    this.colors,
     this.trackColor = const Color(0x33FFFFFF),
     this.label,
     this.labelColor = Colors.white,
@@ -28,8 +28,8 @@ class ProgressRing extends StatelessWidget {
   /// 描边宽度
   final double strokeWidth;
 
-  /// 进度渐变颜色
-  final List<Color> colors;
+  /// 进度渐变颜色（null 时用主题阅读渐变起止色）
+  final List<Color>? colors;
 
   /// 轨道（底环）颜色
   final Color trackColor;
@@ -44,6 +44,8 @@ class ProgressRing extends StatelessWidget {
   Widget build(BuildContext context) {
     final clamped = progress.clamp(0.0, 1.0);
     final text = label ?? '${(clamped * 100).round()}%';
+    final ringColors = colors ??
+        [context.colors.readingStart, context.colors.readingEnd];
 
     return SizedBox(
       width: size,
@@ -60,7 +62,7 @@ class ProgressRing extends StatelessWidget {
               painter: _RingPainter(
                 progress: value,
                 strokeWidth: strokeWidth,
-                colors: colors,
+                colors: ringColors,
                 trackColor: trackColor,
               ),
             ),
