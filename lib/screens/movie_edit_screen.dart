@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_palette.dart';
@@ -49,6 +50,22 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
   late double _rating;
   late final Set<String> _selectedGenres;
 
+  /// 剧情类型联想输入（多选标签：点选候选 / 自定义回车 / 保存前兜底提交）
+  late final TextEditingController _genreCtrl;
+  late final FocusNode _genreFocus;
+
+  /// 导演框焦点（失焦触发导演 → 演员槽位自动同步）
+  late final FocusNode _directorFocus;
+
+  /// 当前导演自动槽的文本（用于识别用户是否改过该槽位）
+  String? _directorAutoName;
+
+  /// 用户手动删除自动槽时的导演名——同导演不再自动弹回
+  String? _directorAutoDismissed;
+
+  /// 「添加“X”」哨兵：候选无匹配时提供可点的自定义入口（回车提交同语义）
+  static const String _genreCreateSentinel = '__genre_create__';
+
   /// 演员槽位（每个槽位 = 联想输入框 + 已解析实体）
   ///
   /// 槽位文本与实体分离：文本展示姓名，[ActorSlot.picked] 记录解析出的实体 id。
@@ -91,6 +108,13 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     _watchDate = movie?.watchDate;
     _rating = movie?.rating ?? 0;
     _selectedGenres = Set.of(movie?.genres ?? const <String>[]);
+    _genreCtrl = TextEditingController();
+    _genreFocus = FocusNode();
+    // 失焦时把未提交的输入收进标签，防止用户中途移开焦点丢输入
+    _genreFocus.addListener(_handleGenreFocusChange);
+    _directorFocus = FocusNode();
+    // 导演失焦 → 自动同步到演员第 0 位（回车提交在导演输入框 onSubmitted 同样触发）
+    _directorFocus.addListener(_handleDirectorFocusChange);
     // 编辑模式回填：actorIds → 实体解析 → 显示姓名（悬空引用静默丢弃）。
     // 这是"渲染 actorIds 的地方统一走解析"的第二个渲染点，与详情页同步切换，
     // 确保用户新建的 id≠name 演员在回填时显示名字而非一串乱码 id。
@@ -100,6 +124,9 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
         picked: actor,
       ));
     }
+    // 编辑模式回填后同步一次导演（首帧前执行，无需 setState）；
+    // 新增模式导演为空 → no-op
+    _applyDirectorSync();
   }
 
   @override
@@ -112,8 +139,67 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     for (final slot in _actorSlots) {
       slot.dispose();
     }
+    _genreCtrl.dispose();
+    _genreFocus.dispose();
+    _directorFocus.dispose();
     _posterUrlCtrl.dispose();
     super.dispose();
+  }
+
+  // ---------- 导演 → 演员槽位自动同步 ----------
+
+  /// 失焦时触发（onSubmitted 同语义）
+  void _handleDirectorFocusChange() {
+    if (!_directorFocus.hasFocus) _handleDirectorSync();
+  }
+
+  void _handleDirectorSync() {
+    _applyDirectorSync();
+    setState(() {});
+  }
+
+  /// 同步的纯数据操作（不含 setState；initState 回填后也复用）
+  ///
+  /// - 导演非空：自动槽文本跟随导演；无自动槽且演员区无同名 → 第 0 位插入；
+  ///   用户删过该导演的自动槽（[_directorAutoDismissed]）→ 尊重不弹回
+  /// - 导演清空：移除自动槽
+  /// - 用户改过自动槽文本 → 该槽降级为普通槽（自定义优先，另起自动槽）
+  void _applyDirectorSync() {
+    final director = _directorCtrl.text.trim();
+    ActorSlot? autoSlot;
+    for (final s in _actorSlots) {
+      if (s.autoFromDirector) {
+        autoSlot = s;
+        break;
+      }
+    }
+    if (autoSlot != null &&
+        autoSlot.ctrl.text.trim() != _directorAutoName) {
+      autoSlot.autoFromDirector = false; // 用户改过 → 降级
+      autoSlot = null;
+      _directorAutoName = null;
+    }
+    if (director.isEmpty) {
+      if (autoSlot != null) {
+        autoSlot.dispose();
+        _actorSlots.remove(autoSlot);
+      }
+      _directorAutoName = null;
+      return;
+    }
+    if (autoSlot != null) {
+      if (autoSlot.ctrl.text != director) {
+        autoSlot.ctrl.text = director;
+      }
+      return;
+    }
+    final hasSame = _actorSlots.any((s) => s.ctrl.text.trim() == director);
+    if (!hasSame && director != _directorAutoDismissed) {
+      final slot = ActorSlot(ctrl: TextEditingController(text: director))
+        ..autoFromDirector = true;
+      _actorSlots.insert(0, slot);
+      _directorAutoName = director;
+    }
   }
 
   // ---------- 日期选择 ----------
@@ -166,6 +252,8 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
       return;
     }
 
+    // 输入框里还没回车/点选的自定义类型先收进标签，再统计
+    _commitGenreText();
     final rating = _rating > 0 ? _rating : null;
     final duration = int.tryParse(_durationCtrl.text.trim());
     final actorIds = _collectActorIds();
@@ -329,6 +417,8 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                 controller: _directorCtrl,
                 label: '导演',
                 hint: '输入导演姓名',
+                focusNode: _directorFocus,
+                onSubmitted: _handleDirectorSync,
               ),
               const SizedBox(height: 26),
               _sectionTitle('上映与观影'),
@@ -354,9 +444,16 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
               ),
               const SizedBox(height: 12),
               // 片长（数字 + 分钟后缀）
+              // 注意：不能用 TextInputType.number——搜狗等部分国产输入法在该
+              // 模式下弹数字键盘但不提交字符（键盘能弹、输入无效）。改用文本
+              // 通道 + digitsOnly 过滤，输入法兼容性等同普通输入框。
               TextField(
                 controller: _durationCtrl,
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.text,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(4),
+                ],
                 style:  TextStyle(
                     color: context.colors.textPrimary, fontSize: 15),
                 cursorColor: context.colors.accent,
@@ -403,7 +500,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
               const SizedBox(height: 26),
               _sectionTitle('剧情类型'),
               const SizedBox(height: 10),
-              _buildGenreChips(),
+              _buildGenreSection(),
               const SizedBox(height: 26),
               _sectionTitle('评分'),
               const SizedBox(height: 4),
@@ -627,9 +724,13 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     required TextEditingController controller,
     required String label,
     required String hint,
+    FocusNode? focusNode,
+    VoidCallback? onSubmitted,
   }) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
+      onSubmitted: onSubmitted == null ? null : (_) => onSubmitted(),
       style:  TextStyle(color: context.colors.textPrimary, fontSize: 15),
       cursorColor: context.colors.accent,
       decoration: InputDecoration(
@@ -703,45 +804,204 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     );
   }
 
-  // ---------- 类型 Tag 多选 ----------
+  // ---------- 类型联想输入 + 多选标签 ----------
 
-  Widget _buildGenreChips() {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
+  /// 类型联想候选：预设 ∪ 影库实际用过的类型（去重，预设在前），剔除已选
+  List<String> get _genreCandidates {
+    final used = context.read<LibraryProvider>().usedMovieGenres;
+    return <String>{
+      ...kMovieCategories,
+      ...used,
+    }.where((g) => !_selectedGenres.contains(g)).toList(growable: false);
+  }
+
+  /// 联想规则：空输入 → 全部候选；有输入 → 包含匹配。
+  /// 精确命中的候选置顶（保证回车确认的就是它）；无精确命中且未选过时
+  /// 追加「添加」哨兵——空 options 不渲染浮层，哨兵保证自定义值有可点入口。
+  ///
+  /// 哨兵选项编码为 `_genreCreateSentinel + 用户输入`：RawAutocomplete 选中
+  /// 时会先把 displayString 写进输入框，onSelected 里再读输入框会把哨兵
+  /// 原文当类型吞进去（踩过），所以真实值必须随选项携带（同演员哨兵做法）。
+  List<String> _genreOptionsFor(String rawQuery) {
+    final q = rawQuery.trim();
+    if (q.isEmpty) return _genreCandidates;
+    final options = _genreCandidates.where((c) => c.contains(q)).toList();
+    if (options.contains(q)) {
+      options
+        ..remove(q)
+        ..insert(0, q);
+    } else if (!_selectedGenres.contains(q)) {
+      options.add('$_genreCreateSentinel$q');
+    }
+    return options;
+  }
+
+  /// 添加一个类型标签（空串/已选静默忽略，天然去重）
+  void _addGenre(String genre) {
+    final g = genre.trim();
+    if (g.isEmpty || _selectedGenres.contains(g)) return;
+    setState(() => _selectedGenres.add(g));
+  }
+
+  /// 把输入框里未提交的文本收进标签并清空输入框（无文本时跳过）
+  void _commitGenreText() {
+    final text = _genreCtrl.text.trim();
+    if (text.isEmpty) return;
+    _addGenre(text);
+    _genreCtrl.clear();
+  }
+
+  void _handleGenreFocusChange() {
+    if (!_genreFocus.hasFocus) _commitGenreText();
+  }
+
+  Widget _buildGenreSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final g in kMovieCategories)
-          FilterChip(
-            label: Text(g),
-            selected: _selectedGenres.contains(g),
-            onSelected: (selected) => setState(() {
-              if (selected) {
-                _selectedGenres.add(g);
-              } else {
-                _selectedGenres.remove(g);
-              }
-            }),
-            selectedColor: context.colors.movieStart.withOpacity(0.28),
-            backgroundColor: context.colors.surfaceHigh,
-            side: BorderSide(
-              color: _selectedGenres.contains(g)
-                  ? context.colors.movieStart
-                  : context.colors.outline,
-              width: 1,
-            ),
-            labelStyle: TextStyle(
-              color: _selectedGenres.contains(g)
-                  ? context.colors.movieEnd
-                  : context.colors.textSecondary,
-              fontSize: 13,
-              fontWeight:
-                  _selectedGenres.contains(g) ? FontWeight.w700 : FontWeight.w500,
-            ),
-            showCheckmark: false,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+        // 已选标签（点 × 移除，等价旧 FilterChip 的取消语义）
+        if (_selectedGenres.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final g in _selectedGenres)
+                  InputChip(
+                    label: Text(g),
+                    onDeleted: () =>
+                        setState(() => _selectedGenres.remove(g)),
+                    deleteIconColor: context.colors.textMuted,
+                    backgroundColor: context.colors.surfaceHigh,
+                    side: BorderSide(color: context.colors.movieStart, width: 1),
+                    labelStyle: TextStyle(
+                      color: context.colors.movieEnd,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+              ],
             ),
           ),
+        RawAutocomplete<String>(
+          textEditingController: _genreCtrl,
+          focusNode: _genreFocus,
+          optionsBuilder: (value) => _genreOptionsFor(value.text),
+          displayStringForOption: (g) => g,
+          onSelected: (g) {
+            // 哨兵选项自带用户输入，解析出真实类型；普通选项直接采用。
+            // 两种来源最后统一清空输入框（RawAutocomplete 选中时已把
+            // displayString 写入输入框，不主动清会残留哨兵/旧文本）。
+            if (g.startsWith(_genreCreateSentinel)) {
+              _addGenre(g.substring(_genreCreateSentinel.length));
+            } else {
+              _addGenre(g);
+            }
+            _genreCtrl.clear();
+          },
+          // 注意：fieldViewBuilder 第 4 参是 onFieldSubmitted（回车确认候选），
+          // 不是 onChanged；自定义文本的提交在 onFieldSubmitted 之后兜底。
+          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+            return TextField(
+              key: const ValueKey('genre-input'),
+              controller: controller,
+              focusNode: focusNode,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) {
+                // 先走候选确认（有精确/高亮候选时），再把剩余自定义文本收进标签
+                onFieldSubmitted();
+                _commitGenreText();
+              },
+              style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
+              cursorColor: context.colors.accent,
+              decoration: InputDecoration(
+                hintText: '输入或选择类型，回车添加（可多选）',
+                hintStyle:
+                    TextStyle(color: context.colors.textMuted, fontSize: 14),
+                filled: true,
+                fillColor: context.colors.surfaceHigh,
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 13),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      BorderSide(color: context.colors.outline, width: 0.8),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      BorderSide(color: context.colors.outline, width: 0.8),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      BorderSide(color: context.colors.accent, width: 1.3),
+                ),
+              ),
+            );
+          },
+          optionsViewBuilder: (context, onChoose, options) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                color: context.colors.surface,
+                elevation: 6,
+                borderRadius: BorderRadius.circular(14),
+                child: ConstrainedBox(
+                  constraints:
+                      const BoxConstraints(maxHeight: 220, maxWidth: 340),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    itemBuilder: (context, i) {
+                      final option = options.elementAt(i);
+                      final isCreate =
+                          option.startsWith(_genreCreateSentinel);
+                      return InkWell(
+                        onTap: () => onChoose(option),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          child: isCreate
+                              ? Row(
+                                  children: [
+                                    Icon(Icons.add_circle_outline_rounded,
+                                        size: 17, color: context.colors.accent),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '添加「${option.substring(_genreCreateSentinel.length)}」',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: context.colors.accent,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Text(
+                                  option,
+                                  style: TextStyle(
+                                      color: context.colors.textPrimary,
+                                      fontSize: 14),
+                                ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
       ],
     );
   }
@@ -874,6 +1134,12 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                   IconButton(
                     tooltip: '移除',
                     onPressed: () => setState(() {
+                      // 删除导演自动槽：记录导演名，同导演不再自动弹回
+                      if (slot.autoFromDirector) {
+                        _directorAutoDismissed = _directorCtrl.text.trim();
+                        _directorAutoName = null;
+                        slot.autoFromDirector = false;
+                      }
                       slot.dispose();
                       _actorSlots.remove(slot);
                     }),
@@ -1293,6 +1559,9 @@ class ActorSlot {
 
   /// 已解析实体（回填 / 联想选中 / 新建产生）；null = 自由文本
   Actor? picked;
+
+  /// true = 由导演框自动挂载的槽位（导演失焦/回车同步；用户改过文本或删除后降级）
+  bool autoFromDirector = false;
 
   void dispose() {
     ctrl.dispose();

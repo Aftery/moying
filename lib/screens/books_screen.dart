@@ -249,6 +249,10 @@ class _FilterItem<T> {
 }
 
 /// 暗色下拉筛选组件
+///
+/// [onChanged] 用 [ValueChanged<T?>]：「全部」项的 value 就是 null（T 以可空类型
+/// 实例化，如 BookStatus?），必须允许 null 回传——此处加非空 guard 就是
+/// 「选不回全部」bug 的根因。
 class _FilterDropdown<T> extends StatelessWidget {
   const _FilterDropdown({
     required this.icon,
@@ -259,7 +263,7 @@ class _FilterDropdown<T> extends StatelessWidget {
 
   final IconData icon;
   final List<_FilterItem<T>> items;
-  final ValueChanged<T> onChanged;
+  final ValueChanged<T?> onChanged;
   final T value;
 
   @override
@@ -305,9 +309,9 @@ class _FilterDropdown<T> extends StatelessWidget {
                   ),
                 ),
             ],
-            onChanged: (v) {
-              if (v != null) onChanged(v);
-            },
+            // 直接回调：「全部」项的 value 就是 null，不能加非空 guard（否则永远选不回全部）。
+            // DropdownButton 仅在真正选中菜单项时触发 onChanged，dismiss 不会回调。
+            onChanged: (v) => onChanged(v),
           ),
         ),
       ),

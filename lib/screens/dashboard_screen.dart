@@ -9,10 +9,20 @@ import '../widgets/grid_item_card.dart';
 import '../widgets/media_tile.dart';
 import '../widgets/section_header.dart';
 import '../widgets/stats_card.dart';
+import 'book_detail_screen.dart';
+import 'book_edit_screen.dart';
+import 'movie_detail_screen.dart';
+import 'movie_edit_screen.dart';
 
 /// 仪表盘主页 —— 数据统计 + 当前任务 + 阅读/电影列表
+///
+/// [onOpenBooks] / [onOpenMovies]：「查看全部」等入口跳转对应底部 Tab，
+/// 由 MainShell 注入（IndexedStack 切换，各 Tab 状态保留）；不传则无跳转。
 class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+  const DashboardScreen({super.key, this.onOpenBooks, this.onOpenMovies});
+
+  final VoidCallback? onOpenBooks;
+  final VoidCallback? onOpenMovies;
 
   @override
   Widget build(BuildContext context) {
@@ -56,14 +66,11 @@ class DashboardScreen extends StatelessWidget {
           const SizedBox(height: 26),
 
           // ---------- 当前任务（横向滚动） ----------
-          const SectionHeader(
+          SectionHeader(
             title: '当前任务',
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('下一部电影'),
-                Icon(Icons.arrow_forward_ios, size: 11),
-              ],
+            trailing: _HeaderLink(
+              label: '下一部电影',
+              onTap: onOpenMovies,
             ),
           ),
           const SizedBox(height: 12),
@@ -71,34 +78,71 @@ class DashboardScreen extends StatelessWidget {
           const SizedBox(height: 26),
 
           // ---------- 阅读列表 ----------
-          const SectionHeader(
+          SectionHeader(
             title: '阅读列表',
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('查看全部'),
-                Icon(Icons.arrow_forward_ios, size: 11),
-              ],
+            trailing: _HeaderLink(
+              label: '查看全部',
+              onTap: onOpenBooks,
             ),
           ),
           const SizedBox(height: 12),
-          _BookGrid(books: library.readingList),
+          _BookGrid(books: library.readingList.take(4).toList()),
           const SizedBox(height: 26),
 
           // ---------- 电影列表 ----------
-          const SectionHeader(
+          SectionHeader(
             title: '我的电影',
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('查看全部'),
-                Icon(Icons.arrow_forward_ios, size: 11),
-              ],
+            trailing: _HeaderLink(
+              label: '查看全部',
+              onTap: onOpenMovies,
             ),
           ),
           const SizedBox(height: 12),
-          _MovieGrid(movies: library.movieList),
+          _MovieGrid(movies: library.movieList.take(4).toList()),
         ],
+      ),
+    );
+  }
+}
+
+/// 区块头部的可点入口（查看全部 / 下一部电影），onTap 为空时退化为纯文本
+class _HeaderLink extends StatelessWidget {
+  const _HeaderLink({required this.label, this.onTap});
+
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final row = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: onTap != null
+                ? context.colors.textSecondary
+                : context.colors.textMuted,
+          ),
+        ),
+        const SizedBox(width: 2),
+        Icon(
+          Icons.arrow_forward_ios,
+          size: 11,
+          color: onTap != null
+              ? context.colors.textSecondary
+              : context.colors.textMuted,
+        ),
+      ],
+    );
+    if (onTap == null) return row;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: row,
       ),
     );
   }
@@ -266,6 +310,13 @@ class _BookGrid extends StatelessWidget {
             media: b.cover,
             rating: b.rating,
             statusLabel: b.status.label,
+            // 与书籍模块一致：单击进详情、长按进编辑
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => BookDetailScreen(bookId: b.id)),
+            ),
+            onLongPress: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => BookEditScreen(bookId: b.id)),
+            ),
           ),
       ],
     );
@@ -301,6 +352,14 @@ class _MovieGrid extends StatelessWidget {
             media: m.poster,
             rating: m.rating,
             statusLabel: m.status.label,
+            // 与书籍模块一致：单击进详情、长按进编辑
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) => MovieDetailScreen(movieId: m.id)),
+            ),
+            onLongPress: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => MovieEditScreen(movieId: m.id)),
+            ),
           ),
       ],
     );

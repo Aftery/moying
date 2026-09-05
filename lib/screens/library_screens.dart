@@ -44,6 +44,13 @@ class _MoviesScreenState extends State<MoviesScreen> {
       genre: _genreFilter,
       sort: _sort,
     );
+    // 类型筛选候选：预设 ∪ 影库实际用过的类型（自定义类型可筛，去重）
+    final genreOptions =
+        <String>{...kMovieCategories, ...library.usedMovieGenres}.toList();
+    // 防御：当前筛选值因删改电影不在候选中时补回，避免 Dropdown 值断言失败
+    if (_genreFilter != null && !genreOptions.contains(_genreFilter)) {
+      genreOptions.insert(0, _genreFilter!);
+    }
 
     return Scaffold(
       backgroundColor: context.colors.background,
@@ -79,8 +86,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                     value: _genreFilter,
                     items: [
                       const _FilterItem(label: '全部类型', value: null),
-                      for (final g in kMovieCategories)
-                        _FilterItem(label: g, value: g),
+                      for (final g in genreOptions) _FilterItem(label: g, value: g),
                     ],
                     onChanged: (v) => setState(() => _genreFilter = v),
                   ),
@@ -92,7 +98,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
                       for (final s in MovieSort.values)
                         _FilterItem(label: s.label, value: s),
                     ],
-                    onChanged: (v) => setState(() => _sort = v),
+                    // 排序项 value 均非空，v 不会为 null，v! 安全
+                    onChanged: (v) => setState(() => _sort = v!),
                   ),
                 ],
               ),
@@ -135,6 +142,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                           rating: movie.rating,
                           statusLabel: movie.status.label,
                           onTap: () => _openDetail(movie.id),
+                          onLongPress: () => _openEditor(movie.id),
                         );
                       },
                     ),
@@ -165,6 +173,17 @@ class _MoviesScreenState extends State<MoviesScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => MovieDetailScreen(movieId: movieId)),
     );
+  }
+
+  /// 长按网格卡片进编辑（与书籍模块 BookListCard 长按语义一致）
+  Future<void> _openEditor(String movieId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => MovieEditScreen(movieId: movieId)),
+    );
+    if (result == kEditResultDeleted && messenger.mounted) {
+      messenger.showSnackBar(const SnackBar(content: Text('电影已删除')));
+    }
   }
 
   Future<void> _openCreate() async {
@@ -225,6 +244,10 @@ class _FilterItem<T> {
 }
 
 /// 暗色下拉筛选组件
+/// 暗色下拉筛选组件
+///
+/// [onChanged] 用 [ValueChanged<T?>]：「全部类型」项的 value 就是 null（T 以可空
+/// 类型实例化，如 String?），必须允许 null 回传——非空 guard 会吞掉「全部」项。
 class _FilterDropdown<T> extends StatelessWidget {
   const _FilterDropdown({
     required this.icon,
@@ -235,7 +258,7 @@ class _FilterDropdown<T> extends StatelessWidget {
 
   final IconData icon;
   final List<_FilterItem<T>> items;
-  final ValueChanged<T> onChanged;
+  final ValueChanged<T?> onChanged;
   final T value;
 
   @override
@@ -281,9 +304,9 @@ class _FilterDropdown<T> extends StatelessWidget {
                   ),
                 ),
             ],
-            onChanged: (v) {
-              if (v != null) onChanged(v);
-            },
+            // 直接回调：「全部类型」项的 value 就是 null，不能加非空 guard（否则永远选不回全部）。
+            // DropdownButton 仅在真正选中菜单项时触发 onChanged，dismiss 不会回调。
+            onChanged: (v) => onChanged(v),
           ),
         ),
       ),

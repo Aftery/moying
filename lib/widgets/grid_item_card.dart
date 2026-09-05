@@ -18,6 +18,7 @@ class GridItemCard extends StatelessWidget {
     this.rating,
     this.statusLabel,
     this.onTap,
+    this.onLongPress,
   });
 
   /// 主标题
@@ -44,10 +45,14 @@ class GridItemCard extends StatelessWidget {
   /// 点击回调
   final VoidCallback? onTap;
 
+  /// 长按回调（仪表盘/网格卡片：长按进编辑，与书籍模块 BookListCard 语义一致）
+  final VoidCallback? onLongPress;
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(

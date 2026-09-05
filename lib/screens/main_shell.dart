@@ -17,11 +17,15 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
 
-  static const _pages = <Widget>[
-    DashboardScreen(),
-    BooksScreen(),
-    MoviesScreen(),
-    ProfileScreen(),
+  // 仪表盘「查看全部」等入口跳 Tab 的回调（非 const，其余三页保持 const）
+  late final _pages = <Widget>[
+    DashboardScreen(
+      onOpenBooks: () => setState(() => _index = 1),
+      onOpenMovies: () => setState(() => _index = 2),
+    ),
+    const BooksScreen(),
+    const MoviesScreen(),
+    const ProfileScreen(),
   ];
 
   @override

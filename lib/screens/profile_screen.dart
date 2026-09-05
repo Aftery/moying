@@ -26,10 +26,10 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // 头像 + 昵称（点击即编辑）
+          // 头像 + 昵称（点击只读展示，编辑走下方「编辑资料」入口）
           _ProfileCard(
             profile: library.userProfile,
-            onEdit: () => _openProfileEditor(context, library),
+            onTap: () => _showProfileInfo(context, library.userProfile),
           ),
           const SizedBox(height: 20),
 
@@ -74,6 +74,67 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ---------- 档案只读展示（点卡片弹出，编辑走「编辑资料」行）----------
+
+  void _showProfileInfo(BuildContext context, UserProfile profile) {
+    // TEMP 诊断：真机弹窗签名缺失，打印实际值定位（验证后移除）
+    // ignore: avoid_print
+    print('PROFILE-SHEET sig=${profile.signature}');
+    final signature = profile.signature?.trim() ?? '';
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.colors.surfaceHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 96,
+                height: 96,
+                child: MediaCover(
+                  circular: true,
+                  media: profile.avatar,
+                  title: profile.nickname,
+                  hue: 262,
+                  fontSize: 40,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                profile.nickname,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: context.colors.textPrimary,
+                ),
+              ),
+              if (signature.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  signature,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: context.colors.textSecondary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -191,12 +252,12 @@ class _ThemeModeLabel extends StatelessWidget {
   }
 }
 
-/// 档案卡（头像 + 昵称 + 签名，点击编辑）
+/// 档案卡（头像 + 昵称 + 签名，点击只读展示；编辑走「编辑资料」设置行）
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.profile, required this.onEdit});
+  const _ProfileCard({required this.profile, required this.onTap});
 
   final UserProfile profile;
-  final VoidCallback onEdit;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +268,7 @@ class _ProfileCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: InkWell(
-        onTap: onEdit,
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Row(
           children: [

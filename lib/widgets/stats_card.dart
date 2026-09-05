@@ -128,7 +128,21 @@ class StatsCard extends StatelessWidget {
           style: _subStyle,
         ),
         const SizedBox(height: 14),
-        // 均分徽章居中展示
+        // 均分徽章上方小标注——与阅读卡「平均进度」行镜像，保证双卡等高对齐
+        const Row(
+          children: [
+            Spacer(),
+            Text(
+              '平均评分',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.white70,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Spacer(),
+          ],
+        ),
         Row(
           children: [
             const Spacer(),
