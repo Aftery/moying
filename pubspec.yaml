@@ -1,0 +1,23 @@
+name: moying
+description: "墨影 —— 一个现代暗色风格的书籍与电影记录应用（Flutter UI 框架 + 虚拟数据）"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+  path_provider: ^2.1.4
+  image_picker: ^1.1.2
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
