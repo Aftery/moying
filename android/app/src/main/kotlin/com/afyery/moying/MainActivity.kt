@@ -1,4 +1,4 @@
-package com.example.moying
+package com.afyery.moying
 
 import io.flutter.embedding.android.FlutterActivity
 
