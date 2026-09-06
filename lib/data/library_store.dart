@@ -3,6 +3,7 @@ import 'dart:io';
 
 import '../models/actor.dart';
 import '../models/book.dart';
+import '../models/data_source.dart';
 import '../models/movie.dart';
 import '../models/sync_settings.dart';
 import '../models/user_profile.dart';
@@ -198,6 +199,47 @@ class LibraryStore {
 
   /// 保存同步配置（原子写；返回后已落盘）
   Future<void> saveSettings(SyncSettings settings) => _writeSettings(settings);
+
+  // ==================== 数据源配置（data_sources.json，单对象） ====================
+
+  static const String _dataSourcesFile = 'data_sources.json';
+
+  /// 加载数据源配置列表（书籍 + 影视平铺，按 [DataSourceConfig.category] 区分）。
+  ///
+  /// 返回 null 表示**文件尚不存在**（首次启动）——调用方（DataSourceManager）
+  /// 据此写入内置默认预设；损坏时同样视为未初始化（回退默认，不阻断启动）。
+  Future<List<DataSourceConfig>?> loadDataSourceConfigs() async {
+    await dataDir.create(recursive: true);
+    final file = File(_join(_dataSourcesFile));
+    if (!await file.exists()) return null;
+    try {
+      final content = await file.readAsString();
+      final root = jsonDecode(content);
+      if (root is! Map<String, dynamic>) {
+        throw const FormatException('顶层必须是对象');
+      }
+      final sources = root['sources'] as List? ?? const [];
+      return sources
+          .whereType<Map<String, dynamic>>()
+          .map(DataSourceConfig.fromJson)
+          .toList();
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// 保存数据源配置（原子写；敏感凭据不在配置内，存安全存储）
+  Future<void> saveDataSourceConfigs(List<DataSourceConfig> configs) async {
+    await dataDir.create(recursive: true);
+    final tmp = File(_join('$_dataSourcesFile.tmp'));
+    const encoder = JsonEncoder.withIndent('  ');
+    await tmp.writeAsString(encoder.convert({
+      'schemaVersion': schemaVersion,
+      'sources': configs.map((c) => c.toJson()).toList(),
+    }));
+    await tmp.rename(_join(_dataSourcesFile));
+  }
+
 
   /// settings 原子写（单对象形态，schemaVersion 校验与集合文件共用常量）
   Future<void> _writeSettings(SyncSettings settings) async {

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../config/app_palette.dart';
 import '../models/sync_settings.dart';
+import '../providers/data_source_provider.dart';
 import '../providers/sync_provider.dart';
 import '../services/backup_service.dart';
 import '../services/webdav_client.dart';
@@ -127,6 +128,7 @@ class _DataSyncScreenState extends State<DataSyncScreen> {
       if (confirmed != true || !mounted) return;
       await sync.confirmRestore(pending);
       _toast('已从云端恢复');
+      await _afterRestoreReload();
     } on WebDavException catch (e) {
       _toast(e.message, error: true);
     } on BackupException catch (e) {
@@ -167,8 +169,26 @@ class _DataSyncScreenState extends State<DataSyncScreen> {
       if (confirmed != true || !mounted) return;
       await sync.confirmRestore(pending);
       _toast('已从本地文件恢复');
+      await _afterRestoreReload();
     } on BackupException catch (e) {
       _toast(e.message, error: true);
+    }
+  }
+
+  /// 恢复完成后的收尾：数据源配置可能被备份覆盖 → 重载内存列表；
+  /// 必填凭据缺失的源（跨设备恢复场景）集中提示重填
+  Future<void> _afterRestoreReload() async {
+    DataSourceProvider? ds;
+    try {
+      ds = context.read<DataSourceProvider>();
+    } on ProviderNotFoundException {
+      return;
+    }
+    await ds.reload();
+    final missing = await ds.sourcesMissingCredentials();
+    if (!mounted) return;
+    if (missing.isNotEmpty) {
+      _toast('以下数据源需重新配置 API Key：${missing.join('、')}', error: true);
     }
   }
 

@@ -9,6 +9,7 @@ import '../models/media_ref.dart';
 import '../models/user_profile.dart';
 import '../providers/library_provider.dart';
 import '../widgets/media_cover.dart';
+import 'data_source_screen.dart';
 import 'data_sync_screen.dart';
 import 'personal_stats_screen.dart';
 
@@ -58,8 +59,15 @@ class ProfileScreen extends StatelessWidget {
             trailing: _ThemeModeLabel(mode: library.themeMode),
             onTap: () => _chooseThemeMode(context, library),
           ),
-          // Web 平台无本地存储，同步/备份不支持 → 隐藏入口
-          if (!kIsWeb)
+          // Web 平台无本地存储 / 真实网络栈受限 → 隐藏数据源与同步入口
+          if (!kIsWeb) ...[
+            _SettingItem(
+              icon: Icons.cloud_download_outlined,
+              label: '数据源管理',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const DataSourceScreen()),
+              ),
+            ),
             _SettingItem(
               icon: Icons.sync_rounded,
               label: '数据同步',
@@ -67,6 +75,7 @@ class ProfileScreen extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const DataSyncScreen()),
               ),
             ),
+          ],
           const SizedBox(height: 32),
           Text(
             '墨影 · v0.1.0\n一个正在成长的书籍与电影记录应用',

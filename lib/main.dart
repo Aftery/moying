@@ -5,9 +5,11 @@ import 'package:provider/provider.dart';
 import 'config/app_palette.dart';
 import 'config/app_theme.dart';
 import 'data/persistence.dart';
+import 'providers/data_source_provider.dart';
 import 'providers/library_provider.dart';
 import 'providers/sync_provider.dart';
 import 'screens/main_shell.dart';
+import 'services/data_source_manager.dart';
 
 /// 「墨影」入口 —— 书籍与电影记录应用
 ///
@@ -18,7 +20,15 @@ Future<void> main() async {
   final boot = await bootstrapApp();
   final sync = SyncProvider(store: boot.store, library: boot.library);
   await sync.loadSettings();
-  runApp(MoYingApp(library: boot.library, sync: sync));
+  final dataSource = DataSourceProvider(
+    manager: DataSourceManager(store: boot.store),
+  );
+  await dataSource.init();
+  runApp(MoYingApp(
+    library: boot.library,
+    sync: sync,
+    dataSource: dataSource,
+  ));
 }
 
 /// 档案中的主题偏好字符串 → ThemeMode
@@ -34,13 +44,16 @@ ThemeMode resolveThemeMode(String mode) {
 }
 
 class MoYingApp extends StatefulWidget {
-  const MoYingApp({super.key, this.library, this.sync});
+  const MoYingApp({super.key, this.library, this.sync, this.dataSource});
 
   /// 书影库 Provider；不传则用内存模式自建（测试 / 预览快速起应用）
   final LibraryProvider? library;
 
   /// 数据同步 Provider；不传则自建（Web / 测试内存模式无存储）
   final SyncProvider? sync;
+
+  /// 数据源 Provider；不传则自建（测试快速起应用）
+  final DataSourceProvider? dataSource;
 
   @override
   State<MoYingApp> createState() => _MoYingAppState();
@@ -50,12 +63,14 @@ class _MoYingAppState extends State<MoYingApp> {
   late final AppLifecycleListener _lifecycleListener;
   late final LibraryProvider _library;
   late final SyncProvider _sync;
+  late final DataSourceProvider _dataSource;
 
   @override
   void initState() {
     super.initState();
     _library = widget.library ?? LibraryProvider();
     _sync = widget.sync ?? SyncProvider(store: null, library: _library);
+    _dataSource = widget.dataSource ?? _buildFallbackDataSource();
     // App 挂起/隐藏/退出前冲刷合并写，尽量缩小「改了但还没落盘」的窗口
     _lifecycleListener = AppLifecycleListener(
       onStateChange: (state) {
@@ -66,6 +81,13 @@ class _MoYingAppState extends State<MoYingApp> {
         }
       },
     );
+  }
+
+  /// 兜底数据源（无注入时仅内存预设，配置不落盘；测试环境用）
+  DataSourceProvider _buildFallbackDataSource() {
+    final provider = DataSourceProvider(manager: DataSourceManager());
+    provider.init();
+    return provider;
   }
 
   @override
@@ -82,6 +104,7 @@ class _MoYingAppState extends State<MoYingApp> {
       providers: [
         ChangeNotifierProvider.value(value: _library),
         ChangeNotifierProvider.value(value: _sync),
+        ChangeNotifierProvider.value(value: _dataSource),
       ],
       child: const _AppShell(),
     );

@@ -239,7 +239,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).at(1), '测试作者');
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).at(2), '500');
+      // 联网检索上线后字段顺序：书名/作者/ISBN/总页数/分类
+      await tester.enterText(find.byType(TextField).at(3), '500');
       await tester.pumpAndSettle();
 
       // 保存按钮：AppBar 标题与按钮文案重名，且 Scaffold 遍历顺序 body 在 appBar 前，
@@ -294,8 +295,8 @@ void main() {
 
       final provider = await pumpCreator(tester);
 
-      // 分类字段是第 4 个 TextField（书名/作者/总页数之后）
-      final categoryField = find.byType(TextField).at(3);
+      // 分类字段是第 5 个 TextField（书名/作者/ISBN/总页数之后）
+      final categoryField = find.byType(TextField).at(4);
       await tester.enterText(categoryField, '幻');
       await tester.pumpAndSettle();
 
@@ -330,7 +331,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField).first, '自定义分类的书');
       await tester.enterText(find.byType(TextField).at(1), '作者乙');
-      await tester.enterText(find.byType(TextField).at(3), '科幻硬核');
+      await tester.enterText(find.byType(TextField).at(4), '科幻硬核');
       await tester.pumpAndSettle();
 
       final saveBtn =

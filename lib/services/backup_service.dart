@@ -80,6 +80,10 @@ class BackupService {
     'actors.json',
     'profile.json',
   ];
+
+  /// 数据源配置（可选第 5 文件：未进过管理页时不存在；敏感凭据不在内，
+  /// 存系统安全存储。旧版本应用恢复本备份会静默忽略该文件，向后兼容）
+  static const String _dataSourceFile = 'data_sources.json';
   static const String _preRestoreDir = 'backup-pre-restore';
 
   /// 打包备份字节（调用前请 `store.flush()` 保证磁盘为最新）
@@ -91,6 +95,11 @@ class BackupService {
         throw BackupException('本地数据文件缺失：$name');
       }
       files[name] = await f.readAsBytes();
+    }
+    Uint8List? dataSourceBytes;
+    final dsFile = store.fileInDataDir(_dataSourceFile);
+    if (await dsFile.exists()) {
+      dataSourceBytes = await dsFile.readAsBytes();
     }
     final imageNames = includeImages ? await store.listImageFiles() : const <String>[];
     final imageData = <String, Uint8List>{};
@@ -105,6 +114,8 @@ class BackupService {
       counts: {
         for (final name in _collectionFiles)
           name: _countItems(files[name]!),
+        if (dataSourceBytes != null)
+          _dataSourceFile: _countSourceItems(dataSourceBytes),
       },
       imageCount: imageData.length,
     );
@@ -115,6 +126,8 @@ class BackupService {
         'data': {
           for (final name in _collectionFiles)
             name: jsonDecode(utf8.decode(files[name]!)),
+          if (dataSourceBytes != null)
+            _dataSourceFile: jsonDecode(utf8.decode(dataSourceBytes)),
         },
       });
       return Uint8List.fromList(utf8.encode(merged));
@@ -124,6 +137,9 @@ class BackupService {
       ..addFile(_textFile('manifest.json', jsonEncode(manifest.toJson())));
     for (final entry in files.entries) {
       archive.addFile(_bytesFile(entry.key, entry.value));
+    }
+    if (dataSourceBytes != null) {
+      archive.addFile(_bytesFile(_dataSourceFile, dataSourceBytes));
     }
     for (final entry in imageData.entries) {
       archive.addFile(_bytesFile('images/${entry.key}', entry.value));
@@ -149,7 +165,7 @@ class BackupService {
       '${store.dataDir.path}${Platform.pathSeparator}$_preRestoreDir',
     );
     await preDir.create(recursive: true);
-    for (final name in _collectionFiles) {
+    for (final name in [..._collectionFiles, _dataSourceFile]) {
       final f = store.fileInDataDir(name);
       if (await f.exists()) {
         await f.copy('${preDir.path}${Platform.pathSeparator}$name');
@@ -163,6 +179,12 @@ class BackupService {
         throw BackupException('备份缺少必需文件：$name');
       }
       await store.writeFileAtomic(name, data);
+    }
+
+    // 2.5) 数据源配置（可选：备份里没有则保留本地现状）
+    final dsData = parsed.files[_dataSourceFile];
+    if (dsData != null) {
+      await store.writeFileAtomic(_dataSourceFile, dsData);
     }
 
     // 3) 图片：清空重建（备份为完整快照语义）
@@ -271,6 +293,17 @@ class BackupService {
     try {
       final root = jsonDecode(utf8.decode(collectionJson));
       final items = root is Map<String, dynamic> ? root['items'] : null;
+      return items is List ? items.length : 0;
+    } on FormatException {
+      return 0;
+    }
+  }
+
+  /// 统计 data_sources.json 的 sources 条数（容错：损坏按 0）
+  int _countSourceItems(Uint8List bytes) {
+    try {
+      final root = jsonDecode(utf8.decode(bytes));
+      final items = root is Map<String, dynamic> ? root['sources'] : null;
       return items is List ? items.length : 0;
     } on FormatException {
       return 0;

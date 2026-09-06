@@ -52,6 +52,7 @@ class Book {
     this.startedAt,
     this.finishedAt,
     this.cover,
+    this.isbn,
     this.source,
   });
 
@@ -106,6 +107,9 @@ class Book {
   /// 封面图引用（可空：无图时 UI 用 coverHue + emoji 渐变占位）
   final MediaRef? cover;
 
+  /// ISBN（ISBN-13 / ISBN-10，快速检索回填与手工录入均可）
+  final String? isbn;
+
   /// 数据溯源标记（可空：P6 网络补全落地后记录来源与外部 id，如 googleBooksId）
   final String? source;
 
@@ -146,6 +150,7 @@ class Book {
     Object? startedAt = _unset,
     Object? finishedAt = _unset,
     Object? cover = _unset,
+    Object? isbn = _unset,
     Object? source = _unset,
   }) {
     return Book(
@@ -166,6 +171,7 @@ class Book {
       startedAt: _take(startedAt, this.startedAt),
       finishedAt: _take(finishedAt, this.finishedAt),
       cover: _take(cover, this.cover),
+      isbn: _take(isbn, this.isbn),
       source: _take(source, this.source),
     );
   }
@@ -200,6 +206,7 @@ class Book {
         if (startedAt != null) 'startedAt': startedAt!.toIso8601String(),
         if (finishedAt != null) 'finishedAt': finishedAt!.toIso8601String(),
         if (cover != null) 'cover': cover!.toJson(),
+        if (isbn != null) 'isbn': isbn,
         if (source != null) 'source': source,
       };
 
@@ -229,6 +236,7 @@ class Book {
         cover: json['cover'] == null
             ? null
             : MediaRef.fromJson(json['cover'] as Map<String, dynamic>),
+        isbn: json['isbn'] as String?,
         source: json['source'] as String?,
       );
 
@@ -255,10 +263,11 @@ class Book {
           other.startedAt == startedAt &&
           other.finishedAt == finishedAt &&
           other.cover == cover &&
+          other.isbn == isbn &&
           other.source == source;
 
   @override
   int get hashCode => Object.hash(id, title, author, totalPages, createdAt,
       currentPage, status, coverHue, rating, year, emoji, category, notes,
-      startedAt, finishedAt, cover, source);
+      startedAt, finishedAt, cover, isbn, source);
 }
