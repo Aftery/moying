@@ -4,6 +4,7 @@ import 'dart:io';
 import '../models/actor.dart';
 import '../models/book.dart';
 import '../models/movie.dart';
+import '../models/sync_settings.dart';
 import '../models/user_profile.dart';
 
 /// 三集合数据快照（内存形态与磁盘形态之间的统一载体）
@@ -59,9 +60,37 @@ class LibraryStore {
   static const String _moviesFile = 'movies.json';
   static const String _actorsFile = 'actors.json';
   static const String _profileFile = 'profile.json';
+  static const String _settingsFile = 'settings.json';
 
   /// images 子目录（上传图片复制目标，MediaRef.localFile 相对此目录）
   Directory get imagesDir => Directory(_join('images'));
+
+  // ==================== 备份辅助（BackupService 用） ====================
+
+  /// 数据目录下的文件（集合 JSON / settings.json 等，[name] 为裸文件名）
+  File fileInDataDir(String name) => File(_join(name));
+
+  /// 列出 images/ 下的图片文件名（目录不存在返回空）
+  Future<List<String>> listImageFiles() async {
+    final dir = imagesDir;
+    if (!await dir.exists()) return const [];
+    return dir
+        .list()
+        .where((e) => e is File)
+        .map((e) => e.uri.pathSegments.last)
+        .toList();
+  }
+
+  /// images/ 下指定文件名的文件
+  File imageFileByName(String name) => File(_join('images', name));
+
+  /// 原子覆盖写数据目录下的 JSON 文件（tmp + rename，与集合写同契约）
+  Future<void> writeFileAtomic(String name, List<int> bytes) async {
+    await dataDir.create(recursive: true);
+    final tmp = File(_join('$name.tmp'));
+    await tmp.writeAsBytes(bytes);
+    await tmp.rename(_join(name));
+  }
 
   /// 加载全部数据（或首启 seed）
   ///
@@ -138,6 +167,49 @@ class LibraryStore {
   /// 保存用户档案（合并写 + 原子写；返回后该次数据已落盘）
   Future<void> saveProfile(UserProfile profile) =>
       _enqueueSave(_profileFile, [profile.toJson()]);
+
+  // ==================== 同步配置（settings.json，单对象） ====================
+
+  /// 加载同步配置（缺文件 → 默认配置写盘；损坏 → 默认配置，不阻断启动）
+  ///
+  /// 与集合文件不同：settings 丢失/损坏只影响体验不丢数据，
+  /// 因此**不抛异常**，回退默认值并覆写修复。
+  Future<SyncSettings> loadSettings() async {
+    await dataDir.create(recursive: true);
+    final file = File(_join(_settingsFile));
+    if (!await file.exists()) {
+      const defaults = SyncSettings();
+      await _writeSettings(defaults);
+      return defaults;
+    }
+    try {
+      final content = await file.readAsString();
+      final root = jsonDecode(content);
+      if (root is! Map<String, dynamic>) {
+        throw const FormatException('顶层必须是对象');
+      }
+      return SyncSettings.fromJson(root);
+    } on FormatException {
+      const defaults = SyncSettings();
+      await _writeSettings(defaults);
+      return defaults;
+    }
+  }
+
+  /// 保存同步配置（原子写；返回后已落盘）
+  Future<void> saveSettings(SyncSettings settings) => _writeSettings(settings);
+
+  /// settings 原子写（单对象形态，schemaVersion 校验与集合文件共用常量）
+  Future<void> _writeSettings(SyncSettings settings) async {
+    await dataDir.create(recursive: true);
+    final tmp = File(_join('$_settingsFile.tmp'));
+    const encoder = JsonEncoder.withIndent('  ');
+    await tmp.writeAsString(encoder.convert({
+      'schemaVersion': schemaVersion,
+      ...settings.toJson(),
+    }));
+    await tmp.rename(_join(_settingsFile));
+  }
 
   /// 立即冲刷未落盘的合并写（App 生命周期挂起/退出、测试断言前调用）
   ///

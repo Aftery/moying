@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,6 +9,7 @@ import '../models/media_ref.dart';
 import '../models/user_profile.dart';
 import '../providers/library_provider.dart';
 import '../widgets/media_cover.dart';
+import 'data_sync_screen.dart';
 import 'personal_stats_screen.dart';
 
 /// 个人中心 —— 档案（昵称/签名/头像）、主题偏好、个人统计入口
@@ -56,13 +58,15 @@ class ProfileScreen extends StatelessWidget {
             trailing: _ThemeModeLabel(mode: library.themeMode),
             onTap: () => _chooseThemeMode(context, library),
           ),
-          _SettingItem(
-            icon: Icons.sync_rounded,
-            label: '数据同步',
-            trailing: Text('即将上线',
-                style: TextStyle(
-                    fontSize: 12, color: context.colors.textMuted)),
-          ),
+          // Web 平台无本地存储，同步/备份不支持 → 隐藏入口
+          if (!kIsWeb)
+            _SettingItem(
+              icon: Icons.sync_rounded,
+              label: '数据同步',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const DataSyncScreen()),
+              ),
+            ),
           const SizedBox(height: 32),
           Text(
             '墨影 · v0.1.0\n一个正在成长的书籍与电影记录应用',
@@ -81,9 +85,6 @@ class ProfileScreen extends StatelessWidget {
   // ---------- 档案只读展示（点卡片弹出，编辑走「编辑资料」行）----------
 
   void _showProfileInfo(BuildContext context, UserProfile profile) {
-    // TEMP 诊断：真机弹窗签名缺失，打印实际值定位（验证后移除）
-    // ignore: avoid_print
-    print('PROFILE-SHEET sig=${profile.signature}');
     final signature = profile.signature?.trim() ?? '';
     showModalBottomSheet<void>(
       context: context,

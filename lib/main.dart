@@ -6,6 +6,7 @@ import 'config/app_palette.dart';
 import 'config/app_theme.dart';
 import 'data/persistence.dart';
 import 'providers/library_provider.dart';
+import 'providers/sync_provider.dart';
 import 'screens/main_shell.dart';
 
 /// 「墨影」入口 —— 书籍与电影记录应用
@@ -14,8 +15,10 @@ import 'screens/main_shell.dart';
 /// Web：回退内存模式（见 data/persistence.dart 的按平台接线）。
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final provider = await createAppProvider();
-  runApp(MoYingApp(provider: provider));
+  final boot = await bootstrapApp();
+  final sync = SyncProvider(store: boot.store, library: boot.library);
+  await sync.loadSettings();
+  runApp(MoYingApp(library: boot.library, sync: sync));
 }
 
 /// 档案中的主题偏好字符串 → ThemeMode
@@ -31,10 +34,13 @@ ThemeMode resolveThemeMode(String mode) {
 }
 
 class MoYingApp extends StatefulWidget {
-  const MoYingApp({super.key, this.provider});
+  const MoYingApp({super.key, this.library, this.sync});
 
-  /// 全局 Provider；不传则用内存模式自建（测试 / 预览快速起应用）
-  final LibraryProvider? provider;
+  /// 书影库 Provider；不传则用内存模式自建（测试 / 预览快速起应用）
+  final LibraryProvider? library;
+
+  /// 数据同步 Provider；不传则自建（Web / 测试内存模式无存储）
+  final SyncProvider? sync;
 
   @override
   State<MoYingApp> createState() => _MoYingAppState();
@@ -42,17 +48,21 @@ class MoYingApp extends StatefulWidget {
 
 class _MoYingAppState extends State<MoYingApp> {
   late final AppLifecycleListener _lifecycleListener;
+  late final LibraryProvider _library;
+  late final SyncProvider _sync;
 
   @override
   void initState() {
     super.initState();
+    _library = widget.library ?? LibraryProvider();
+    _sync = widget.sync ?? SyncProvider(store: null, library: _library);
     // App 挂起/隐藏/退出前冲刷合并写，尽量缩小「改了但还没落盘」的窗口
     _lifecycleListener = AppLifecycleListener(
       onStateChange: (state) {
         if (state == AppLifecycleState.paused ||
             state == AppLifecycleState.hidden ||
             state == AppLifecycleState.detached) {
-          widget.provider?.flush();
+          _library.flush();
         }
       },
     );
@@ -68,8 +78,11 @@ class _MoYingAppState extends State<MoYingApp> {
   Widget build(BuildContext context) {
     // 注意：本层 context 在 Provider 之上，不能 watch；
     // 主题偏好读取与系统栏同步都下沉到 Provider 之下的 _AppShell。
-    return ChangeNotifierProvider(
-      create: (_) => widget.provider ?? LibraryProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _library),
+        ChangeNotifierProvider.value(value: _sync),
+      ],
       child: const _AppShell(),
     );
   }
@@ -84,11 +97,20 @@ class _AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<_AppShell> {
+  bool _autoSyncFired = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // 系统状态栏/导航栏随主题偏好联动（依赖变化时自动重调）
     _syncSystemChrome(context.watch<LibraryProvider>().themeMode);
+    // 首帧后触发一次「启动时自动同步」（节流与条件判断在 SyncProvider 内）
+    if (!_autoSyncFired) {
+      _autoSyncFired = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<SyncProvider>().tryAutoSyncOnResume();
+      });
+    }
   }
 
   void _syncSystemChrome(String mode) {

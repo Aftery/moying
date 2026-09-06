@@ -69,6 +69,9 @@ class LibraryProvider extends ChangeNotifier {
   /// 立即把未落盘的合并写冲盘（App 生命周期挂起/退出前调用）
   Future<void> flush() async => _store?.flush();
 
+  /// 云端恢复覆盖磁盘后重新从存储加载（SyncProvider 恢复完成后调用）
+  Future<void> reloadFromStore() => init();
+
   // ==================== 用户档案与主题偏好 ====================
 
   /// 当前用户档案（单例，profile.json）

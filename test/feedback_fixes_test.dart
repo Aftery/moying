@@ -1,12 +1,16 @@
 // 用户反馈 4 项修复的回归测试：
-// 1) 片长输入：digitsOnly 过滤（搜狗数字键盘兼容修复的钉子）
+// 1) 片长输入：文本通道 + onChanged 净化（搜狗组合输入兼容的钉子）
 // 2) 导演自动挂演员第 0 位（失焦/回车同步、清空移除、删除不弹回）
 // 3) 仪表盘卡片：单击进详情、长按进编辑
 // 4) 个人页只读弹窗：签名非空必须渲染
+// 5) 仪表盘空态点击直达新增页（书库/影库为空时）
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import 'package:moying/data/library_store.dart';
 import 'package:moying/models/user_profile.dart';
 import 'package:moying/providers/library_provider.dart';
 import 'package:moying/screens/book_edit_screen.dart';
@@ -48,7 +52,7 @@ Finder _saveButton() => find.ancestor(
     );
 
 void main() {
-  group('片长输入过滤（digitsOnly）', () {
+  group('片长输入过滤（onChanged 净化）', () {
     testWidgets('输入纯数字正常进入', (tester) async {
       final p = LibraryProvider();
       await tester.pumpWidget(_wrap(p, const MovieEditScreen()));
@@ -75,7 +79,7 @@ void main() {
       );
     });
 
-    testWidgets('超过 4 位被截断（LengthLimiting）', (tester) async {
+    testWidgets('超过 4 位被截断', (tester) async {
       final p = LibraryProvider();
       await tester.pumpWidget(_wrap(p, const MovieEditScreen()));
       await tester.pumpAndSettle();
@@ -173,7 +177,8 @@ void main() {
     testWidgets('长按阅读列表卡片进入图书编辑页', (tester) async {
       final p = LibraryProvider();
       // 仪表盘依赖外层 Scaffold 的 Material（MainShell 提供），测试里补齐
-      await tester.pumpWidget(_wrap(p, const Scaffold(body: DashboardScreen())));
+      await tester
+          .pumpWidget(_wrap(p, const Scaffold(body: DashboardScreen())));
       await tester.pumpAndSettle();
 
       final book = p.readingList.first;
@@ -200,7 +205,8 @@ void main() {
 
     testWidgets('长按电影卡片进入电影编辑页', (tester) async {
       final p = LibraryProvider();
-      await tester.pumpWidget(_wrap(p, const Scaffold(body: DashboardScreen())));
+      await tester
+          .pumpWidget(_wrap(p, const Scaffold(body: DashboardScreen())));
       await tester.pumpAndSettle();
 
       final movie = p.movieList.first;
@@ -240,6 +246,98 @@ void main() {
 
       // 卡片上 + 弹窗内各渲染一份
       expect(find.text('读万卷书·行万里路'), findsNWidgets(2));
+    });
+  });
+
+  group('片长净化函数 sanitizeDurationInput', () {
+    test('纯数字原样保留', () {
+      expect(sanitizeDurationInput('169'), '169');
+    });
+
+    test('混入字母/符号/中文被过滤', () {
+      expect(sanitizeDurationInput('a1b6c9!分'), '169');
+    });
+
+    test('超过 4 位截断', () {
+      expect(sanitizeDurationInput('123456'), '1234');
+    });
+
+    test('全非数字结果为空串', () {
+      expect(sanitizeDurationInput('分钟 minutes'), '');
+    });
+  });
+
+  group('仪表盘空态点击直达新增页', () {
+    /// 建一个空书影库（空集合 seed，保证四集合文件齐全）
+    ///
+    /// 真实 dart:io 的 await 在 testWidgets 默认 FakeAsync zone 下永不完成，
+    /// 必须包在 [tester.runAsync]（真实异步 zone）里执行（同 media_pipeline_test）。
+    Future<LibraryProvider> emptyLibrary(
+      WidgetTester tester,
+      Directory dir,
+    ) async {
+      final p = await tester.runAsync(() async {
+        final store = LibraryStore(
+          dir,
+          seed: const LibrarySnapshot(books: [], movies: [], actors: []),
+        );
+        await store.load();
+        await store.loadProfile();
+        final p = LibraryProvider(store: store);
+        await p.init();
+        return p;
+      });
+      return p!;
+    }
+
+    testWidgets('书库为空：点击空态卡进入添加图书页', (tester) async {
+      // 大视口让全部区块免滚动直接可见（规避 scrollUntilVisible 多滚动容器歧义）
+      tester.view.physicalSize = const Size(1080, 3200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final dir = (await tester.runAsync(
+        () => Directory.systemTemp.createTemp('moying_empty_book'),
+      ))!;
+      addTearDown(() => tester.runAsync(() => dir.delete(recursive: true)));
+      final p = await emptyLibrary(tester, dir);
+      await tester
+          .pumpWidget(_wrap(p, const Scaffold(body: DashboardScreen())));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.ensureVisible(find.text('书库空空'));
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(find.text('书库空空'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(find.byType(BookEditScreen), findsOneWidget);
+      // AppBar 标题 + 页内标题各渲染一份
+      expect(find.text('添加图书'), findsWidgets);
+    });
+
+    testWidgets('影库为空：点击空态卡进入添加电影页', (tester) async {
+      tester.view.physicalSize = const Size(1080, 3200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final dir = (await tester.runAsync(
+        () => Directory.systemTemp.createTemp('moying_empty_movie'),
+      ))!;
+      addTearDown(() => tester.runAsync(() => dir.delete(recursive: true)));
+      final p = await emptyLibrary(tester, dir);
+      await tester
+          .pumpWidget(_wrap(p, const Scaffold(body: DashboardScreen())));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.ensureVisible(find.text('还没有电影记录'));
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(find.text('还没有电影记录'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(find.byType(MovieEditScreen), findsOneWidget);
+      expect(find.text('添加电影'), findsOneWidget);
     });
   });
 }

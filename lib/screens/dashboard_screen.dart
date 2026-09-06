@@ -171,7 +171,7 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           // 标题区占满剩余空间（窄屏超长时自动省略，避免溢出）
-           Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -201,13 +201,13 @@ class _Header extends StatelessWidget {
           ),
           IconButton(
             onPressed: () {},
-            icon:  Icon(Icons.search_rounded,
-                color: context.colors.textSecondary),
+            icon:
+                Icon(Icons.search_rounded, color: context.colors.textSecondary),
             tooltip: '搜索',
           ),
           IconButton(
             onPressed: () {},
-            icon:  Icon(Icons.notifications_none_rounded,
+            icon: Icon(Icons.notifications_none_rounded,
                 color: context.colors.textSecondary),
             tooltip: '通知',
           ),
@@ -290,12 +290,15 @@ class _BookGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (books.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: _InlineEmpty(
           icon: Icons.menu_book_outlined,
           title: '书库空空',
-          subtitle: '去「书籍」Tab 添加你的第一本书',
+          subtitle: '点击这里直接添加你的第一本书',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const BookEditScreen()),
+          ),
         ),
       );
     }
@@ -332,12 +335,15 @@ class _MovieGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (movies.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: _InlineEmpty(
           icon: Icons.movie_outlined,
           title: '还没有电影记录',
-          subtitle: '去「电影」Tab 添加你的第一部',
+          subtitle: '点击这里直接添加你的第一部电影',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const MovieEditScreen()),
+          ),
         ),
       );
     }
@@ -407,21 +413,23 @@ class _GridSection extends StatelessWidget {
 /// 仪表盘内联空态（嵌入 ListView 区块内，比 PlaceholderView 紧凑）
 ///
 /// - 圆角浅色卡片 + 居中 icon + 标题 + 多行描述
-/// - 不带 CTA：跳转由用户点击底部 Tab 自助完成（避免 Tab 控制器提升到全局的连带重构）
+/// - 传入 [onTap] 时整卡可点击（书籍 / 电影空态直达新增页）；不传则纯展示
 class _InlineEmpty extends StatelessWidget {
   const _InlineEmpty({
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
       decoration: BoxDecoration(
@@ -444,7 +452,7 @@ class _InlineEmpty extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             title,
-            style:  TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: context.colors.textPrimary,
@@ -454,7 +462,7 @@ class _InlineEmpty extends StatelessWidget {
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style:  TextStyle(
+            style: TextStyle(
               fontSize: 13,
               height: 1.55,
               color: context.colors.textMuted,
@@ -462,6 +470,12 @@ class _InlineEmpty extends StatelessWidget {
           ),
         ],
       ),
+    );
+    if (onTap == null) return card;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: card,
     );
   }
 }

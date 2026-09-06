@@ -13,6 +13,12 @@ dependencies:
   path_provider: ^2.1.4
   image_picker: ^1.1.2
   cupertino_icons: ^1.0.8
+  http: ^1.2.0                    # WebDAV 通信
+  flutter_secure_storage: ^9.2.2  # WebDAV 凭据（Keystore/Keychain）
+  archive: ^3.6.1                 # 含图备份 ZIP 打包（纯 Dart）
+  share_plus: ^10.0.0             # 导出 JSON 到本地
+  file_picker: ^8.0.0             # 从本地文件导入恢复
+  connectivity_plus: ^6.0.5       # 自动同步 Wi-Fi 探测
 
 dev_dependencies:
   flutter_test:

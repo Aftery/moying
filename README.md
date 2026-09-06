@@ -42,7 +42,7 @@ flutter build apk --release
 ## 目录结构
 
 ```
-lib/（39 个 .dart 文件）
+lib/（45 个 .dart 文件）
 
 ├── main.dart                     # 入口（Provider + 主题接线 + 状态栏 + 持久化）
 ├── config/
@@ -54,17 +54,22 @@ lib/（39 个 .dart 文件）
 │   ├── media_ref.dart            # MediaRef（本地文件 / 网络图引用，双空即占位）
 │   ├── movie.dart                # Movie + MovieStatus + kMovieCategories
 │   ├── stats.dart                # BookStats / MovieStats（聚合指标，无 mock 默认值）
+│   ├── sync_settings.dart        # SyncSettings（WebDAV 地址 / 自动同步偏好，不含密码）
 │   └── user_profile.dart         # UserProfile（昵称 / 签名 / 头像 / 主题偏好）
-├── providers/
-│   └── library_provider.dart     # 书影库状态（ChangeNotifier）+ 持久化接线
 ├── data/
 │   ├── library_store.dart        # JSON 存储：原子写 / 合并写 / schemaVersion / 图片管理
 │   ├── mock_data.dart            # 种子数据（12 本书 / 8 部电影；演员由演员表派生）
 │   ├── persistence.dart          # 平台门面（条件导入）
 │   ├── persistence_io.dart       # 手机 / 桌面实现（dart:io + path_provider）
 │   └── persistence_stub.dart     # Web 回退（内存存储）
+├── providers/
+│   ├── library_provider.dart     # 书影库状态（ChangeNotifier 单一数据源）
+│   └── sync_provider.dart        # 同步状态与动作（上传 / 恢复 / 自动同步）
 ├── services/
-│   └── image_pick_service.dart   # 选图服务抽象（image_picker）
+│   ├── image_pick_service.dart   # 选图服务抽象（image_picker）
+│   ├── webdav_client.dart        # WebDAV 最小客户端（PROPFIND / MKCOL / PUT / GET，可注入 fake）
+│   ├── backup_service.dart       # 备份打包 / 还原（JSON 单文件 / 含图 ZIP）
+│   └── secure_storage_service.dart # WebDAV 凭据安全存储（Keystore / Keychain）
 ├── screens/
 │   ├── main_shell.dart           # 底部导航壳（IndexedStack 保持各 Tab 状态）
 │   ├── dashboard_screen.dart     # 仪表盘主页（统计 + 当前任务 + 阅读 / 观影网格）
@@ -76,6 +81,7 @@ lib/（39 个 .dart 文件）
 │   ├── book_edit_screen.dart     # 书籍新增 / 编辑（分类联想、阅读时间、封面）
 │   ├── movie_edit_screen.dart    # 电影新增 / 编辑（演员联想、类型联想、评分、海报）
 │   ├── profile_screen.dart       # 个人中心（资料编辑 / 主题三选 / 统计入口）
+│   ├── data_sync_screen.dart     # 数据同步（WebDAV 云同步 + 本地导出导入）
 │   └── personal_stats_screen.dart # 个人数据统计
 └── widgets/
     ├── media_cover.dart          # 媒体图三态展示（本地 / 网络 / 占位）
@@ -92,8 +98,9 @@ lib/（39 个 .dart 文件）
     └── placeholder_view.dart     # 空态视图
 ```
 
-`test/` 下另有 16 个测试文件，共 153 个用例，覆盖模型序列化、存储层、Provider 持久化、
-图片管线、个人档案与主题、以及关键 UI 流程（联想输入、筛选恢复、卡片长按跳转等）。
+`test/` 下另有 17 个测试文件，共 175 个用例，覆盖模型序列化、存储层、Provider 持久化、
+图片管线、备份往返与 WebDAV 交互、个人档案与主题、以及关键 UI 流程（联想输入、筛选恢复、
+卡片长按跳转、仪表盘空态点击直达新增页、本地导出落盘与含图分支、片长输入净化和容等）。
 
 ## 特性说明
 
@@ -112,13 +119,17 @@ lib/（39 个 .dart 文件）
 - **书籍 / 电影 / 演员全链路增删改查**：三套编辑页 + 详情页；删除演员时若仍被影片引用会拒绝删除并列出引用来源
 - **搜索与筛选**：关键词搜索、分类 / 类型 / 状态下拉筛选（候选动态取自已有数据，含用户自定义项）、详情页点击作者即跳转并预填筛选条件
 - **图片管理**：相册选图 / 粘贴网络链接 / 移除封面，图片复制进应用私有目录，更换或删除时自动回收孤儿文件
-- **仪表盘真实数据联动**：统计双卡、当前任务、阅读与观影网格全部由书影数据实时计算，含空态兜底；「查看全部」跳转对应 Tab
+- **仪表盘真实数据联动**：统计双卡、当前任务、阅读与观影网格全部由书影数据实时计算，含空态兜底；书库 / 影库为空时，空态卡整卡可点击，直达「添加图书 / 添加电影」页；「查看全部」跳转对应 Tab
 - **个人中心**：昵称 / 签名 / 头像编辑（头像卡片点击为只读展示，「编辑资料」行进入编辑）、数据统计页、主题三选
+- **数据同步 / 备份（P5）**：WebDAV 云同步（坚果云 / Nextcloud 等标准网盘）——4 项服务器配置 +
+  测试连接、立即备份 / 从云端恢复（恢复前二次确认 + 本地快照兜底）、启动时自动同步（可限 Wi-Fi、
+  节流 1 小时）、备份可选包含本地图片（JSON 单文件 / 含图 ZIP）；本地导出改为弹「保存位置选择器」
+  由用户自选落盘路径（含图开关跟随同步偏好，开 → ZIP、关 → JSON），断网环境的保底手段。
+  凭据存系统安全存储（Keystore / Keychain），`settings.json` 不含密码；Web 平台隐藏该功能入口
 
 ## 路线图（未实现）
 
 - [ ] 联网信息补全：豆瓣 / TMDB 条目检索，自动填充真实封面与元数据
-- [ ] 备份与恢复：本地文件导出 + WebDAV 同步（需纳入 `profile.json`）
 - [ ] 年度目标设定与图表统计（当前「数据统计」页为数字汇总 + 进度环）
 - [ ] 仪表盘顶栏搜索 / 通知按钮接上功能（当前为空实现）
 

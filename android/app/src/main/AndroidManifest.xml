@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- WebDAV 云同步需要网络访问 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="moying"
         android:name="${applicationName}"
