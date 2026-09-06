@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../config/app_palette.dart';
+import '../providers/library_provider.dart';
 import 'books_screen.dart';
 import 'dashboard_screen.dart';
 import 'library_screens.dart';
@@ -30,9 +32,31 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    // 监听写盘错误并及时提示
+    final persistError = context.select<LibraryProvider, String>(
+      (p) => p.lastPersistError,
+    );
+    if (persistError.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(persistError),
+            backgroundColor: const Color(0xFFFF6B6B),
+          ),
+        );
+        context.read<LibraryProvider>().clearPersistError();
+      });
+    }
+
     return Scaffold(
-      // IndexedStack 保持各 Tab 状态（滚动位置等）
-      body: IndexedStack(index: _index, children: _pages),
+      // IndexedStack 保持各 Tab 状态（滚动位置等），各 Tab 套 RepaintBoundary 隔离绘制边界
+      body: IndexedStack(
+        index: _index,
+        children: [
+          for (final page in _pages) RepaintBoundary(child: page),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration:  BoxDecoration(
           color: context.colors.surface,

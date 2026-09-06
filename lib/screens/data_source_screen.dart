@@ -302,10 +302,16 @@ class _SourceTile extends StatelessWidget {
           activeColor: c.accent,
           onChanged: (_) async {
             final messenger = ScaffoldMessenger.of(context);
-            await ds.setDefault(config.id);
-            messenger.showSnackBar(
-              SnackBar(content: Text('已将「${config.name}」设为默认')),
-            );
+            try {
+              await ds.setDefault(config.id);
+              messenger.showSnackBar(
+                SnackBar(content: Text('已将「${config.name}」设为默认')),
+              );
+            } on Object catch (e) {
+              messenger.showSnackBar(
+                SnackBar(content: Text('设置默认源失败：$e')),
+              );
+            }
           },
         ),
         title: Row(
@@ -445,10 +451,15 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
   late final DataSourceProvider _ds = widget._provider;
   late final DataSourceConfig _config = widget.config;
 
+  late final TextEditingController _nameCtrl =
+      TextEditingController(text: _config.name);
   late final List<ConfigField> _fields;
   late final Map<String, TextEditingController> _plainCtrls;
   late final Map<String, TextEditingController> _secretCtrls;
   late final Map<String, bool> _secretVisible;
+
+  /// 防止异步操作连击
+  bool _busy = false;
 
   @override
   void initState() {
@@ -489,6 +500,7 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
 
   @override
   void dispose() {
+    _nameCtrl.dispose();
     for (final c in _plainCtrls.values) {
       c.dispose();
     }
@@ -539,6 +551,18 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
   }
 
   Future<void> _save() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await _doSave();
+    } on Object catch (e) {
+      if (mounted) _toast('保存失败：$e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _doSave() async {
     final name = (_nameCtrl.text).trim();
     if (name.isEmpty) {
       _toast('名称不能为空');
@@ -582,39 +606,48 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
   }
 
   Future<void> _testConnection() async {
-    // 先把当前表单内容落到 Provider（测试连接读取的是已保存配置）
-    final name = (_nameCtrl.text).trim();
-    final draft = _config.copyWith(
-      name: name.isEmpty ? _config.name : name,
-      config: {
-        for (final e in _plainCtrls.entries)
-          if (e.value.text.trim().isNotEmpty) e.key: e.value.text.trim(),
-      },
-      clearSummary: true,
-    );
-    for (final f in _fields.where((f) => f.isSecret)) {
-      final typed = _secretCtrls[f.key]!.text.trim();
-      if (typed.isNotEmpty && typed != '••••••••') {
-        await _ds.saveCredential(_config, f.key, typed);
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      // 先把当前表单内容落到 Provider（测试连接读取的是已保存配置）
+      final name = (_nameCtrl.text).trim();
+      final draft = _config.copyWith(
+        name: name.isEmpty ? _config.name : name,
+        config: {
+          for (final e in _plainCtrls.entries)
+            if (e.value.text.trim().isNotEmpty) e.key: e.value.text.trim(),
+        },
+        clearSummary: true,
+      );
+      for (final f in _fields.where((f) => f.isSecret)) {
+        final typed = _secretCtrls[f.key]!.text.trim();
+        if (typed.isNotEmpty && typed != '••••••••') {
+          await _ds.saveCredential(_config, f.key, typed);
+        }
       }
-    }
-    if (!widget.isNew) {
-      await _ds.updateSource(draft);
-    }
-    final ok = await _ds.testSource(_config.id);
-    if (!mounted) return;
-    final matches =
-        _ds.configs.where((c) => c.id == _config.id).toList(growable: false);
-    final latest = matches.isEmpty ? null : matches.first;
-    _toast(ok
-        ? '连接成功 ✓'
-        : (latest?.summary ?? _ds.actionError ?? '连接失败'));
-    if (ok) {
-      Navigator.of(context).pop(draft.copyWith(status: DataSourceStatus.connected));
+      if (!widget.isNew) {
+        await _ds.updateSource(draft);
+      }
+      final ok = await _ds.testSource(_config.id);
+      if (!mounted) return;
+      final matches =
+          _ds.configs.where((c) => c.id == _config.id).toList(growable: false);
+      final latest = matches.isEmpty ? null : matches.first;
+      _toast(ok
+          ? '连接成功 ✓'
+          : (latest?.summary ?? _ds.actionError ?? '连接失败'));
+      if (ok) {
+        Navigator.of(context).pop(draft.copyWith(status: DataSourceStatus.connected));
+      }
+    } on Object catch (e) {
+      if (mounted) _toast('测试失败：$e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _delete() async {
+    if (_busy) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -660,9 +693,6 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
       SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
     );
   }
-
-  late final TextEditingController _nameCtrl =
-      TextEditingController(text: _config.name);
 
   @override
   Widget build(BuildContext context) {
@@ -729,7 +759,7 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: _testConnection,
+                      onPressed: _busy ? null : _testConnection,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: c.accent,
                         side: BorderSide(color: c.accent, width: 1),
@@ -747,7 +777,7 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: FilledButton(
-                      onPressed: _save,
+                      onPressed: _busy ? null : _save,
                       style: FilledButton.styleFrom(
                         backgroundColor: c.accent,
                         shape: RoundedRectangleBorder(
@@ -768,7 +798,7 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
                 const SizedBox(height: 10),
                 Center(
                   child: TextButton.icon(
-                    onPressed: _delete,
+                    onPressed: _busy ? null : _delete,
                     style: TextButton.styleFrom(
                       foregroundColor: const Color(0xFFFF6B6B),
                       padding: const EdgeInsets.symmetric(vertical: 6),

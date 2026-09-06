@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import '../models/actor.dart';
 import '../models/book.dart';
 import '../models/data_source.dart';
@@ -297,12 +299,15 @@ class LibraryStore {
     if (!await source.exists()) {
       throw StoreException('源图片不存在：${source.path}');
     }
+    _ensureSafeRelativePath(entryId); // ponytail: path traversal guard
     final ext = _extensionOf(source.path);
     final name = '$entryId$ext';
     await imagesDir.create(recursive: true);
     final dest = File(_join('images', name));
-    if (await dest.exists()) await dest.delete();
-    await source.copy(dest.path);
+    // 临时文件 copy 再 rename：拷贝失败不丢旧图
+    final tmp = File(_join('images', '$name.tmp'));
+    await source.copy(tmp.path);
+    await tmp.rename(dest.path);
     return name;
   }
 
@@ -330,7 +335,17 @@ class LibraryStore {
       ? '${dataDir.path}${Platform.pathSeparator}$a'
       : '${dataDir.path}${Platform.pathSeparator}$a${Platform.pathSeparator}$b';
 
-  /// 逐文件加载：缺 → seed + 写盘；存在 → 解析校验
+  /// 将损坏文件改名隔离（保留证据），后缀加时间戳避免覆盖
+  Future<void> _quarantine(File file) async {
+    if (!await file.exists()) return;
+    final bad = File(
+      '${file.path}.corrupt-${DateTime.now().millisecondsSinceEpoch}',
+    );
+    await file.rename(bad.path);
+    debugPrint('[Store] 已隔离损坏文件：${file.path} → ${bad.path}');
+  }
+
+  /// 逐文件加载：缺 → seed + 写盘；存在 → 解析校验（任何异常均隔离并回落空列表，保证 App 启动）
   Future<List<T>> _loadList<T>(
     String fileName,
     List<T> seedItems,
@@ -350,29 +365,40 @@ class LibraryStore {
     String fileName,
     T Function(Map<String, dynamic>) fromJson,
   ) async {
-    final content = await File(_join(fileName)).readAsString();
-    dynamic root;
+    final file = File(_join(fileName));
     try {
-      root = jsonDecode(content);
-    } on FormatException catch (e) {
-      throw StoreException('$fileName JSON 损坏：${e.message}');
+      final content = await file.readAsString();
+      final root = jsonDecode(content);
+      if (root is! Map<String, dynamic>) {
+        throw StoreException('$fileName 格式错误：顶层必须是对象');
+      }
+      final version = root['schemaVersion'];
+      if (version is! int || version != schemaVersion) {
+        throw StoreException(
+          '$fileName schemaVersion 不符：期望 $schemaVersion，实际 $version',
+        );
+      }
+      final items = root['items'];
+      if (items is! List) {
+        throw StoreException('$fileName 格式错误：items 必须是数组');
+      }
+      final result = <T>[];
+      for (final e in items) {
+        try {
+          result.add(fromJson(e as Map<String, dynamic>));
+        } on Object catch (e) {
+          // 逐条隔离：单条损坏不影响同文件其他正常条目
+          debugPrint('[Store] $fileName 中一条记录解析失败($e)，已跳过');
+        }
+      }
+      return result;
+    } on Object catch (e) {
+      // 关键防御：捕获所有异常（CastError、ArgumentError、FormatException 等）
+      // 隔离损坏文件，回落空列表（上层会以空列表或默认数据启动，绝不白屏崩溃）
+      await _quarantine(file);
+      debugPrint('[Store] $fileName 解析失败($e)，已隔离并回退空列表');
+      return <T>[];
     }
-    if (root is! Map<String, dynamic>) {
-      throw StoreException('$fileName 格式错误：顶层必须是对象');
-    }
-    final version = root['schemaVersion'];
-    if (version is! int || version != schemaVersion) {
-      throw StoreException(
-        '$fileName schemaVersion 不符：期望 $schemaVersion，实际 $version',
-      );
-    }
-    final items = root['items'];
-    if (items is! List) {
-      throw StoreException('$fileName 格式错误：items 必须是数组');
-    }
-    return items
-        .map((e) => fromJson(e as Map<String, dynamic>))
-        .toList();
   }
 
   /// 原子写：写 `.tmp` → rename 到目标

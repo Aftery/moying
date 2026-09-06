@@ -65,7 +65,7 @@ class CoverPlaceholder extends StatelessWidget {
               ),
               Center(
                 child: Text(
-                  emoji ?? title.characters.first,
+                  emoji ?? (title.isEmpty ? '?' : title.characters.first),
                   style: TextStyle(fontSize: fontSize),
                 ),
               ),

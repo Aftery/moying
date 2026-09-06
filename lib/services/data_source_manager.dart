@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import '../data/library_store.dart';
 import '../models/data_source.dart';
 import 'data_source_interface.dart';
@@ -32,8 +34,10 @@ class DataSourceManager {
   final Map<DataSourceType, MovieDataSource> _movieImpls = {};
   final Map<DataSourceType, BookDataSource> _bookImpls = {};
 
-  /// 当前生效的配置列表（内存镜像；改动即落盘）
-  List<DataSourceConfig> configs = [];
+  /// 当前生效的配置列表（内存镜像；改动即落盘；M2: 对外只读，防绕过 notifyListeners 改状态）
+  List<DataSourceConfig> _configs = [];
+
+  UnmodifiableListView<DataSourceConfig> get configs => UnmodifiableListView(_configs);
 
   void registerMovie(MovieDataSource impl) => _movieImpls[impl.type] = impl;
 
@@ -97,11 +101,11 @@ class DataSourceManager {
     final store = _store;
     final loaded = store == null ? null : await store.loadDataSourceConfigs();
     if (loaded == null) {
-      configs = _builtinPresets();
+      _configs = _builtinPresets();
       await saveConfigs();
       return configs;
     }
-    configs = loaded;
+    _configs = loaded;
     return configs;
   }
 
@@ -109,7 +113,7 @@ class DataSourceManager {
   Future<void> saveConfigs() async {
     final store = _store;
     if (store == null) return;
-    await store.saveDataSourceConfigs(configs);
+    await store.saveDataSourceConfigs(_configs);
   }
 
   /// 内置默认预设：TMDB（影视默认）+ Google Books（书籍默认，免配置）
@@ -135,33 +139,37 @@ class DataSourceManager {
 
   /// 添加一个内置类型的数据源实例（豆瓣等后续迭代类型由 UI 拦截）
   Future<DataSourceConfig> addConfig(DataSourceConfig config) async {
-    configs = [...configs, config];
+    _configs = [..._configs, config];
     await saveConfigs();
     return config;
   }
 
-  /// 更新配置（按 id 替换）
+  /// 更新配置（按 id 替换；M12: id 缺失抛异常防静默丢失）
   Future<void> updateConfig(DataSourceConfig config) async {
-    configs = [
-      for (final c in configs) if (c.id == config.id) config,
+    final idx = _configs.indexWhere((c) => c.id == config.id);
+    if (idx < 0) {
+      throw const DataSourceException('要更新的数据源不存在');
+    }
+    _configs = [
+      for (final c in _configs) if (c.id == config.id) config else c,
     ];
     await saveConfigs();
   }
 
   /// 移除数据源（同时清理凭据；若它是默认源，把同类剩余第一个顶上）
   Future<void> removeConfig(String id) async {
-    final targets = configs.where((c) => c.id == id).toList(growable: false);
+    final targets = _configs.where((c) => c.id == id).toList(growable: false);
     for (final c in targets) {
       await deleteAllCredentials(c);
     }
-    configs.removeWhere((c) => c.id == id);
+    _configs.removeWhere((c) => c.id == id);
     for (final target in targets.where((c) => c.isDefault)) {
       final sameCategory =
-          configs.where((c) => c.category == target.category).toList();
+          _configs.where((c) => c.category == target.category).toList();
       if (sameCategory.isNotEmpty) {
         final first = sameCategory.first;
-        configs = [
-          for (final c in configs)
+        _configs = [
+          for (final c in _configs)
             c.id == first.id ? c.copyWith(isDefault: true) : c,
         ];
       }
@@ -171,12 +179,13 @@ class DataSourceManager {
 
   /// 设为默认源（同类别互斥）
   Future<void> setDefault(String id) async {
-    final target = configs.firstWhere(
-      (c) => c.id == id,
-      orElse: () => throw StateError('source not found: $id'),
-    );
-    configs = [
-      for (final c in configs)
+    final index = _configs.indexWhere((c) => c.id == id);
+    if (index < 0) {
+      throw const DataSourceException('数据源不存在，可能已被删除');
+    }
+    final target = _configs[index];
+    _configs = [
+      for (final c in _configs)
         c.copyWith(
           isDefault: c.id == id
               ? true
@@ -222,5 +231,15 @@ class DataSourceManager {
     );
     await updateConfig(updated);
     return updated;
+  }
+
+  /// 释放各数据源实现占用的底层网络连接与资源
+  void close() {
+    for (final impl in _movieImpls.values) {
+      if (impl is TmdbDataSource) impl.close();
+    }
+    for (final impl in _bookImpls.values) {
+      if (impl is GoogleBooksDataSource) impl.close();
+    }
   }
 }

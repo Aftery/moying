@@ -57,20 +57,24 @@ class ActorDetailScreen extends StatelessWidget {
       name: name,
       bio: bio.isEmpty ? null : bio,
     );
-    if (!result.avatarTouched) {
-      lib.updateActor(base);
-      return;
+    try {
+      if (!result.avatarTouched) {
+        lib.updateActor(base);
+        return;
+      }
+      // 头像被改动：本地图先复制落盘 → local；URL → network；否则移除(null)
+      MediaRef? avatar;
+      final picked = result.avatarFile;
+      if (picked != null) {
+        final rel = await lib.attachImage(picked, actor.id);
+        avatar = rel == null ? null : MediaRef.local(rel);
+      } else if (result.avatarUrl.isNotEmpty) {
+        avatar = MediaRef.network(result.avatarUrl);
+      }
+      lib.updateActor(base.copyWith(avatar: avatar));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('保存演员信息失败：$e')));
     }
-    // 头像被改动：本地图先复制落盘 → local；URL → network；否则移除(null)
-    MediaRef? avatar;
-    final picked = result.avatarFile;
-    if (picked != null) {
-      final rel = await lib.attachImage(picked, actor.id);
-      avatar = rel == null ? null : MediaRef.local(rel);
-    } else if (result.avatarUrl.isNotEmpty) {
-      avatar = MediaRef.network(result.avatarUrl);
-    }
-    lib.updateActor(base.copyWith(avatar: avatar));
   }
 
   // ---------- 删除（引用保护）----------

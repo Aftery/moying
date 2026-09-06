@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:archive/archive.dart';
 
 import '../data/library_store.dart';
@@ -73,7 +73,8 @@ class BackupService {
 
   final LibraryStore store;
 
-  static const int backupSchemaVersion = 2;
+  static /// 备份包 ZIP/JSON 外层协议版本（区别于 LibraryStore.schemaVersion 的单集合存储格式版本）
+const int backupSchemaVersion = 2;
   static const List<String> _collectionFiles = [
     'books.json',
     'movies.json',
@@ -104,7 +105,15 @@ class BackupService {
     final imageNames = includeImages ? await store.listImageFiles() : const <String>[];
     final imageData = <String, Uint8List>{};
     for (final name in imageNames) {
-      imageData[name] = await store.imageFileByName(name).readAsBytes();
+      try {
+        final f = store.imageFileByName(name);
+        if (await f.exists()) {
+          imageData[name] = await f.readAsBytes();
+        }
+      } catch (e) {
+        // ponytail: 单张图片读取失败容错，跳过不中断全量备份
+        debugPrint('[BackupService] 读取图片失败跳过: $name, error: $e');
+      }
     }
 
     final manifest = BackupManifest(
@@ -171,6 +180,16 @@ class BackupService {
         await f.copy('${preDir.path}${Platform.pathSeparator}$name');
       }
     }
+    // images 也纳入快照（恢复中途失败时的最后一道防线）
+    final preImgDir = Directory('${preDir.path}${Platform.pathSeparator}images');
+    try {
+      if (await store.imagesDir.exists()) {
+        await preImgDir.create(recursive: true);
+        await _copyDir(store.imagesDir, preImgDir);
+      }
+    } catch (_) {
+      // images 快照失败不影响恢复主流程
+    }
 
     // 2) 覆盖四集合 JSON（原子写）
     for (final name in _collectionFiles) {
@@ -187,14 +206,38 @@ class BackupService {
       await store.writeFileAtomic(_dataSourceFile, dsData);
     }
 
-    // 3) 图片：清空重建（备份为完整快照语义）
+    // 3) 图片：原子替换（先写临时目录，全部成功后再重命名，避免中途失败丢失现有图片）
     final imgDir = store.imagesDir;
-    if (await imgDir.exists()) {
-      await imgDir.delete(recursive: true);
-    }
-    await imgDir.create(recursive: true);
-    for (final entry in parsed.images.entries) {
-      await store.imageFileByName(entry.key).writeAsBytes(entry.value);
+    final tmpDir = Directory('${imgDir.path}-new-${DateTime.now().millisecondsSinceEpoch}');
+    final oldDir = Directory('${imgDir.path}-old-${DateTime.now().millisecondsSinceEpoch}');
+    await tmpDir.create(recursive: true);
+
+    try {
+      // 写入全部新图片到临时目录
+      for (final entry in parsed.images.entries) {
+        final targetFile = File('${tmpDir.path}${Platform.pathSeparator}${entry.key}');
+        await targetFile.writeAsBytes(entry.value);
+      }
+
+      // 全部新图写成功，执行原子替换
+      if (await imgDir.exists()) {
+        await imgDir.rename(oldDir.path); // 旧图改名保命
+      }
+      await tmpDir.rename(imgDir.path); // 新图上位
+
+      // 替换成功，清理旧图
+      if (await oldDir.exists()) {
+        await oldDir.delete(recursive: true);
+      }
+    } catch (e) {
+      // 恢复中途失败：清理临时目录，如果旧图被挪走了则还原旧图
+      if (await tmpDir.exists()) {
+        await tmpDir.delete(recursive: true);
+      }
+      if (await oldDir.exists() && !await imgDir.exists()) {
+        await oldDir.rename(imgDir.path);
+      }
+      rethrow;
     }
   }
 
@@ -245,7 +288,11 @@ class BackupService {
     // 单 JSON（不含图）
     final Map<String, dynamic> root;
     try {
-      root = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+      final decoded = jsonDecode(utf8.decode(bytes));
+      if (decoded is! Map<String, dynamic>) {
+        throw BackupException('备份文件不是有效的墨影备份');
+      }
+      root = decoded;
     } on FormatException {
       throw BackupException('备份文件不是有效的墨影备份');
     }
@@ -285,6 +332,21 @@ class BackupService {
       throw BackupException(
         '备份版本过低（v${manifest.schemaVersion}），暂不支持恢复',
       );
+    }
+  }
+
+  /// 递归复制目录（排除以 . 开头的隐藏文件/子目录）
+  Future<void> _copyDir(Directory src, Directory dst) async {
+    if (!await dst.exists()) await dst.create(recursive: true);
+    for (final entry in src.listSync()) {
+      if (entry.path.split(Platform.pathSeparator).last.startsWith('.')) {
+        continue;
+      }
+      if (entry is Directory) {
+        await _copyDir(entry, Directory('${dst.path}${Platform.pathSeparator}${entry.uri.pathSegments.last}'));
+      } else if (entry is File) {
+        await entry.copy('${dst.path}${Platform.pathSeparator}${entry.uri.pathSegments.last}');
+      }
     }
   }
 

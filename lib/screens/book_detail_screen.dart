@@ -572,23 +572,20 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
         builder: (context, constraints) {
           if (!_measured) {
             _measured = true;
-            final style = TextStyle(
-              fontSize: 14,
-              height: 1.7,
-              color: context.colors.textSecondary,
+            final span = TextSpan(
+              text: widget.text,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.7,
+                color: context.colors.textSecondary,
+              ),
             );
-            final span = TextSpan(text: widget.text, style: style);
-            final collapsed = TextPainter(
+            final painter = TextPainter(
               text: span,
               maxLines: _foldLines,
               textDirection: TextDirection.ltr,
             )..layout(maxWidth: constraints.maxWidth);
-            final full = TextPainter(
-              text: span,
-              textDirection: TextDirection.ltr,
-            )..layout(maxWidth: constraints.maxWidth);
-            // 完整高度 > 折叠行高 → 需要「展开」入口
-            final needFold = full.height > collapsed.height + 1;
+            final needFold = painter.didExceedMaxLines;
             if (needFold != _overflow) {
               _overflow = needFold;
               WidgetsBinding.instance.addPostFrameCallback((_) {

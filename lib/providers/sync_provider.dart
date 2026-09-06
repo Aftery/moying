@@ -98,6 +98,7 @@ class SyncProvider extends ChangeNotifier {
       _lastError = e.message;
       rethrow;
     } finally {
+      client.close();
       notifyListeners();
     }
   }
@@ -125,6 +126,7 @@ class SyncProvider extends ChangeNotifier {
       _lastError = e.message;
       rethrow;
     } finally {
+      client.close();
       _isSyncing = false;
       notifyListeners();
     }
@@ -155,6 +157,7 @@ class SyncProvider extends ChangeNotifier {
       _lastError = e.message;
       rethrow;
     } finally {
+      client.close();
       _isSyncing = false;
       notifyListeners();
     }

@@ -51,7 +51,11 @@ class GoogleBooksDataSource implements BookDataSource {
       throw DataSourceException('Google Books 接口异常（HTTP ${resp.statusCode}）');
     }
     try {
-      return jsonDecode(resp.body) as Map<String, dynamic>;
+      final root = jsonDecode(resp.body);
+      if (root is! Map<String, dynamic>) {
+        throw const DataSourceException('Google Books 返回格式异常');
+      }
+      return root;
     } on FormatException {
       throw const DataSourceException('Google Books 返回内容解析失败');
     }
@@ -140,4 +144,7 @@ class GoogleBooksDataSource implements BookDataSource {
     final trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
   }
+
+  /// 释放底层 HTTP 客户端连接池
+  void close() => _client.close();
 }

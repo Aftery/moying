@@ -268,6 +268,6 @@ class Book {
 
   @override
   int get hashCode => Object.hash(id, title, author, totalPages, createdAt,
-      currentPage, status, coverHue, rating, year, emoji, category, notes,
-      startedAt, finishedAt, cover, isbn, source);
+      currentPage, status, coverHue, rating, year, emoji, category, description,
+      notes, startedAt, finishedAt, cover, isbn, source);
 }

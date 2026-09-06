@@ -32,6 +32,9 @@ abstract class WebDavClient {
 
   /// 列出云端备份文件（moying-*.zip，按文件名倒序 = 时间倒序）
   Future<List<String>> listBackups();
+
+  /// 释放底层 HTTP 连接池与客户端资源
+  void close();
 }
 
 /// HTTP 实现（dart http + Basic Auth）
@@ -125,6 +128,11 @@ class WebDavClientHttp implements WebDavClient {
     names.sort((a, b) => b.compareTo(a)); // 名字含时间戳，倒序即最新在前
     return names;
   }
+
+  @override
+  void close() {
+    _http.close();
+  }
 }
 
 /// 内存 fake（widget / 单元测试注入；行为与 [WebDavClientHttp] 对齐）
@@ -176,4 +184,7 @@ class FakeWebDavClient implements WebDavClient {
     names.sort((a, b) => b.compareTo(a));
     return names;
   }
+
+  @override
+  void close() {}
 }

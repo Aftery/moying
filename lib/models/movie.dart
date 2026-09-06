@@ -304,7 +304,23 @@ class Movie {
           other.source == source;
 
   @override
-  int get hashCode => Object.hash(id, title, englishTitle, year, director,
-      status, rating, coverHue, emoji, releaseDate, watchDate, duration,
-      description, review, poster, source);
+  int get hashCode => Object.hash(
+      id,
+      title,
+      englishTitle,
+      year,
+      director,
+      status,
+      rating,
+      coverHue,
+      emoji,
+      releaseDate,
+      watchDate,
+      duration,
+      genres == null ? null : Object.hashAll(genres!),
+      description,
+      review,
+      actorIds == null ? null : Object.hashAll(actorIds!),
+      poster,
+      source);
 }

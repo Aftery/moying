@@ -244,7 +244,6 @@ class _FilterItem<T> {
 }
 
 /// 暗色下拉筛选组件
-/// 暗色下拉筛选组件
 ///
 /// [onChanged] 用 [ValueChanged<T?>]：「全部类型」项的 value 就是 null（T 以可空
 /// 类型实例化，如 String?），必须允许 null 回传——非空 guard 会吞掉「全部」项。

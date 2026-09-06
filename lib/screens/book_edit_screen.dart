@@ -92,6 +92,9 @@ class _BookEditScreenState extends State<BookEditScreen> {
   /// 数据溯源标记（保存时写入 Book.source，如 'googleBooks:xyz'）
   String? _sourceTag;
 
+  /// 防止双击重复提交
+  bool _saving = false;
+
   @override
   void initState() {
     super.initState();
@@ -158,6 +161,21 @@ class _BookEditScreenState extends State<BookEditScreen> {
   }
 
   Future<void> _save() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      await _doSave();
+    } on Object catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('保存失败：$e')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _doSave() async {
     final title = _titleCtrl.text.trim();
     final author = _authorCtrl.text.trim();
     if (title.isEmpty || author.isEmpty) {
@@ -344,6 +362,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   Future<void> _confirmDelete() async {
+    if (_saving) return;
     final book = _book;
     if (book == null) return;
 
@@ -1348,17 +1367,26 @@ class _BookEditScreenState extends State<BookEditScreen> {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
-                onTap: _save,
+                onTap: _saving ? null : _save,
                 child: Center(
-                  child: Text(
-                    _isAddMode ? '添加图书' : '保存修改',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-                  ),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          _isAddMode ? '添加图书' : '保存修改',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1,
+                          ),
+                        ),
                 ),
               ),
             ),

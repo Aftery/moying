@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:ui';
 import 'package:provider/provider.dart';
 
 import 'config/app_palette.dart';
@@ -17,6 +18,14 @@ import 'services/data_source_manager.dart';
 /// Web：回退内存模式（见 data/persistence.dart 的按平台接线）。
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 全局兜底：捕获所有未处理异常，保证 App 永不完全崩溃
+  FlutterError.onError = (d) => debugPrint('[FlutterError] ${d.exception}');
+  PlatformDispatcher.instance.onError = (e, st) {
+    debugPrint('[AsyncError] $e\n$st');
+    return true; // 已处理，不继续向上传播
+  };
+
   final boot = await bootstrapApp();
   final sync = SyncProvider(store: boot.store, library: boot.library);
   await sync.loadSettings();
@@ -86,7 +95,9 @@ class _MoYingAppState extends State<MoYingApp> {
   /// 兜底数据源（无注入时仅内存预设，配置不落盘；测试环境用）
   DataSourceProvider _buildFallbackDataSource() {
     final provider = DataSourceProvider(manager: DataSourceManager());
-    provider.init();
+    provider.init().catchError((e, st) {
+      debugPrint('[FallbackDataSource] init failed: $e');
+    });
     return provider;
   }
 
@@ -125,13 +136,14 @@ class _AppShellState extends State<_AppShell> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // 系统状态栏/导航栏随主题偏好联动（依赖变化时自动重调）
-    _syncSystemChrome(context.watch<LibraryProvider>().themeMode);
-    // 首帧后触发一次「启动时自动同步」（节流与条件判断在 SyncProvider 内）
+    // ponytail: SystemChrome 副作用从 didChangeDependencies 下沉到 postFrame
     if (!_autoSyncFired) {
       _autoSyncFired = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.read<SyncProvider>().tryAutoSyncOnResume();
+        if (mounted) {
+          _syncSystemChrome(context.read<LibraryProvider>().themeMode);
+          context.read<SyncProvider>().tryAutoSyncOnResume();
+        }
       });
     }
   }
@@ -157,8 +169,11 @@ class _AppShellState extends State<_AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final themeMode =
-        resolveThemeMode(context.watch<LibraryProvider>().themeMode);
+    final rawTheme = context.watch<LibraryProvider>().themeMode;
+    final themeMode = resolveThemeMode(rawTheme);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncSystemChrome(rawTheme);
+    });
     return MaterialApp(
       title: '墨影',
       debugShowCheckedModeBanner: false,

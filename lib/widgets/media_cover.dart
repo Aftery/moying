@@ -143,7 +143,7 @@ class MediaCover extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          emoji ?? title.characters.first,
+          emoji ?? (title.isEmpty ? '?' : title.characters.first),
           style: TextStyle(
             fontSize: fontSize * 0.55,
             fontWeight: FontWeight.w700,

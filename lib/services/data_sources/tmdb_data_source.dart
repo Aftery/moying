@@ -96,7 +96,11 @@ class TmdbDataSource implements MovieDataSource {
       throw DataSourceException('TMDB 接口异常（HTTP ${resp.statusCode}）');
     }
     try {
-      return jsonDecode(resp.body) as Map<String, dynamic>;
+      final root = jsonDecode(resp.body);
+      if (root is! Map<String, dynamic>) {
+        throw const DataSourceException('TMDB 返回格式异常');
+      }
+      return root;
     } on FormatException {
       throw const DataSourceException('TMDB 返回内容解析失败');
     }
@@ -246,4 +250,7 @@ class TmdbDataSource implements MovieDataSource {
       overview: (overview == null || overview.isEmpty) ? null : overview,
     );
   }
+
+  /// 释放底层 HTTP 客户端连接池
+  void close() => _client.close();
 }

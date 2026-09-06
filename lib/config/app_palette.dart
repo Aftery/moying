@@ -25,6 +25,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.star,
     required this.accent,
     required this.success,
+    this.danger = const Color(0xFFFF6B6B),
+    this.warning = const Color(0xFFFFB020),
+    this.error = const Color(0xFFFF6B6B),
   });
 
   // ---- 基础背景 ----
@@ -57,6 +60,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
   final Color star;
   final Color accent;
   final Color success;
+  final Color danger; // 危险/删除用红
+  final Color warning; // 警告用黄
+  final Color error; // 错误态用红（区别于 success 绿）
 
   /// 阅读卡片渐变
   LinearGradient get readingGradient => LinearGradient(
@@ -88,6 +94,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
     star: Color(0xFFFFC94D),
     accent: Color(0xFF7C8CF8),
     success: Color(0xFF3DDC97),
+    danger: Color(0xFFFF6B6B),
+    warning: Color(0xFFFFB020),
+    error: Color(0xFFFF5252),
   );
 
   /// 浅色板（暗色反推：近白背景 + 深灰文字；品牌渐变与功能色保持一致）
@@ -106,6 +115,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
     star: Color(0xFFFFC94D),
     accent: Color(0xFF6B7BE8),
     success: Color(0xFF2BBF84),
+    danger: Color(0xFFE53935),
+    warning: Color(0xFFFFA000),
+    error: Color(0xFFD32F2F),
   );
 
   @override
@@ -124,6 +136,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? star,
     Color? accent,
     Color? success,
+    Color? danger,
+    Color? warning,
+    Color? error,
   }) {
     return AppPalette(
       background: background ?? this.background,
@@ -140,6 +155,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
       star: star ?? this.star,
       accent: accent ?? this.accent,
       success: success ?? this.success,
+      danger: danger ?? this.danger,
+      warning: warning ?? this.warning,
+      error: error ?? this.error,
     );
   }
 
@@ -161,6 +179,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
       star: Color.lerp(star, other.star, t)!,
       accent: Color.lerp(accent, other.accent, t)!,
       success: Color.lerp(success, other.success, t)!,
+      danger: Color.lerp(danger, other.danger, t)!,
+      warning: Color.lerp(warning, other.warning, t)!,
+      error: Color.lerp(error, other.error, t)!,
     );
   }
 }

@@ -114,6 +114,8 @@ class _DataSyncScreenState extends State<DataSyncScreen> {
       _toast('备份已上传');
     } on WebDavException catch (e) {
       _toast(e.message, error: true);
+    } on BackupException catch (e) {
+      _toast(e.message, error: true);
     }
   }
 
@@ -270,15 +272,19 @@ class _DataSyncScreenState extends State<DataSyncScreen> {
             onlyOnWifi: sync.settings.onlyOnWifi,
             includeImages: sync.settings.includeImages,
             onChanged: (auto, wifi, images) async {
-              await sync.saveSettings(
-                _collectInput(
-                  base: sync.settings.copyWith(
-                    autoSync: auto,
-                    onlyOnWifi: wifi,
-                    includeImages: images,
+              try {
+                await sync.saveSettings(
+                  _collectInput(
+                    base: sync.settings.copyWith(
+                      autoSync: auto,
+                      onlyOnWifi: wifi,
+                      includeImages: images,
+                    ),
                   ),
-                ),
-              );
+                );
+              } catch (e) {
+                _toast('保存偏好失败：$e', error: true);
+              }
             },
           ),
           const SizedBox(height: 24),

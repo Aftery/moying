@@ -17,13 +17,16 @@ import '../widgets/media_cover.dart';
 const String kEditResultSaved = 'saved';
 const String kEditResultDeleted = 'deleted';
 
+/// 片长输入净化正则（提为顶层常量，避免每字符输入重建）
+final _nonDigitRegex = RegExp(r'[^0-9]');
+
 /// 片长输入净化：仅保留 ASCII 数字，超 4 位截断。
 ///
 /// 不走 [TextInputFormatter]——搜狗等国产输入法经格式化器过滤时组合输入
 /// 中间态会被吞掉，表现为"键盘能弹、字符进不去"；改为 onChanged 收敛后
 /// 输入通道与普通文本框完全一致。
 String sanitizeDurationInput(String raw) {
-  final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+  final digits = raw.replaceAll(_nonDigitRegex, '');
   return digits.length > 4 ? digits.substring(0, 4) : digits;
 }
 
@@ -75,6 +78,9 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
   /// 用户手动删除自动槽时的导演名——同导演不再自动弹回
   String? _directorAutoDismissed;
 
+  /// 防止双击重复提交
+  bool _saving = false;
+
   /// 「添加“X”」哨兵：候选无匹配时提供可点的自定义入口（回车提交同语义）
   static const String _genreCreateSentinel = '__genre_create__';
 
@@ -96,6 +102,9 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
 
   Movie? _movie;
   bool get _isEditMode => widget.movieId != null;
+
+  /// 编辑模式但电影已被并发删除（防 _movie! 崩溃）
+  bool _notFound = false;
 
   // ---------- 快速检索（联网信息补全）状态 ----------
 
@@ -120,6 +129,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     if (movieId != null) {
       final matches = provider.movieList.where((m) => m.id == movieId).toList();
       movie = matches.isEmpty ? null : matches.first;
+      _notFound = movie == null; // 并发删除时防止 _movie! 崩溃
     }
     _movie = movie;
 
@@ -258,6 +268,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
         child: child!,
       ),
     );
+    if (!mounted) return;
     if (picked != null) onPicked(picked);
   }
 
@@ -271,6 +282,21 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
   // ---------- 保存 ----------
 
   Future<void> _save() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      await _doSave();
+    } on Object catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('保存失败：$e')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _doSave() async {
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -289,6 +315,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     final genres = _selectedGenres.isEmpty ? null : _selectedGenres.toList();
 
     final provider = context.read<LibraryProvider>();
+    if (_isEditMode && _movie == null) return;
     // 新增/编辑统一先在保存时刻确定 id，供海报复制落盘
     final id =
         _isEditMode ? _movie!.id : 'm_${DateTime.now().microsecondsSinceEpoch}';
@@ -371,6 +398,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
   // ---------- 删除 ----------
 
   Future<void> _confirmDelete() async {
+    if (_saving) return;
     final movie = _movie;
     if (movie == null) return;
 
@@ -419,7 +447,12 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
         title: Text(_isEditMode ? '修改电影' : '添加电影'),
         backgroundColor: Colors.transparent,
       ),
-      body: SafeArea(
+      body: _isEditMode && _notFound
+          ? Center(
+              child:
+                  Text('未找到该电影', style: TextStyle(color: context.colors.textMuted)),
+            )
+          : SafeArea(
         top: false,
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
@@ -1483,20 +1516,23 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
               child: Row(
                 children: [
                   // 序号头像（文本首字实时跟随）
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: coverGradient(30.0 * (i + 1)),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      _slotInitial(slot, i),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                  AnimatedBuilder(
+                    animation: slot.ctrl,
+                    builder: (_, __) => Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: coverGradient(30.0 * (i + 1)),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        _slotInitial(slot, i),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -1573,7 +1609,6 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
         return TextField(
           controller: controller,
           focusNode: focusNode,
-          onChanged: (_) => setState(() {}),
           onSubmitted: (_) => onFieldSubmitted(),
           style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
           cursorColor: context.colors.accent,
@@ -1759,7 +1794,6 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
           maxLines: 6,
           minLines: 4,
           maxLength: _reviewMaxChars,
-          onChanged: (_) => setState(() {}),
           style: TextStyle(
               color: context.colors.textPrimary, fontSize: 14, height: 1.5),
           cursorColor: context.colors.accent,
@@ -1787,14 +1821,20 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
         const SizedBox(height: 4),
         Align(
           alignment: Alignment.centerRight,
-          child: Text(
-            '${_reviewCtrl.text.length}/$_reviewMaxChars',
-            style: TextStyle(
-              color: _reviewCtrl.text.length >= _reviewMaxChars
-                  ? const Color(0xFFFF6B6B)
-                  : context.colors.textMuted,
-              fontSize: 12,
-            ),
+          child: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _reviewCtrl,
+            builder: (_, value, __) {
+              final len = value.text.length;
+              return Text(
+                '$len/$_reviewMaxChars',
+                style: TextStyle(
+                  color: len >= _reviewMaxChars
+                      ? const Color(0xFFFF6B6B)
+                      : context.colors.textMuted,
+                  fontSize: 12,
+                ),
+              );
+            },
           ),
         ),
       ],
@@ -1827,17 +1867,26 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
-                onTap: _save,
+                onTap: _saving ? null : _save,
                 child: Center(
-                  child: Text(
-                    _isEditMode ? '保存修改' : '保存',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-                  ),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          _isEditMode ? '保存修改' : '保存',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1,
+                          ),
+                        ),
                 ),
               ),
             ),

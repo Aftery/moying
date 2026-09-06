@@ -32,10 +32,12 @@ class DataSourceProvider extends ChangeNotifier {
       _manager.configs.where((c) => c.category == category).toList();
 
   /// 正在测试连接的源 id（管理页行内 loading）
-  String? testingId;
+  String? _testingId;
+  String? get testingId => _testingId;
 
   /// 最近一次全局错误（配置操作失败提示；搜索错误单独走 searchError）
-  String? actionError;
+  String? _actionError;
+  String? get actionError => _actionError;
 
   /// 初始化：加载配置（首次启动写内置预设）
   Future<void> init() async {
@@ -81,119 +83,98 @@ class DataSourceProvider extends ChangeNotifier {
   bool get isSearching => _isSearching;
 
   /// 书籍搜索结果（null = 尚未搜索；空列表 = 无结果）
-  List<BookSearchResult>? bookResults;
+  List<BookSearchResult>? _bookResults;
+  List<BookSearchResult>? get bookResults => _bookResults;
 
   /// 电影搜索结果
-  List<MovieSearchResult>? movieResults;
+  List<MovieSearchResult>? _movieResults;
+  List<MovieSearchResult>? get movieResults => _movieResults;
 
   /// 最近一次搜索错误（null = 无错误；空串 = 无结果不视为错误）
-  String? searchError;
+  String? _searchError;
+  String? get searchError => _searchError;
 
   /// 最近一次搜索的关键词（结果区标题与去重判断用）
-  String lastQuery = '';
+  String _lastQuery = '';
+  String get lastQuery => _lastQuery;
+
+  /// 统一搜索内核（M3: 抽泛型避免重复）
+  Future<void> _search<T>({
+    required String query,
+    required DataSourceCategory category,
+    required Future<List<T>> Function(DataSourceConfig source, String query) execute,
+    required void Function(List<T>? results) setResults,
+  }) async {
+    final q = query.trim();
+    _lastQuery = q;
+    if (q.isEmpty) {
+      setResults(null);
+      _searchError = null;
+      _isSearching = false;
+      notifyListeners();
+      return;
+    }
+    final source = category == DataSourceCategory.book ? defaultBookSource : defaultMovieSource;
+    final catName = category == DataSourceCategory.book ? '书籍' : '影视';
+    if (source == null) {
+      setResults(null);
+      _searchError = '尚未配置$catName数据源';
+      notifyListeners();
+      return;
+    }
+    final impl = category == DataSourceCategory.book
+        ? _manager.bookImplOf(source.type)
+        : _manager.movieImplOf(source.type);
+    if (impl == null) {
+      setResults(null);
+      _searchError = '暂不支持的数据源类型：${source.type.displayName}';
+      notifyListeners();
+      return;
+    }
+
+    _isSearching = true;
+    _searchError = null;
+    notifyListeners();
+    try {
+      final results = await execute(source, q);
+      if (_lastQuery != q) return;
+      setResults(results);
+      if (results.isEmpty) _searchError = '';
+    } on DataSourceException catch (e) {
+      if (_lastQuery != q) return;
+      setResults(null);
+      _searchError = e.message;
+    } finally {
+      if (_lastQuery == q) {
+        _isSearching = false;
+        notifyListeners();
+      }
+    }
+  }
 
   /// 按关键词搜索书籍（用当前书籍默认源）
-  Future<void> searchBooks(String query) async {
-    final q = query.trim();
-    lastQuery = q;
-    if (q.isEmpty) {
-      bookResults = null;
-      searchError = null;
-      _isSearching = false;
-      notifyListeners();
-      return;
-    }
-    final source = defaultBookSource;
-    if (source == null) {
-      bookResults = null;
-      searchError = '尚未配置书籍数据源';
-      notifyListeners();
-      return;
-    }
-    final impl = _manager.bookImplOf(source.type);
-    if (impl == null) {
-      bookResults = null;
-      searchError = '暂不支持的数据源类型：${source.type.displayName}';
-      notifyListeners();
-      return;
-    }
-
-    _isSearching = true;
-    searchError = null;
-    notifyListeners();
-    try {
-      final credentials = await _manager.credentialsOf(source);
-      final results = await impl.searchBooks(
-        q,
-        config: source.config,
-        credentials: credentials,
+  Future<void> searchBooks(String query) => _search<BookSearchResult>(
+        query: query,
+        category: DataSourceCategory.book,
+        execute: (source, q) async {
+          final credentials = await _manager.credentialsOf(source);
+          final impl = _manager.bookImplOf(source.type)!;
+          return impl.searchBooks(q, config: source.config, credentials: credentials);
+        },
+        setResults: (r) => _bookResults = r,
       );
-      // 期间用户可能改了查询词（竞态：仅当仍是本次查询时采纳结果）
-      if (lastQuery != q) return;
-      bookResults = results;
-      if (results.isEmpty) searchError = '';
-    } on DataSourceException catch (e) {
-      if (lastQuery != q) return;
-      bookResults = null;
-      searchError = e.message;
-    } finally {
-      if (lastQuery == q) {
-        _isSearching = false;
-        notifyListeners();
-      }
-    }
-  }
 
   /// 按关键词搜索电影（用当前影视默认源）
-  Future<void> searchMovies(String query) async {
-    final q = query.trim();
-    lastQuery = q;
-    if (q.isEmpty) {
-      movieResults = null;
-      searchError = null;
-      _isSearching = false;
-      notifyListeners();
-      return;
-    }
-    final source = defaultMovieSource;
-    if (source == null) {
-      movieResults = null;
-      searchError = '尚未配置影视数据源';
-      notifyListeners();
-      return;
-    }
-    final impl = _manager.movieImplOf(source.type);
-    if (impl == null) {
-      movieResults = null;
-      searchError = '暂不支持的数据源类型：${source.type.displayName}';
-      notifyListeners();
-      return;
-    }
-
-    _isSearching = true;
-    searchError = null;
-    notifyListeners();
-    try {
-      final credentials = await _manager.credentialsOf(source);
-      final results = await impl.searchMovies(
-        q,
-        config: source.config,
-        credentials: credentials,
+  Future<void> searchMovies(String query) => _search<MovieSearchResult>(
+        query: query,
+        category: DataSourceCategory.movie,
+        execute: (source, q) async {
+          final credentials = await _manager.credentialsOf(source);
+          final impl = _manager.movieImplOf(source.type)!;
+          return impl.searchMovies(q, config: source.config, credentials: credentials);
+        },
+        setResults: (r) => _movieResults = r,
       );
-      if (lastQuery != q) return;
-      movieResults = results;
-      if (results.isEmpty) searchError = '';
-    } on DataSourceException catch (e) {
-      if (lastQuery != q) return;
-      movieResults = null;
-      searchError = e.message;
-    } finally {
-      if (lastQuery == q) {
-        _isSearching = false;
-        notifyListeners();
-      }
-    }
-  }
 
   /// 取电影详情（导演 / 主演 / 片长补全；失败返回 null——调用方回退搜索结果）
   Future<MovieSearchResult?> fetchMovieDetail(
@@ -216,10 +197,10 @@ class DataSourceProvider extends ChangeNotifier {
   }
 
   void clearResults() {
-    lastQuery = '';
-    bookResults = null;
-    movieResults = null;
-    searchError = null;
+    _lastQuery = '';
+    _bookResults = null;
+    _movieResults = null;
+    _searchError = null;
     _isSearching = false;
     notifyListeners();
   }
@@ -233,17 +214,17 @@ class DataSourceProvider extends ChangeNotifier {
         .toList(growable: false)
         .firstOrNull;
     if (source == null) return false;
-    testingId = id;
-    actionError = null;
+    _testingId = id;
+    _actionError = null;
     notifyListeners();
     try {
       await _manager.testConnection(source);
       return true;
     } on DataSourceException catch (e) {
-      actionError = e.message;
+      _actionError = e.message;
       return false;
     } finally {
-      testingId = null;
+      _testingId = null;
       notifyListeners();
     }
   }
@@ -297,8 +278,10 @@ class DataSourceProvider extends ChangeNotifier {
 
   List<ConfigField>? managerBookFields(DataSourceType type) =>
       _manager.bookImplOf(type)?.configFields;
-}
 
-extension _FirstOrNull<T> on Iterable<T> {
-  T? get firstOrNull => isEmpty ? null : first;
+  @override
+  void dispose() {
+    _manager.close();
+    super.dispose();
+  }
 }

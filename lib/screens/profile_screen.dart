@@ -174,21 +174,25 @@ class ProfileScreen extends StatelessWidget {
       nickname: nickname,
       signature: signature.isEmpty ? null : signature,
     );
-    if (!result.avatarTouched) {
-      await lib.updateProfile(base);
-      return;
+    try {
+      if (!result.avatarTouched) {
+        await lib.updateProfile(base);
+        return;
+      }
+      // 头像被改动：本地图先复制落盘 → local；URL → network；否则移除(null)
+      MediaRef? avatar;
+      final picked = result.avatarFile;
+      if (picked != null) {
+        // 单例档案：固定 entryId 'profile'，copyImage 同名覆盖天然回收旧图
+        final rel = await lib.attachImage(picked, 'profile');
+        avatar = rel == null ? null : MediaRef.local(rel);
+      } else if (result.avatarUrl.isNotEmpty) {
+        avatar = MediaRef.network(result.avatarUrl);
+      }
+      await lib.updateProfile(base.copyWith(avatar: avatar));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('保存档案失败：$e')));
     }
-    // 头像被改动：本地图先复制落盘 → local；URL → network；否则移除(null)
-    MediaRef? avatar;
-    final picked = result.avatarFile;
-    if (picked != null) {
-      // 单例档案：固定 entryId 'profile'，copyImage 同名覆盖天然回收旧图
-      final rel = await lib.attachImage(picked, 'profile');
-      avatar = rel == null ? null : MediaRef.local(rel);
-    } else if (result.avatarUrl.isNotEmpty) {
-      avatar = MediaRef.network(result.avatarUrl);
-    }
-    await lib.updateProfile(base.copyWith(avatar: avatar));
   }
 
   // ---------- 深色模式（三选：深色 / 浅色 / 跟随系统）----------

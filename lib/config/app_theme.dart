@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import 'app_palette.dart';
+import 'fade_slide_transitions.dart';
 
 /// 全局主题构建器（按色板生成，暗/浅共用一套结构）
 ///
@@ -16,7 +18,7 @@ ThemeData buildAppTheme(AppPalette palette) {
           surface: palette.surface,
           onPrimary: Colors.white,
           onSurface: palette.textPrimary,
-          error: const Color(0xFFFF6B6B),
+          error: palette.error,
         )
       : ColorScheme.light(
           primary: palette.accent,
@@ -24,7 +26,7 @@ ThemeData buildAppTheme(AppPalette palette) {
           surface: palette.surface,
           onPrimary: Colors.white,
           onSurface: palette.textPrimary,
-          error: const Color(0xFFFF6B6B),
+          error: palette.error,
         );
 
   return ThemeData(
@@ -119,6 +121,16 @@ ThemeData buildAppTheme(AppPalette palette) {
     dividerTheme: DividerThemeData(
       color: palette.outline,
       thickness: 1,
+    ),
+
+    // 页面转场：淡入 + 微上浮（全局统一，0.28s 生效）
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: FadeSlidePageTransitionsBuilder(),
+        TargetPlatform.iOS: FadeSlidePageTransitionsBuilder(),
+        TargetPlatform.macOS: FadeSlidePageTransitionsBuilder(),
+        TargetPlatform.linux: FadeSlidePageTransitionsBuilder(),
+      },
     ),
   );
 }

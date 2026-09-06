@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -63,6 +64,7 @@ class LibraryProvider extends ChangeNotifier {
     _movieList = List.of(snap.movies);
     _actors = List.of(snap.actors);
     _userProfile = await store.loadProfile();
+    _invalidateCache();
     notifyListeners();
   }
 
@@ -71,6 +73,31 @@ class LibraryProvider extends ChangeNotifier {
 
   /// 云端恢复覆盖磁盘后重新从存储加载（SyncProvider 恢复完成后调用）
   Future<void> reloadFromStore() => init();
+
+  /// 最近一次持久化失败的错误信息（UI 可通过 listen 读取并向用户提示）
+  String _lastPersistError = '';
+  String get lastPersistError => _lastPersistError;
+
+  /// stats 缓存（脏标记失效，避免 dashboard 每次滑动都全量遍历）
+  BookStats? _bookStatsCache;
+  MovieStats? _movieStatsCache;
+  List<Book>? _booksCache;
+  List<Movie>? _movieListCache;
+
+  void _invalidateCache() {
+    _bookStatsCache = null;
+    _movieStatsCache = null;
+    _booksCache = null;
+    _movieListCache = null;
+  }
+
+  /// 清除持久化错误
+  void clearPersistError() {
+    if (_lastPersistError.isNotEmpty) {
+      _lastPersistError = '';
+      notifyListeners();
+    }
+  }
 
   // ==================== 用户档案与主题偏好 ====================
 
@@ -132,23 +159,38 @@ class LibraryProvider extends ChangeNotifier {
 
   void _persistBooks() {
     final s = _store;
-    if (s != null) unawaited(s.saveBooks(_books));
+    if (s == null) return;
+    unawaited(s.saveBooks(_books).catchError((Object e, StackTrace st) {
+      debugPrint('[Persist] books 写盘失败：$e');
+      _lastPersistError = '图书保存失败：$e';
+      notifyListeners();
+    }));
   }
 
   void _persistMovies() {
     final s = _store;
-    if (s != null) unawaited(s.saveMovies(_movieList));
+    if (s == null) return;
+    unawaited(s.saveMovies(_movieList).catchError((Object e, StackTrace st) {
+      debugPrint('[Persist] movies 写盘失败：$e');
+      _lastPersistError = '电影保存失败：$e';
+      notifyListeners();
+    }));
   }
 
   void _persistActors() {
     final s = _store;
-    if (s != null) unawaited(s.saveActors(_actors));
+    if (s == null) return;
+    unawaited(s.saveActors(_actors).catchError((Object e, StackTrace st) {
+      debugPrint('[Persist] actors 写盘失败：$e');
+      _lastPersistError = '演员保存失败：$e';
+      notifyListeners();
+    }));
   }
 
   // ==================== 书库查询 ====================
 
   /// 全量书库（图书模块列表页/筛选/搜索的数据源）
-  List<Book> get books => List.unmodifiable(_books);
+  List<Book> get books => _booksCache ??= UnmodifiableListView(_books);
 
   /// 仪表盘「阅读列表」展示的书目（读完优先，最多 6 本，保持旧观感）
   List<Book> get readingList {
@@ -183,6 +225,7 @@ class LibraryProvider extends ChangeNotifier {
   /// - pagesRead：`finished` 的 `totalPages` 之和 + `reading` 的 `currentPage` 之和（想读不贡献）
   /// - progress：在读 + 已读 书的 `progress` 算术平均（想读不参与，避免 0 拉低）
   BookStats get bookStats {
+    if (_bookStatsCache != null) return _bookStatsCache!;
     final finished = _books.where((b) => b.status == BookStatus.finished);
     final reading = _books.where((b) => b.status == BookStatus.reading);
     final pagesRead = finished.fold<int>(0, (s, b) => s + b.totalPages) +
@@ -192,7 +235,7 @@ class LibraryProvider extends ChangeNotifier {
         ? 0.0
         : started.map((b) => b.progress).reduce((a, b) => a + b) /
             started.length;
-    return BookStats(
+    return _bookStatsCache = BookStats(
       total: _books.length,
       active: reading.length,
       finished: finished.length,
@@ -245,6 +288,7 @@ class LibraryProvider extends ChangeNotifier {
   /// 新增一本书（插入列表头部，网格立即刷新）
   void addBook(Book book) {
     _books.insert(0, book);
+    _invalidateCache();
     notifyListeners();
     _persistBooks();
   }
@@ -256,6 +300,7 @@ class LibraryProvider extends ChangeNotifier {
     final old = _books[i];
     if (old.cover != null) _recycleImage(old.cover, updated.cover);
     _books[i] = updated;
+    _invalidateCache();
     notifyListeners();
     _persistBooks();
   }
@@ -267,6 +312,7 @@ class LibraryProvider extends ChangeNotifier {
     final old = _books[i];
     _books.removeAt(i);
     if (old.cover != null) _recycleImage(old.cover, null);
+    _invalidateCache();
     notifyListeners();
     _persistBooks();
   }
@@ -282,7 +328,7 @@ class LibraryProvider extends ChangeNotifier {
       _movieList.where((m) => m.rating != null).toList();
 
   /// 全部电影（仪表盘网格/电影库）
-  List<Movie> get movieList => List.unmodifiable(_movieList);
+  List<Movie> get movieList => _movieListCache ??= UnmodifiableListView(_movieList);
 
   /// 想看电影（仪表盘横向任务卡）—— 来自电影库真实 watchlist，前 2 部
   List<Movie> get upcomingMovies => List.unmodifiable(_movieList
@@ -295,11 +341,12 @@ class LibraryProvider extends ChangeNotifier {
   /// - rated：`rating != null` 计数
   /// - averageRating：已评分电影的平均评分（0-5；无已评分时为 0）
   MovieStats get movieStats {
+    if (_movieStatsCache != null) return _movieStatsCache!;
     final rated = _movieList.where((m) => m.rating != null).toList();
     final avg = rated.isEmpty
         ? 0.0
         : rated.map((m) => m.rating!).reduce((a, b) => a + b) / rated.length;
-    return MovieStats(
+    return _movieStatsCache = MovieStats(
       total: _movieList.length,
       watchlist: _movieList
           .where((m) => m.status == MovieStatus.watchlist)
@@ -387,6 +434,7 @@ class LibraryProvider extends ChangeNotifier {
   /// 新增一部电影（追加到列表尾部）
   void addMovie(Movie movie) {
     _movieList.add(movie);
+    _invalidateCache();
     notifyListeners();
     _persistMovies();
   }
@@ -398,6 +446,7 @@ class LibraryProvider extends ChangeNotifier {
     final old = _movieList[i];
     if (old.poster != null) _recycleImage(old.poster, updated.poster);
     _movieList[i] = updated;
+    _invalidateCache();
     notifyListeners();
     _persistMovies();
   }
@@ -409,6 +458,7 @@ class LibraryProvider extends ChangeNotifier {
     final old = _movieList[i];
     _movieList.removeAt(i);
     if (old.poster != null) _recycleImage(old.poster, null);
+    _invalidateCache();
     notifyListeners();
     _persistMovies();
   }
