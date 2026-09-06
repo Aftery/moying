@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_palette.dart';
+import '../config/edit_results.dart';
 import '../models/movie.dart';
 import '../providers/library_provider.dart';
+import '../widgets/filter_dropdown.dart';
 import '../widgets/grid_item_card.dart';
 import '../widgets/search_bar_widget.dart';
 import 'movie_detail_screen.dart';
@@ -81,22 +83,22 @@ class _MoviesScreenState extends State<MoviesScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
-                  _FilterDropdown<String?>(
+                  FilterDropdown<String?>(
                     icon: Icons.theaters_rounded,
                     value: _genreFilter,
                     items: [
-                      const _FilterItem(label: '全部类型', value: null),
-                      for (final g in genreOptions) _FilterItem(label: g, value: g),
+                      const FilterItem(label: '全部类型', value: null),
+                      for (final g in genreOptions) FilterItem(label: g, value: g),
                     ],
                     onChanged: (v) => setState(() => _genreFilter = v),
                   ),
                   const SizedBox(width: 10),
-                  _FilterDropdown<MovieSort>(
+                  FilterDropdown<MovieSort>(
                     icon: Icons.swap_vert_rounded,
                     value: _sort,
                     items: [
                       for (final s in MovieSort.values)
-                        _FilterItem(label: s.label, value: s),
+                        FilterItem(label: s.label, value: s),
                     ],
                     // 排序项 value 均非空，v 不会为 null，v! 安全
                     onChanged: (v) => setState(() => _sort = v!),
@@ -230,84 +232,6 @@ class _MoviesScreenState extends State<MoviesScreen> {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-/// 通用筛选项
-class _FilterItem<T> {
-  const _FilterItem({required this.label, required this.value});
-
-  final String label;
-  final T value;
-}
-
-/// 暗色下拉筛选组件
-///
-/// [onChanged] 用 [ValueChanged<T?>]：「全部类型」项的 value 就是 null（T 以可空
-/// 类型实例化，如 String?），必须允许 null 回传——非空 guard 会吞掉「全部」项。
-class _FilterDropdown<T> extends StatelessWidget {
-  const _FilterDropdown({
-    required this.icon,
-    required this.items,
-    required this.onChanged,
-    required this.value,
-  });
-
-  final IconData icon;
-  final List<_FilterItem<T>> items;
-  final ValueChanged<T?> onChanged;
-  final T value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: context.colors.surfaceHigh,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: context.colors.outline, width: 0.8),
-        ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<T>(
-            value: value,
-            isExpanded: true,
-            isDense: true,
-            dropdownColor: context.colors.surfaceHigh,
-            borderRadius: BorderRadius.circular(14),
-            icon:  Icon(Icons.expand_more_rounded,
-                color: context.colors.textSecondary),
-            style:  TextStyle(
-              color: context.colors.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-            items: [
-              for (final item in items)
-                DropdownMenuItem<T>(
-                  value: item.value,
-                  child: Row(
-                    children: [
-                      Icon(icon, size: 16, color: context.colors.textMuted),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          item.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-            // 直接回调：「全部类型」项的 value 就是 null，不能加非空 guard（否则永远选不回全部）。
-            // DropdownButton 仅在真正选中菜单项时触发 onChanged，dismiss 不会回调。
-            onChanged: (v) => onChanged(v),
-          ),
-        ),
       ),
     );
   }

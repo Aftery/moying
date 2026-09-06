@@ -46,9 +46,9 @@ class DataSourceScreen extends StatelessWidget {
               child: Text(
                 ds.actionError!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: Color(0xFFFF6B6B),
+                  color: context.colors.error,
                 ),
               ),
             ),
@@ -411,11 +411,11 @@ class _StatusDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (status) {
-      DataSourceStatus.connected => const Color(0xFF4CD97B),
+      DataSourceStatus.connected => context.colors.success,
       DataSourceStatus.notConfigured => context.colors.textMuted,
-      DataSourceStatus.inactive => const Color(0xFFFFB020),
-      DataSourceStatus.timeout => const Color(0xFFFFB020),
-      DataSourceStatus.error => const Color(0xFFFF6B6B),
+      DataSourceStatus.inactive => context.colors.warning,
+      DataSourceStatus.timeout => context.colors.warning,
+      DataSourceStatus.error => context.colors.error,
     };
     return Container(
       width: 7,
@@ -477,6 +477,14 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
       for (final f in _fields)
         if (f.isSecret) f.key: TextEditingController(),
     };
+    for (final f in _fields.where((f) => f.isSecret)) {
+      _secretModified[f.key] = false;
+      _secretCtrls[f.key]!.addListener(() {
+        if (_secretCtrls[f.key]!.text != _kSecretMask) {
+          _secretModified[f.key] = true;
+        }
+      });
+    }
     _secretVisible = {for (final f in _fields) if (f.isSecret) f.key: false};
     // 预填 secret 字段的掩码占位（已有凭据时显示「已保存」态）
     _loadSecretMask();
@@ -488,15 +496,19 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
       if (!mounted) return;
       if (existing != null && existing.isNotEmpty) {
         setState(() {
-          _secretCtrls[f.key]!.text = '••••••••';
+          _secretCtrls[f.key]!.text = _kSecretMask;
           _secretFilled[f.key] = true;
+          _secretModified[f.key] = false;
         });
       }
     }
   }
 
+  static const _kSecretMask = '••••••••';
+
   /// 已保存的凭据标记（掩码展示；重新输入则覆盖）
   final Map<String, bool> _secretFilled = {};
+  final Map<String, bool> _secretModified = {};
 
   @override
   void dispose() {
@@ -573,7 +585,7 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
       if (f.isSecret) {
         final hasMask = _secretFilled[f.key] ?? false;
         final typed = _secretCtrls[f.key]!.text.trim();
-        final isMask = typed == '••••••••';
+        final isMask = typed == _kSecretMask;
         if (!hasMask && (typed.isEmpty || isMask)) {
           _toast('请填写 ${f.label}');
           return;
@@ -596,7 +608,7 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
     // secret 字段写入安全存储（掩码态不覆盖）
     for (final f in _fields.where((f) => f.isSecret)) {
       final typed = _secretCtrls[f.key]!.text.trim();
-      if (typed.isNotEmpty && typed != '••••••••') {
+      if (typed.isNotEmpty && typed != _kSecretMask) {
         await _ds.saveCredential(_config, f.key, typed);
       }
     }
@@ -621,7 +633,7 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
       );
       for (final f in _fields.where((f) => f.isSecret)) {
         final typed = _secretCtrls[f.key]!.text.trim();
-        if (typed.isNotEmpty && typed != '••••••••') {
+        if (typed.isNotEmpty && typed != _kSecretMask) {
           await _ds.saveCredential(_config, f.key, typed);
         }
       }
@@ -671,10 +683,10 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
+            child: Text(
               '删除',
               style: TextStyle(
-                color: Color(0xFFFF6B6B),
+                color: context.colors.danger,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -800,7 +812,7 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
                   child: TextButton.icon(
                     onPressed: _busy ? null : _delete,
                     style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFFF6B6B),
+                      foregroundColor: context.colors.danger,
                       padding: const EdgeInsets.symmetric(vertical: 6),
                     ),
                     icon: const Icon(Icons.delete_outline_rounded, size: 16),

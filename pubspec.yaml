@@ -1,7 +1,7 @@
 name: moying
 description: "墨影 —— 一个现代暗色风格的书籍与电影记录应用（Flutter UI 框架 + 虚拟数据）"
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.8.0+1
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -12,7 +12,6 @@ dependencies:
   provider: ^6.1.2
   path_provider: ^2.1.4
   image_picker: ^1.1.2
-  cupertino_icons: ^1.0.8
   http: ^1.2.0                    # WebDAV 通信
   flutter_secure_storage: ^9.2.2  # WebDAV 凭据（Keystore/Keychain）
   archive: ^3.6.1                 # 含图备份 ZIP 打包（纯 Dart）

@@ -5,17 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_palette.dart';
+import '../config/edit_results.dart';
 import '../models/actor.dart';
 import '../models/data_source.dart';
 import '../models/media_ref.dart';
 import '../models/movie.dart';
 import '../providers/data_source_provider.dart';
 import '../providers/library_provider.dart';
+import '../widgets/edit_form_widgets.dart';
 import '../widgets/media_cover.dart';
-
-/// 编辑页返回约定：null = 取消；'saved' = 已保存；'deleted' = 已删除
-const String kEditResultSaved = 'saved';
-const String kEditResultDeleted = 'deleted';
 
 /// 片长输入净化正则（提为顶层常量，避免每字符输入重建）
 final _nonDigitRegex = RegExp(r'[^0-9]');
@@ -422,10 +420,10 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
+            child: Text(
               '删除',
               style: TextStyle(
-                  color: Color(0xFFFF6B6B), fontWeight: FontWeight.w700),
+                  color: context.colors.danger, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -463,21 +461,21 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
               ..._quickSearchBlocks(),
               _buildCoverHeader(),
               const SizedBox(height: 26),
-              _sectionTitle('基本信息'),
+              const EditSectionTitle('基本信息'),
               const SizedBox(height: 10),
-              _inputField(
+              EditInputField(
                 controller: _titleCtrl,
                 label: '电影标题',
                 hint: '输入片名',
               ),
               const SizedBox(height: 12),
-              _inputField(
+              EditInputField(
                 controller: _englishCtrl,
                 label: '英文名（可选）',
                 hint: '输入英文名',
               ),
               const SizedBox(height: 12),
-              _inputField(
+              EditInputField(
                 controller: _directorCtrl,
                 label: '导演',
                 hint: '输入导演姓名',
@@ -485,7 +483,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                 onSubmitted: _handleDirectorSync,
               ),
               const SizedBox(height: 26),
-              _sectionTitle('上映与观影'),
+              const EditSectionTitle('上映与观影'),
               const SizedBox(height: 10),
               _buildDateField(
                 label: '上映时间',
@@ -567,19 +565,19 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                 ),
               ),
               const SizedBox(height: 26),
-              _sectionTitle('剧情类型'),
+              const EditSectionTitle('剧情类型'),
               const SizedBox(height: 10),
               _buildGenreSection(),
               const SizedBox(height: 26),
-              _sectionTitle('评分'),
+              const EditSectionTitle('评分'),
               const SizedBox(height: 4),
               _buildRatingSlider(),
               const SizedBox(height: 26),
-              _sectionTitle('演员信息'),
+              const EditSectionTitle('演员信息'),
               const SizedBox(height: 10),
               _buildCastEditor(),
               const SizedBox(height: 26),
-              _sectionTitle('我的影评'),
+              const EditSectionTitle('我的影评'),
               const SizedBox(height: 8),
               _buildReviewField(),
               const SizedBox(height: 32),
@@ -725,14 +723,14 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
         padding: const EdgeInsets.only(top: 12),
         child: Row(
           children: [
-            const Icon(Icons.wifi_off_rounded,
-                size: 14, color: Color(0xFFFF6B6B)),
+            Icon(Icons.wifi_off_rounded,
+                size: 14, color: c.error),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
                 err,
                 style:
-                    const TextStyle(fontSize: 12, color: Color(0xFFFF6B6B)),
+                    TextStyle(fontSize: 12, color: c.error),
               ),
             ),
           ],
@@ -939,38 +937,10 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
   /// 更改海报菜单：从相册选择（持久模式）/ 粘贴网络链接 / 移除海报
   Future<void> _openPosterMenu() async {
     final lib = context.read<LibraryProvider>();
-    final action = await showModalBottomSheet<String>(
+    final action = await showCoverActionSheet(
       context: context,
-      backgroundColor: context.colors.surfaceHigh,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (lib.canPickImage)
-              ListTile(
-                leading: Icon(Icons.photo_library_outlined,
-                    color: context.colors.textSecondary),
-                title: Text('从相册选择',
-                    style: TextStyle(color: context.colors.textPrimary)),
-                onTap: () => Navigator.of(ctx).pop('pick'),
-              ),
-            ListTile(
-              leading:
-                  Icon(Icons.link_rounded, color: context.colors.textSecondary),
-              title: Text('粘贴网络图片链接',
-                  style: TextStyle(color: context.colors.textPrimary)),
-              onTap: () => Navigator.of(ctx).pop('url'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.image_not_supported_outlined,
-                  color: Color(0xFFFF6B6B)),
-              title: const Text('移除海报',
-                  style: TextStyle(color: Color(0xFFFF6B6B))),
-              onTap: () => Navigator.of(ctx).pop('remove'),
-            ),
-          ],
-        ),
-      ),
+      canPickImage: lib.canPickImage,
+      removeLabel: '移除海报',
     );
     if (!mounted || action == null) return;
     switch (action) {
@@ -1114,46 +1084,6 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // ---------- 通用输入框 ----------
-
-  Widget _inputField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    FocusNode? focusNode,
-    VoidCallback? onSubmitted,
-  }) {
-    return TextField(
-      controller: controller,
-      focusNode: focusNode,
-      onSubmitted: onSubmitted == null ? null : (_) => onSubmitted(),
-      style: TextStyle(color: context.colors.textPrimary, fontSize: 15),
-      cursorColor: context.colors.accent,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: context.colors.textMuted, fontSize: 13),
-        hintText: hint,
-        hintStyle: TextStyle(color: context.colors.textMuted, fontSize: 14),
-        filled: true,
-        fillColor: context.colors.surfaceHigh,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: context.colors.outline, width: 0.8),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: context.colors.outline, width: 0.8),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: context.colors.accent, width: 1.3),
-        ),
       ),
     );
   }
@@ -1551,8 +1481,8 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                       slot.dispose();
                       _actorSlots.remove(slot);
                     }),
-                    icon: const Icon(Icons.remove_circle_outline_rounded,
-                        color: Color(0xFFFF6B6B), size: 22),
+                    icon: Icon(Icons.remove_circle_outline_rounded,
+                        color: context.colors.danger, size: 22),
                   ),
                 ],
               ),
@@ -1829,7 +1759,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                 '$len/$_reviewMaxChars',
                 style: TextStyle(
                   color: len >= _reviewMaxChars
-                      ? const Color(0xFFFF6B6B)
+                      ? context.colors.danger
                       : context.colors.textMuted,
                   fontSize: 12,
                 ),
@@ -1920,7 +1850,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                   child: ElevatedButton(
                     onPressed: _confirmDelete,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE5484D),
+                      backgroundColor: context.colors.error,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -1947,18 +1877,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     );
   }
 
-  // ---------- 区块标题 ----------
-
-  Widget _sectionTitle(String text) {
-    return Text(
-      text,
-      style: TextStyle(
-        color: context.colors.textPrimary,
-        fontSize: 15,
-        fontWeight: FontWeight.w700,
-      ),
-    );
-  }
+  // → EditSectionTitle
 }
 
 /// 编辑页演员槽位：输入控制器 + 焦点 + 已解析实体（可空）。

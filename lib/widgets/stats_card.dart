@@ -159,12 +159,12 @@ class StatsCard extends StatelessWidget {
     );
   }
 
-  TextStyle get _subStyle => const TextStyle(
-        fontSize: 12,
-        color: Colors.white,
-        fontWeight: FontWeight.w400,
-        decoration: TextDecoration.none,
-      );
+  static const TextStyle _subStyle = TextStyle(
+    fontSize: 12,
+    color: Colors.white,
+    fontWeight: FontWeight.w400,
+    decoration: TextDecoration.none,
+  );
 
   Widget _detailRow(String label, String value) {
     return Row(

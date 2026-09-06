@@ -143,33 +143,38 @@ void main() {
   });
 
   group('容错与校验', () {
-    test('JSON 损坏：拒载并抛 StoreException', () async {
+    test('JSON 损坏：隔离坏文件并回退空列表（不白屏）', () async {
       await makeStore(tmpDir).load();
       File('${tmpDir.path}/books.json')
           .writeAsStringSync('{"schemaVersion": 1, "items": [半截');
-      await expectLater(
-        makeStore(tmpDir).load(),
-        throwsA(isA<StoreException>()),
-      );
+      final snap = await makeStore(tmpDir).load();
+      expect(snap.books, isEmpty);
+      expect(File('${tmpDir.path}/books.json').existsSync(), isFalse);
+      final corrupted = tmpDir.listSync().where((e) => e.path.contains('.corrupt-'));
+      expect(corrupted, isNotEmpty);
     });
 
-    test('schemaVersion 不符：拒载', () async {
+    test('schemaVersion 不符：隔离坏文件并回退空列表', () async {
+      await makeStore(tmpDir).load();
       File('${tmpDir.path}/books.json').writeAsStringSync(jsonEncode({
         'schemaVersion': 99,
         'items': <Map<String, dynamic>>[],
       }));
-      await expectLater(
-        makeStore(tmpDir).load(),
-        throwsA(isA<StoreException>()),
-      );
+      final snap = await makeStore(tmpDir).load();
+      expect(snap.books, isEmpty);
+      expect(File('${tmpDir.path}/books.json').existsSync(), isFalse);
+      final corrupted = tmpDir.listSync().where((e) => e.path.contains('.corrupt-'));
+      expect(corrupted, isNotEmpty);
     });
 
-    test('顶层不是对象：拒载', () async {
+    test('顶层不是对象：隔离坏文件并回退空列表', () async {
+      await makeStore(tmpDir).load();
       File('${tmpDir.path}/books.json').writeAsStringSync('[1,2,3]');
-      await expectLater(
-        makeStore(tmpDir).load(),
-        throwsA(isA<StoreException>()),
-      );
+      final snap = await makeStore(tmpDir).load();
+      expect(snap.books, isEmpty);
+      expect(File('${tmpDir.path}/books.json').existsSync(), isFalse);
+      final corrupted = tmpDir.listSync().where((e) => e.path.contains('.corrupt-'));
+      expect(corrupted, isNotEmpty);
     });
   });
 

@@ -15,6 +15,7 @@ import 'package:moying/screens/data_sync_screen.dart';
 import 'package:moying/services/backup_service.dart';
 import 'package:moying/services/secure_storage_service.dart';
 import 'package:moying/services/webdav_client.dart';
+import 'helpers/fake_webdav_client.dart';
 
 /// P5 数据同步/备份：备份往返、版本校验、路径拼接、fake WebDAV、
 /// SyncProvider 动作链、页面禁用态与开关联动。

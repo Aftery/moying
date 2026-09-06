@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_palette.dart';
+import '../config/edit_results.dart';
 import '../models/book.dart';
 import '../providers/library_provider.dart';
 import '../widgets/book_list_card.dart';
+import '../widgets/filter_dropdown.dart';
 import '../widgets/search_bar_widget.dart';
 import 'book_detail_screen.dart';
 import 'book_edit_screen.dart';
@@ -102,24 +104,24 @@ class _BooksScreenState extends State<BooksScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
-                  _FilterDropdown<BookStatus?>(
+                  FilterDropdown<BookStatus?>(
                     icon: Icons.auto_stories_rounded,
                     value: _statusFilter,
                     items: [
-                      const _FilterItem(label: '全部状态', value: null),
+                      const FilterItem(label: '全部状态', value: null),
                       for (final s in BookStatus.values)
-                        _FilterItem(label: s.label, value: s),
+                        FilterItem(label: s.label, value: s),
                     ],
                     onChanged: (v) => setState(() => _statusFilter = v),
                   ),
                   const SizedBox(width: 10),
-                  _FilterDropdown<String?>(
+                  FilterDropdown<String?>(
                     icon: Icons.category_rounded,
                     value: _categoryFilter,
                     items: [
-                      const _FilterItem(label: '全部分类', value: null),
+                      const FilterItem(label: '全部分类', value: null),
                       for (final c in categoryOptions)
-                        _FilterItem(label: c, value: c),
+                        FilterItem(label: c, value: c),
                     ],
                     onChanged: (v) => setState(() => _categoryFilter = v),
                   ),
@@ -235,85 +237,6 @@ class _BooksScreenState extends State<BooksScreen> {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-/// 通用筛选项
-class _FilterItem<T> {
-  const _FilterItem({required this.label, required this.value});
-
-  final String label;
-  final T value;
-}
-
-/// 暗色下拉筛选组件
-///
-/// [onChanged] 用 [ValueChanged<T?>]：「全部」项的 value 就是 null（T 以可空类型
-/// 实例化，如 BookStatus?），必须允许 null 回传——此处加非空 guard 就是
-/// 「选不回全部」bug 的根因。
-class _FilterDropdown<T> extends StatelessWidget {
-  const _FilterDropdown({
-    required this.icon,
-    required this.items,
-    required this.onChanged,
-    required this.value,
-  });
-
-  final IconData icon;
-  final List<_FilterItem<T>> items;
-  final ValueChanged<T?> onChanged;
-  final T value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: context.colors.surfaceHigh,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: context.colors.outline, width: 0.8),
-        ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<T>(
-            value: value,
-            isExpanded: true,
-            isDense: true,
-            dropdownColor: context.colors.surfaceHigh,
-            borderRadius: BorderRadius.circular(14),
-            icon:  Icon(Icons.expand_more_rounded,
-                color: context.colors.textSecondary),
-            style:  TextStyle(
-              color: context.colors.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-            items: [
-              for (final item in items)
-                DropdownMenuItem<T>(
-                  value: item.value,
-                  child: Row(
-                    children: [
-                      Icon(icon, size: 16, color: context.colors.textMuted),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          item.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-            // 直接回调：「全部」项的 value 就是 null，不能加非空 guard（否则永远选不回全部）。
-            // DropdownButton 仅在真正选中菜单项时触发 onChanged，dismiss 不会回调。
-            onChanged: (v) => onChanged(v),
-          ),
-        ),
       ),
     );
   }

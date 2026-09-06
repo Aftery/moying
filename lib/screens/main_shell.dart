@@ -42,7 +42,7 @@ class _MainShellState extends State<MainShell> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(persistError),
-            backgroundColor: const Color(0xFFFF6B6B),
+            backgroundColor: context.colors.error,
           ),
         );
         context.read<LibraryProvider>().clearPersistError();

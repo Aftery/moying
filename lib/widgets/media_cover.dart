@@ -99,12 +99,14 @@ class MediaCover extends StatelessWidget {
       img = Image.file(
         local,
         fit: BoxFit.cover,
+        cacheWidth: 300,
         errorBuilder: (_, __, ___) => fallback,
       );
     } else if (network != null) {
       img = Image.network(
         network,
         fit: BoxFit.cover,
+        cacheWidth: 300,
         errorBuilder: (_, __, ___) => fallback,
       );
     }

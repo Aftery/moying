@@ -78,7 +78,7 @@ class ProfileScreen extends StatelessWidget {
           ],
           const SizedBox(height: 32),
           Text(
-            '墨影 · v0.1.0\n一个正在成长的书籍与电影记录应用',
+            '墨影 · v0.8.0\n一个正在成长的书籍与电影记录应用',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
@@ -622,7 +622,7 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
                           _avatarUrlCtrl.clear();
                         }),
                         style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFFFF6B6B),
+                          foregroundColor: context.colors.danger,
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(0, 36),
                         ),

@@ -140,10 +140,10 @@ class ActorDetailScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
+            child: Text(
               '删除',
               style: TextStyle(
-                  color: Color(0xFFFF6B6B), fontWeight: FontWeight.w700),
+                  color: context.colors.danger, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -574,7 +574,7 @@ class _ActorEditDialogState extends State<_ActorEditDialog> {
                           _avatarUrlCtrl.clear();
                         }),
                         style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFFFF6B6B),
+                          foregroundColor: context.colors.danger,
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(0, 36),
                         ),

@@ -6,17 +6,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_palette.dart';
+import '../config/edit_results.dart';
 import '../models/book.dart';
 import '../models/data_source.dart';
 import '../models/media_ref.dart';
 import '../providers/data_source_provider.dart';
 import '../providers/library_provider.dart';
+import '../widgets/edit_form_widgets.dart';
 import '../widgets/media_cover.dart';
 import '../widgets/star_rating_picker.dart';
-
-/// 编辑页返回约定：null = 取消；'saved' = 已保存；'deleted' = 已删除
-const String kEditResultSaved = 'saved';
-const String kEditResultDeleted = 'deleted';
 
 /// 图书编辑 / 新增界面（双模式）
 ///
@@ -317,9 +315,9 @@ class _BookEditScreenState extends State<BookEditScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('确认回退',
+            child: Text('确认回退',
                 style: TextStyle(
-                    color: Color(0xFFFFB020), fontWeight: FontWeight.w700)),
+                    color: context.colors.warning, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -386,10 +384,10 @@ class _BookEditScreenState extends State<BookEditScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
+            child: Text(
               '删除',
               style: TextStyle(
-                  color: Color(0xFFFF6B6B), fontWeight: FontWeight.w700),
+                  color: context.colors.danger, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -425,7 +423,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
                     ..._quickSearchBlocks(),
                     _buildHeader(),
                     const SizedBox(height: 24),
-                    _sectionTitle('评分'),
+                    const EditSectionTitle('评分'),
                     const SizedBox(height: 4),
                     Center(
                       child: StarRatingPicker(
@@ -434,17 +432,17 @@ class _BookEditScreenState extends State<BookEditScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    _sectionTitle('阅读进度'),
+                    const EditSectionTitle('阅读进度'),
                     const SizedBox(height: 8),
                     _buildProgressCard(),
                     // 阅读时间区块：想读且无任何记录时整块隐藏（_readingTimeBlocks 返回空）
                     ..._readingTimeBlocks(),
                     const SizedBox(height: 24),
-                    _sectionTitle('分类'),
+                    const EditSectionTitle('分类'),
                     const SizedBox(height: 8),
                     _buildCategoryField(),
                     const SizedBox(height: 24),
-                    _sectionTitle('内容简介'),
+                    const EditSectionTitle('内容简介'),
                     const SizedBox(height: 8),
                     _buildMultilineField(
                       controller: _descCtrl,
@@ -453,7 +451,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
                       maxLines: 4,
                     ),
                     const SizedBox(height: 24),
-                    _sectionTitle('阅读感悟'),
+                    const EditSectionTitle('阅读感悟'),
                     const SizedBox(height: 8),
                     _buildMultilineField(
                       controller: _notesCtrl,
@@ -549,7 +547,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
         Expanded(
           child: Column(
             children: [
-              _inputField(
+              EditInputField(
                 controller: _titleCtrl,
                 label: '书名',
                 hint: '输入书名',
@@ -557,19 +555,19 @@ class _BookEditScreenState extends State<BookEditScreen> {
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 10),
-              _inputField(
+              EditInputField(
                 controller: _authorCtrl,
                 label: '作者',
                 hint: '输入作者',
               ),
               const SizedBox(height: 10),
-              _inputField(
+              EditInputField(
                 controller: _isbnCtrl,
                 label: 'ISBN',
                 hint: '选填，联网检索回填自动带出',
               ),
               const SizedBox(height: 10),
-              _inputField(
+              EditInputField(
                 controller: _pagesCtrl,
                 label: '总页数',
                 hint: '如 328',
@@ -718,14 +716,14 @@ class _BookEditScreenState extends State<BookEditScreen> {
         padding: const EdgeInsets.only(top: 12),
         child: Row(
           children: [
-            const Icon(Icons.wifi_off_rounded,
-                size: 14, color: Color(0xFFFF6B6B)),
+            Icon(Icons.wifi_off_rounded,
+                size: 14, color: c.error),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
                 err,
                 style:
-                    const TextStyle(fontSize: 12, color: Color(0xFFFF6B6B)),
+                    TextStyle(fontSize: 12, color: c.error),
               ),
             ),
           ],
@@ -896,38 +894,9 @@ class _BookEditScreenState extends State<BookEditScreen> {
   /// 更换封面菜单：从相册选择（持久模式）/ 粘贴网络链接 / 移除封面
   Future<void> _openCoverMenu() async {
     final lib = context.read<LibraryProvider>();
-    final action = await showModalBottomSheet<String>(
+    final action = await showCoverActionSheet(
       context: context,
-      backgroundColor: context.colors.surfaceHigh,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (lib.canPickImage)
-              ListTile(
-                leading:  Icon(Icons.photo_library_outlined,
-                    color: context.colors.textSecondary),
-                title:  Text('从相册选择',
-                    style: TextStyle(color: context.colors.textPrimary)),
-                onTap: () => Navigator.of(ctx).pop('pick'),
-              ),
-            ListTile(
-              leading:  Icon(Icons.link_rounded,
-                  color: context.colors.textSecondary),
-              title:  Text('粘贴网络图片链接',
-                  style: TextStyle(color: context.colors.textPrimary)),
-              onTap: () => Navigator.of(ctx).pop('url'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.image_not_supported_outlined,
-                  color: Color(0xFFFF6B6B)),
-              title: const Text('移除封面',
-                  style: TextStyle(color: Color(0xFFFF6B6B))),
-              onTap: () => Navigator.of(ctx).pop('remove'),
-            ),
-          ],
-        ),
-      ),
+      canPickImage: lib.canPickImage,
     );
     if (!mounted || action == null) return;
     switch (action) {
@@ -1012,62 +981,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
     });
   }
 
-  Widget _inputField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    TextInputType? keyboardType,
-    ValueChanged<String>? onChanged,
-    VoidCallback? onSubmitted,
-    FocusNode? focusNode,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      onChanged: onChanged,
-      onSubmitted: onSubmitted == null
-          ? null
-          : (_) => onSubmitted(),
-      focusNode: focusNode,
-      style:  TextStyle(color: context.colors.textPrimary, fontSize: 15),
-      cursorColor: context.colors.accent,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle:  TextStyle(color: context.colors.textMuted, fontSize: 13),
-        hintText: hint,
-        hintStyle:  TextStyle(color: context.colors.textMuted, fontSize: 14),
-        filled: true,
-        fillColor: context.colors.surfaceHigh,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:  BorderSide(color: context.colors.outline, width: 0.8),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:  BorderSide(color: context.colors.outline, width: 0.8),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:  BorderSide(color: context.colors.accent, width: 1.3),
-        ),
-      ),
-    );
-  }
-
   // ---------- 区块小标题 ----------
-
-  Widget _sectionTitle(String text) {
-    return Text(
-      text,
-      style:  TextStyle(
-        color: context.colors.textPrimary,
-        fontSize: 15,
-        fontWeight: FontWeight.w700,
-      ),
-    );
-  }
+  // → EditSectionTitle
 
   // ---------- 进度条卡片 ----------
 
@@ -1143,7 +1058,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
 
     final blocks = <Widget>[
       const SizedBox(height: 24),
-      _sectionTitle('阅读时间'),
+      const EditSectionTitle('阅读时间'),
       const SizedBox(height: 8),
       _dateField(
         label: '开始阅读',
@@ -1261,7 +1176,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
       // 注意：fieldViewBuilder 第 4 参数是 onFieldSubmitted（回车确认选中项），
       // 不是 onChanged！文本变化由 RawAutocomplete 通过 controller 监听自行响应。
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-        return _inputField(
+        return EditInputField(
           controller: controller,
           focusNode: focusNode,
           label: '分类',
@@ -1431,7 +1346,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
                       child: ElevatedButton(
                         onPressed: _confirmDelete,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFE5484D),
+                          backgroundColor: context.colors.error,
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_palette.dart';
+import '../config/edit_results.dart';
 import '../models/actor.dart';
 import '../models/movie.dart';
 import '../providers/library_provider.dart';
