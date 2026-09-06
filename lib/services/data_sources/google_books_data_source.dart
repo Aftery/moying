@@ -47,6 +47,11 @@ class GoogleBooksDataSource implements BookDataSource {
         'Google Books 拒绝访问（403），可在数据源配置中填写国家代码重试',
       );
     }
+    if (resp.statusCode == 429) {
+      throw const DataSourceException(
+        'Google Books 请求过于频繁（HTTP 429），请稍后再试',
+      );
+    }
     if (resp.statusCode != 200) {
       throw DataSourceException('Google Books 接口异常（HTTP ${resp.statusCode}）');
     }

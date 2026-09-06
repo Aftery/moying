@@ -4,6 +4,7 @@ import '../data/library_store.dart';
 import '../models/data_source.dart';
 import 'data_source_interface.dart';
 import 'data_sources/google_books_data_source.dart';
+import 'data_sources/open_library_data_source.dart';
 import 'data_sources/tmdb_data_source.dart';
 import 'secure_storage_service.dart';
 
@@ -13,17 +14,21 @@ import 'secure_storage_service.dart';
 /// - 类型 → 实现实例的注册表（测试可注入 fake 覆盖）；
 /// - 配置加载 / 保存：`data_sources.json`（凭据走 [DataSourceCredentialStore]）；
 /// - 首次启动（配置文件不存在）写入内置默认预设：TMDB（影视默认，未配置）+
-///   Google Books（书籍默认，开箱即用）；
+///   OpenLibrary（书籍默认，2026-09 替换 Google Books，因国内网络 429 问题）；
 /// - 测试连接并把结果（状态 / 摘要 / 时间）落盘。
 class DataSourceManager {
   DataSourceManager({
     LibraryStore? store,
     DataSourceCredentialStore? credentials,
     MovieDataSource? tmdb,
+    BookDataSource? openLibrary,
     BookDataSource? googleBooks,
   })  : _store = store,
         _credentials = credentials ?? DataSourceSecureCredentials() {
     registerMovie(tmdb ?? TmdbDataSource());
+    // OpenLibrary 为书籍默认实现（2026-09 起，替代 Google Books——国内常 429）；
+    // Google Books 实现保留注册：旧配置 / 手动添加仍可用（配合 429 友好提示与节流）。
+    registerBook(openLibrary ?? OpenLibraryDataSource());
     registerBook(googleBooks ?? GoogleBooksDataSource());
   }
 
@@ -105,7 +110,10 @@ class DataSourceManager {
       await saveConfigs();
       return configs;
     }
-    _configs = loaded;
+    // 旧版配置一次性迁移（书籍默认源 Google Books → OpenLibrary），有改动才落盘
+    final migrated = _migrateLegacyDefaults(loaded);
+    _configs = migrated;
+    if (!_sameConfigs(loaded, migrated)) await saveConfigs();
     return configs;
   }
 
@@ -116,7 +124,40 @@ class DataSourceManager {
     await store.saveDataSourceConfigs(_configs);
   }
 
-  /// 内置默认预设：TMDB（影视默认）+ Google Books（书籍默认，免配置）
+  /// 2026-09 迁移：把旧版内置书籍默认源 `builtin_googlebooks`（国内常 429）
+  /// 替换为 OpenLibrary。仅当书籍默认仍是该内置源且尚无 OpenLibrary 配置时
+  /// 才执行——用户已手动改默认 / 已添加过 OpenLibrary 的配置一律不动。
+  static List<DataSourceConfig> _migrateLegacyDefaults(
+    List<DataSourceConfig> loaded,
+  ) {
+    if (loaded.any((c) => c.type == DataSourceType.openLibrary)) return loaded;
+    final idx =
+        loaded.indexWhere((c) => c.id == 'builtin_googlebooks' && c.isDefault);
+    if (idx < 0) return loaded;
+    final migrated = [...loaded]..removeAt(idx);
+    migrated.add(const DataSourceConfig(
+      id: 'builtin_openlibrary',
+      type: DataSourceType.openLibrary,
+      name: 'Open Library',
+      isDefault: true,
+      status: DataSourceStatus.connected,
+      summary: '免 API Key 免配置，无速率限制',
+    ));
+    return migrated;
+  }
+
+  static bool _sameConfigs(
+    List<DataSourceConfig> a,
+    List<DataSourceConfig> b,
+  ) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  /// 内置默认预设：TMDB（影视默认）+ OpenLibrary（书籍默认，2026-09 起替代 Google Books）
   static List<DataSourceConfig> _builtinPresets() => [
         const DataSourceConfig(
           id: 'builtin_tmdb',
@@ -126,12 +167,12 @@ class DataSourceManager {
           status: DataSourceStatus.notConfigured,
         ),
         const DataSourceConfig(
-          id: 'builtin_googlebooks',
-          type: DataSourceType.googleBooks,
-          name: 'Google Books',
+          id: 'builtin_openlibrary',
+          type: DataSourceType.openLibrary,
+          name: 'Open Library',
           isDefault: true,
           status: DataSourceStatus.connected,
-          summary: '免 API Key 免配置',
+          summary: '免 API Key 免配置，无速率限制',
         ),
       ];
 
@@ -240,6 +281,7 @@ class DataSourceManager {
     }
     for (final impl in _bookImpls.values) {
       if (impl is GoogleBooksDataSource) impl.close();
+      if (impl is OpenLibraryDataSource) impl.close();
     }
   }
 }

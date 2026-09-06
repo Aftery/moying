@@ -53,7 +53,7 @@ class _FakeCreds implements DataSourceCredentialStore {
 
 class _FakeBookSource implements BookDataSource {
   @override
-  DataSourceType get type => DataSourceType.googleBooks;
+  DataSourceType get type => DataSourceType.openLibrary;
 
   @override
   List<ConfigField> get configFields => const [];
@@ -179,7 +179,7 @@ DataSourceManager _managerWithFakes({
       store: store,
       credentials: creds ?? _FakeCreds(),
       tmdb: movie ?? _FakeMovieSource(),
-      googleBooks: book ?? _FakeBookSource(),
+      openLibrary: book ?? _FakeBookSource(),
     );
 
 void main() {
@@ -268,7 +268,7 @@ void main() {
   });
 
   group('DataSourceManager', () {
-    test('首次加载写入内置预设（TMDB + Google Books，各自类别默认）', () async {
+    test('首次加载写入内置预设（TMDB + Open Library，各自类别默认）', () async {
       final store = await _makeStore(tmpDir, 'presets');
       final manager = _managerWithFakes(store: store);
       final configs = await manager.loadConfigs();
@@ -277,12 +277,62 @@ void main() {
       expect(manager.defaultSourceOf(DataSourceCategory.movie)!.type,
           DataSourceType.tmdb);
       expect(manager.defaultSourceOf(DataSourceCategory.book)!.type,
-          DataSourceType.googleBooks);
+          DataSourceType.openLibrary);
 
       // 已落盘
       final persisted = await store.loadDataSourceConfigs();
       expect(persisted, isNotNull);
       expect(persisted!.length, 2);
+    });
+
+    test('旧版 builtin_googlebooks 默认源自动迁移为 OpenLibrary', () async {
+      final store = await _makeStore(tmpDir, 'legacy');
+      await store.saveDataSourceConfigs(const [
+        DataSourceConfig(
+          id: 'builtin_tmdb',
+          type: DataSourceType.tmdb,
+          name: 'TMDB (The Movie Database)',
+          isDefault: true,
+        ),
+        DataSourceConfig(
+          id: 'builtin_googlebooks',
+          type: DataSourceType.googleBooks,
+          name: 'Google Books',
+          isDefault: true,
+          status: DataSourceStatus.connected,
+        ),
+      ]);
+
+      final manager = _managerWithFakes(store: store);
+      final configs = await manager.loadConfigs();
+      // Google Books 默认项被替换为 OpenLibrary；TMDB 不受影响
+      expect(configs.any((c) => c.id == 'builtin_googlebooks'), isFalse);
+      expect(configs.any((c) => c.id == 'builtin_openlibrary'), isTrue);
+      expect(manager.defaultSourceOf(DataSourceCategory.book)!.type,
+          DataSourceType.openLibrary);
+      // 迁移结果已落盘
+      final persisted = await store.loadDataSourceConfigs();
+      expect(
+        persisted!.any((c) => c.id == 'builtin_openlibrary' && c.isDefault),
+        isTrue,
+      );
+    });
+
+    test('用户已手动改默认（非内置 Google Books）时不做迁移', () async {
+      final store = await _makeStore(tmpDir, 'manual');
+      await store.saveDataSourceConfigs(const [
+        DataSourceConfig(
+          id: 'user_gb',
+          type: DataSourceType.googleBooks,
+          name: '自建谷歌源',
+          isDefault: true,
+        ),
+      ]);
+
+      final manager = _managerWithFakes(store: store);
+      final configs = await manager.loadConfigs();
+      expect(configs.single.id, 'user_gb');
+      expect(configs.single.type, DataSourceType.googleBooks);
     });
 
     test('已有配置文件时直接读取（不覆盖用户配置）', () async {
@@ -318,7 +368,7 @@ void main() {
       );
       // 书籍默认不受影响
       expect(manager.defaultSourceOf(DataSourceCategory.book)!.id,
-          'builtin_googlebooks');
+          'builtin_openlibrary');
     });
 
     test('移除默认源后同类剩余第一个顶上，凭据一并清理', () async {
@@ -408,8 +458,8 @@ void main() {
 
       var missing = await provider.sourcesMissingCredentials();
       expect(missing, contains('TMDB (The Movie Database)'));
-      // Google Books 免配置不命中
-      expect(missing, isNot(contains('Google Books')));
+      // Open Library 免配置不命中
+      expect(missing, isNot(contains('Open Library')));
 
       final tmdb = provider.configs.firstWhere((c) => c.id == 'builtin_tmdb');
       await provider.saveCredential(tmdb, 'apiKey', 'v3_ok');
@@ -502,7 +552,7 @@ void main() {
       expect(find.text('影视数据源'), findsOneWidget);
       expect(find.text('书籍数据源'), findsOneWidget);
       expect(find.text('TMDB (The Movie Database)'), findsOneWidget);
-      expect(find.text('Google Books'), findsOneWidget);
+      expect(find.text('Open Library'), findsOneWidget);
       expect(find.text('默认'), findsNWidgets(2));
       expect(find.text('添加影视数据源'), findsOneWidget);
       expect(find.text('添加书籍数据源'), findsOneWidget);
@@ -616,7 +666,7 @@ void main() {
         (b) => b.isbn == '9787536692930',
       );
       expect(saved.title, '三体');
-      expect(saved.source, 'googleBooks:gb-1');
+      expect(saved.source, 'openLibrary:gb-1');
       expect(saved.author, '刘慈欣');
     });
   });

@@ -510,8 +510,11 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
               // 模式下弹数字键盘但不提交字符（键盘能弹、输入无效）。也不能用
               // FilteringTextInputFormatter——组合输入中间态会被格式化器吞掉。
               // 最终方案：文本通道 + onChanged 手动净化（见 sanitizeDurationInput）。
-              TextField(
+              EditInputField(
                 controller: _durationCtrl,
+                label: '片长',
+                hint: '如 169',
+                suffixText: '分钟',
                 keyboardType: TextInputType.text,
                 onChanged: (raw) {
                   final clean = sanitizeDurationInput(raw);
@@ -521,48 +524,6 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                     selection: TextSelection.collapsed(offset: clean.length),
                   );
                 },
-                style:
-                    TextStyle(color: context.colors.textPrimary, fontSize: 15),
-                cursorColor: context.colors.accent,
-                decoration: InputDecoration(
-                  labelText: '片长',
-                  labelStyle:
-                      TextStyle(color: context.colors.textMuted, fontSize: 13),
-                  suffixIcon: Padding(
-                    padding: const EdgeInsets.only(right: 14),
-                    child: Center(
-                      child: Text(
-                        '分钟',
-                        style: TextStyle(
-                          color: context.colors.textMuted.withOpacity(0.8),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ),
-                  hintText: '如 169',
-                  hintStyle:
-                      TextStyle(color: context.colors.textMuted, fontSize: 14),
-                  filled: true,
-                  fillColor: context.colors.surfaceHigh,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide:
-                        BorderSide(color: context.colors.outline, width: 0.8),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide:
-                        BorderSide(color: context.colors.outline, width: 0.8),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide:
-                        BorderSide(color: context.colors.accent, width: 1.3),
-                  ),
-                ),
               ),
               const SizedBox(height: 26),
               const EditSectionTitle('剧情类型'),

@@ -9,7 +9,15 @@ import '../services/data_source_manager.dart';
 /// - 配置管理（加载 / 增删改 / 设默认 / 测试连接）走 [DataSourceManager]；
 /// - 快速检索：按类别取默认源搜索，状态（进行中 / 结果 / 错误）驱动编辑页 UI；
 /// - debounce 由 UI 层负责（Timer 500ms），Provider 只收最终查询词。
+/// - 全局请求节流：同类型数据源（按 DataSourceType）最小间隔 3s，防止触发 API 速率限制。
 class DataSourceProvider extends ChangeNotifier {
+  /// 请求节流：每类数据源（DataSourceType）上次请求时间。
+  /// 实例级即可——应用内 DataSourceProvider 为单例；static 会让测试间状态泄漏
+  /// （前一个用例的记录拦截后一个用例的真实请求）。
+  final Map<DataSourceType, DateTime> _lastRequestTime = {};
+
+  /// 同类型数据源最小请求间隔（3s），防止 Google Books 等免 Key API 触发 429
+  static const _minRequestInterval = Duration(seconds: 3);
   DataSourceProvider({required DataSourceManager manager})
       : _manager = manager;
 
@@ -132,11 +140,22 @@ class DataSourceProvider extends ChangeNotifier {
       return;
     }
 
+    // 全局节流：同类型数据源最小间隔 3s，防止触发 429
+    final now = DateTime.now();
+    final last = _lastRequestTime[source.type];
+    if (last != null && now.difference(last) < _minRequestInterval) {
+      setResults(null);
+      _searchError = '请求过于频繁，请稍后再试';
+      notifyListeners();
+      return;
+    }
+
     _isSearching = true;
     _searchError = null;
     notifyListeners();
     try {
       final results = await execute(source, q);
+      _lastRequestTime[source.type] = DateTime.now();
       if (_lastQuery != q) return;
       setResults(results);
       if (results.isEmpty) _searchError = '';

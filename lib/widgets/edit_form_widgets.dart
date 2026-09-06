@@ -31,6 +31,7 @@ class EditInputField extends StatelessWidget {
     this.onChanged,
     this.onSubmitted,
     this.focusNode,
+    this.suffixText,
   });
 
   final TextEditingController controller;
@@ -40,6 +41,9 @@ class EditInputField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final VoidCallback? onSubmitted;
   final FocusNode? focusNode;
+  /// 后缀文字（如 '分钟'）；suffixText 与 suffixIcon 二选一，
+  /// suffixText 会自动靠右对齐，无需额外 Padding。
+  final String? suffixText;
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +64,9 @@ class EditInputField extends StatelessWidget {
         fillColor: context.colors.surfaceHigh,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        suffixText: suffixText,
+        suffixStyle:
+            TextStyle(color: context.colors.textMuted.withOpacity(0.8), fontSize: 13),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: context.colors.outline, width: 0.8),

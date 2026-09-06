@@ -237,12 +237,14 @@ class DataSourceScreen extends StatelessWidget {
   IconData _typeIcon(DataSourceType type) => switch (type) {
         DataSourceType.tmdb => Icons.local_movies_outlined,
         DataSourceType.googleBooks => Icons.menu_book_outlined,
+        DataSourceType.openLibrary => Icons.auto_stories_outlined,
         DataSourceType.douban => Icons.bookmarks_outlined,
       };
 
   String _typeSubtitle(DataSourceType type) => switch (type) {
         DataSourceType.tmdb => '影视元数据最全，需免费申请 API Key',
         DataSourceType.googleBooks => '免 API Key，开箱即用',
+        DataSourceType.openLibrary => '免 API Key，无速率限制，适合国内',
         DataSourceType.douban => '官方 API 已关闭，需自建代理',
       };
 

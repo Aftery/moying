@@ -25,8 +25,11 @@ enum DataSourceType {
   /// TMDB —— The Movie Database（影视；需 API Key，免费申请）
   tmdb('TMDB (The Movie Database)', DataSourceCategory.movie),
 
-  /// Google Books（书籍；免 API Key 开箱即用）
+  /// Google Books（书籍；免 API Key 开箱即用，国内访问不稳定）
   googleBooks('Google Books', DataSourceCategory.book),
+
+  /// OpenLibrary（书籍；免 API Key，无速率限制，适合国内）
+  openLibrary('Open Library', DataSourceCategory.book),
 
   /// 豆瓣（书籍；官方 API 已关闭，需自建代理，后续迭代开放）
   douban('豆瓣 Douban', DataSourceCategory.book);
