@@ -7,7 +7,9 @@ import 'package:share_plus/share_plus.dart';
 import '../data/library_store.dart';
 import '../models/sync_settings.dart';
 import '../services/backup_service.dart';
+import '../services/merge_engine.dart';
 import '../services/secure_storage_service.dart';
+import '../services/snapshot_service.dart';
 import '../services/webdav_client.dart';
 import 'library_provider.dart';
 
@@ -57,10 +59,14 @@ class SyncProvider extends ChangeNotifier {
   SyncSettings _settings = const SyncSettings();
   bool _isSyncing = false;
   String? _lastError;
+  MergeResult? _lastMerge;
 
   SyncSettings get settings => _settings;
   bool get isSyncing => _isSyncing;
   String? get lastError => _lastError;
+
+  /// 最近一次合并统计（null = 尚未执行过合并；UI 状态指示用）
+  MergeResult? get lastMerge => _lastMerge;
 
   /// 启动加载配置（main.dart init 阶段调用；损坏回退默认值）
   Future<void> loadSettings() async {
@@ -102,7 +108,12 @@ class SyncProvider extends ChangeNotifier {
     }
   }
 
-  /// 立即上传备份（flush → 打包 → PUT → 记录同步时间）
+  /// 立即上传备份（flush → 本地快照 → 拉云端合并 → 上传 → 记录同步时间）
+  ///
+  /// v0.9.1 起接入记录级 LWW：上传前先拉云端最新备份做三集合合并
+  /// （id 并集 + updatedAt 新者胜），合并结果落盘后随包上传——
+  /// 保证双端各自的修改都不会被整包覆盖。云端无备份 / 包损坏时
+  /// 退化为原全量上传行为。
   Future<void> uploadNow() async {
     final store = _store;
     if (store == null) throw WebDavException(null, '当前平台不支持备份');
@@ -112,13 +123,48 @@ class SyncProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await store.flush();
-      final bytes = await BackupService(
-        store: store,
-      ).buildBackup(includeImages: _settings.includeImages);
+      // 1) 合并前本地快照（失败只记日志，不阻断同步）
+      await SnapshotService(store: store).capture(tag: 'pre-merge');
+
+      // 2) 拉云端最新备份并 LWW 合并
+      MergeResult? merge;
+      try {
+        final names = await client.listBackups();
+        if (names.isNotEmpty) {
+          final remoteBytes = await client.download(names.first);
+          final remoteSnap =
+              await BackupService(store: store).extractSnapshot(remoteBytes);
+          merge = mergeSnapshot(
+            local: LibrarySnapshot(
+              books: _library.books,
+              movies: _library.movieList,
+              actors: _library.actors,
+            ),
+            remote: remoteSnap,
+          );
+          if (merge.hasChanges) {
+            // 合并结果落盘（saveXxx 落 v2 头）后从盘重载，updatedAt 原样保留
+            await store.saveBooks(merge.snapshot.books);
+            await store.saveMovies(merge.snapshot.movies);
+            await store.saveActors(merge.snapshot.actors);
+            await _library.reloadFromStore();
+          }
+        }
+      } on BackupException catch (e) {
+        // 云端包损坏 / 版本不符：不阻断上传（保留云端文件不动，本地上传新包）
+        debugPrint('[Sync] 云端备份无法解析，跳过合并直接上传: ${e.message}');
+        merge = null;
+      }
+
+      // 3) 打包上传（buildBackup 读磁盘 = 合并后数据）
+      final backup = BackupService(store: store);
+      final bytes =
+          await backup.buildBackup(includeImages: _settings.includeImages);
       final now = DateTime.now();
-      final stamp = BackupService(store: store).backupFileStamp(now);
+      final stamp = backup.backupFileStamp(now);
       final fileName = _settings.includeImages ? '$stamp.zip' : '$stamp.json';
       await client.upload(fileName, bytes);
+      _lastMerge = merge;
       _settings = _settings.copyWith(lastSyncAt: now);
       await store.saveSettings(_settings);
     } on WebDavException catch (e) {

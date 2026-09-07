@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:archive/archive.dart';
 
 import '../data/library_store.dart';
+import '../models/actor.dart';
+import '../models/book.dart';
+import '../models/movie.dart';
 
 /// 备份清单（恢复确认弹窗展示条目数；schemaVersion 校验入口）
 class BackupManifest {
@@ -167,6 +170,64 @@ class BackupService {
   Future<BackupManifest> peekBackup(Uint8List bytes) async {
     final parsed = await _parse(bytes);
     return parsed.manifest;
+  }
+
+  /// 从备份字节解析出三集合快照（LWW 合并用，**不落盘**）
+  ///
+  /// 与 [restoreBackup] 的区别：只读取模型，不触碰本地任何文件。
+  /// 集合 JSON 沿用 store 的 schemaVersion 校验语义（v1/v2 均可读，
+  /// 单条损坏跳过——与 [LibraryStore._readFile] 行为一致）。
+  Future<LibrarySnapshot> extractSnapshot(Uint8List bytes) async {
+    final parsed = await _parse(bytes);
+    _ensureCompatible(parsed.manifest);
+    return LibrarySnapshot(
+      books: _decodeCollection(
+        parsed.files['books.json'],
+        Book.fromJson,
+        'books.json',
+      ),
+      movies: _decodeCollection(
+        parsed.files['movies.json'],
+        Movie.fromJson,
+        'movies.json',
+      ),
+      actors: _decodeCollection(
+        parsed.files['actors.json'],
+        Actor.fromJson,
+        'actors.json',
+      ),
+    );
+  }
+
+  /// 解析单个集合 JSON 字节（顶层 schemaVersion 校验 + 逐条容错）
+  List<T> _decodeCollection<T>(
+    Uint8List? fileBytes,
+    T Function(Map<String, dynamic>) fromJson,
+    String fileName,
+  ) {
+    if (fileBytes == null) {
+      throw BackupException('备份缺少必需文件：$fileName');
+    }
+    final root =
+        jsonDecode(utf8.decode(fileBytes)) as Map<String, dynamic>;
+    final version = root['schemaVersion'];
+    if (version is! int ||
+        !const [1, 2].contains(version)) {
+      throw BackupException('$fileName schemaVersion 不符：$version');
+    }
+    final items = root['items'];
+    if (items is! List) {
+      throw BackupException('$fileName 格式错误：items 必须是数组');
+    }
+    final result = <T>[];
+    for (final e in items) {
+      try {
+        result.add(fromJson(e as Map<String, dynamic>));
+      } on Object catch (_) {
+        // 单条损坏跳过（与 LibraryStore 逐条隔离策略一致）
+      }
+    }
+    return result;
   }
 
   /// 还原备份：覆盖四集合 JSON 与 images/（调用方负责通知 Provider reload）

@@ -66,7 +66,14 @@ class LibraryStore {
   /// 两套互不相同的版本号，勿混用：本常量在每个集合文件写入
   /// `schemaVersion` 字段并在 [_loadList] 严格校验；备份恢复时集合文件
   /// 原样字节拷贝、不经过本校验链。
-  static const int schemaVersion = 1;
+  static const int schemaVersion = 2;
+
+  /// 仍可读取的历史版本（v1：updatedAt 引入前的集合文件）。
+  ///
+  /// 版本校验用「可读列表」而非严格相等：v2 新增的 updatedAt 是可选字段、
+  /// fromJson 已兜底，若严格校验会把老用户的 v1 文件整文件隔离（丢数据）。
+  static const List<int> _readableVersions = [1, 2];
+
   static const String _booksFile = 'books.json';
   static const String _moviesFile = 'movies.json';
   static const String _actorsFile = 'actors.json';
@@ -401,9 +408,9 @@ class LibraryStore {
         throw StoreException('$fileName 格式错误：顶层必须是对象');
       }
       final version = root['schemaVersion'];
-      if (version is! int || version != schemaVersion) {
+      if (version is! int || !_readableVersions.contains(version)) {
         throw StoreException(
-          '$fileName schemaVersion 不符：期望 $schemaVersion，实际 $version',
+          '$fileName schemaVersion 不符：期望 $_readableVersions，实际 $version',
         );
       }
       final items = root['items'];

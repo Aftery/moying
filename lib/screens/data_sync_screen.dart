@@ -9,6 +9,7 @@ import '../models/sync_settings.dart';
 import '../providers/data_source_provider.dart';
 import '../providers/sync_provider.dart';
 import '../services/backup_service.dart';
+import '../services/merge_engine.dart';
 import '../services/webdav_client.dart';
 
 /// 数据同步页 —— WebDAV 云同步 + 本地导出/导入（P5）
@@ -251,6 +252,7 @@ class _DataSyncScreenState extends State<DataSyncScreen> {
             configured: sync.settings.isConfigured,
             onUpload: _onUpload,
             onRestore: _onRestoreFromCloud,
+            mergeSummary: _mergeSummary(sync.lastMerge),
           ),
           const SizedBox(height: 24),
           _sectionTitle('WebDAV 服务器设置'),
@@ -298,6 +300,14 @@ class _DataSyncScreenState extends State<DataSyncScreen> {
     );
   }
 
+  /// 合并统计摘要（null → 不显示该行）
+  String? _mergeSummary(MergeResult? merge) {
+    if (merge == null || !merge.hasChanges) return null;
+    return '本次合并：${merge.fromRemote} 条来自云端'
+        ' · ${merge.localKept} 条本地保留'
+        ' · ${merge.localOnly} 条并入';
+  }
+
   Widget _sectionTitle(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: Text(
@@ -312,7 +322,7 @@ class _DataSyncScreenState extends State<DataSyncScreen> {
       );
 }
 
-/// 顶部云同步卡：上次同步时间 + 两个动作按钮
+/// 顶部云同步卡：上次同步时间（含合并统计）+ 两个动作按钮
 class _SyncCard extends StatelessWidget {
   const _SyncCard({
     required this.lastSyncAt,
@@ -320,6 +330,7 @@ class _SyncCard extends StatelessWidget {
     required this.configured,
     required this.onUpload,
     required this.onRestore,
+    this.mergeSummary,
   });
 
   final DateTime? lastSyncAt;
@@ -327,6 +338,9 @@ class _SyncCard extends StatelessWidget {
   final bool configured;
   final VoidCallback onUpload;
   final VoidCallback onRestore;
+
+  /// 最近一次合并摘要（null = 无合并发生或尚未同步过）
+  final String? mergeSummary;
 
   String get _syncLabel {
     final t = lastSyncAt;
@@ -366,6 +380,13 @@ class _SyncCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(_syncLabel,
               style: TextStyle(fontSize: 13, color: c.textSecondary)),
+          if (mergeSummary != null) ...[
+            const SizedBox(height: 4),
+            Text(mergeSummary!,
+                style: TextStyle(
+                    fontSize: 12,
+                    color: c.textSecondary.withOpacity(0.8))),
+          ],
           const SizedBox(height: 16),
           Row(
             children: [

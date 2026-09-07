@@ -57,12 +57,33 @@ void main() {
       expect(File('${tmpDir.path}/actors.json').existsSync(), isTrue);
     });
 
-    test('落盘文件带 schemaVersion:1 头', () async {
+    test('v0.9.0 首启空库：空 seed 时返回空三集合且文件正常落盘', () async {
+      final store = LibraryStore(
+        tmpDir,
+        seed: const LibrarySnapshot(books: [], movies: [], actors: []),
+      );
+      final snap = await store.load();
+
+      expect(snap.books, isEmpty);
+      expect(snap.movies, isEmpty);
+      expect(snap.actors, isEmpty);
+      // 三集合文件照常落盘，二次启动走正常读取路径（不会再碰 seed）
+      expect(File('${tmpDir.path}/books.json').existsSync(), isTrue);
+      expect(File('${tmpDir.path}/movies.json').existsSync(), isTrue);
+      expect(File('${tmpDir.path}/actors.json').existsSync(), isTrue);
+
+      final reload = await store.load();
+      expect(reload.books, isEmpty);
+      expect(reload.movies, isEmpty);
+      expect(reload.actors, isEmpty);
+    });
+
+    test('落盘文件带 schemaVersion:2 头（v1 仍可读，见旧数据兼容组）', () async {
       await makeStore(tmpDir).load();
       final root =
           jsonDecode(File('${tmpDir.path}/books.json').readAsStringSync())
               as Map<String, dynamic>;
-      expect(root['schemaVersion'], 1);
+      expect(root['schemaVersion'], 2);
       expect(root['items'], isA<List<dynamic>>());
     });
 

@@ -73,6 +73,7 @@ class Movie {
     this.actorIds,
     this.poster,
     this.source,
+    this.updatedAt,
   });
 
   /// 唯一标识
@@ -130,6 +131,13 @@ class Movie {
   /// 数据溯源标记（可空：P6 网络补全落地后记录来源与外部 id，如 tmdbId）
   final String? source;
 
+  /// 最后修改时间（WebDAV 记录级 LWW 合并的时间戳基准）
+  ///
+  /// 可空 = 从未修改过（旧数据 / 未编辑的想看电影），合并时视为最旧、
+  /// 让位于任何带时间戳的一端；可空设计同时保证 const 构造器可用
+  /// （DateTime 无 const 构造，无法在初始化列表里做非空兜底）。
+  final DateTime? updatedAt;
+
   /// 是否有评分
   bool get hasRating => rating != null;
 
@@ -173,8 +181,8 @@ class Movie {
   /// 省略参数表示保留原值。例：`copyWith(review: null)` 清空影评。
   Movie copyWith({
     String? title,
-    String? englishTitle,
-    String? director,
+    Object? englishTitle = _unset,
+    Object? director = _unset,
     MovieStatus? status,
     double? rating,
     double? coverHue,
@@ -189,6 +197,7 @@ class Movie {
     Object? actorIds = _unset,
     Object? poster = _unset,
     Object? source = _unset,
+    Object? updatedAt = _unset,
   }) {
     return Movie(
       id: id,
@@ -209,6 +218,7 @@ class Movie {
       actorIds: _take(actorIds, this.actorIds),
       poster: _take(poster, this.poster),
       source: _take(source, this.source),
+      updatedAt: _take(updatedAt, this.updatedAt),
     );
   }
 
@@ -230,6 +240,7 @@ class Movie {
         'year': year,
         'status': status.name,
         'coverHue': coverHue,
+        if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
         if (englishTitle != null) 'englishTitle': englishTitle,
         if (director != null) 'director': director,
         if (rating != null) 'rating': rating,
@@ -245,7 +256,11 @@ class Movie {
         if (source != null) 'source': source,
       };
 
-  factory Movie.fromJson(Map<String, dynamic> json) => Movie(
+  factory Movie.fromJson(Map<String, dynamic> json) {
+    final watchDate = json['watchDate'] == null
+        ? null
+        : DateTime.parse(json['watchDate'] as String);
+    return Movie(
         id: json['id'] as String,
         title: json['title'] as String,
         year: (json['year'] as num).toInt(),
@@ -260,9 +275,7 @@ class Movie {
         releaseDate: json['releaseDate'] == null
             ? null
             : DateTime.parse(json['releaseDate'] as String),
-        watchDate: json['watchDate'] == null
-            ? null
-            : DateTime.parse(json['watchDate'] as String),
+        watchDate: watchDate,
         duration: (json['duration'] as num?)?.toInt(),
         genres: (json['genres'] as List<dynamic>?)
             ?.map((e) => e as String)
@@ -276,7 +289,11 @@ class Movie {
             ? null
             : MediaRef.fromJson(json['poster'] as Map<String, dynamic>),
         source: json['source'] as String?,
+        updatedAt: json['updatedAt'] == null
+            ? null // 旧数据兜底：无 updatedAt = 从未修改，合并时视为最旧
+            : DateTime.parse(json['updatedAt'] as String),
       );
+  }
 
   // ==================== 值相等（round-trip 测试与数据保持断言用）====================
 
@@ -295,6 +312,7 @@ class Movie {
           other.emoji == emoji &&
           other.releaseDate == releaseDate &&
           other.watchDate == watchDate &&
+          other.updatedAt == updatedAt &&
           other.duration == duration &&
           listEquals(other.genres, genres) &&
           other.description == description &&
@@ -316,6 +334,7 @@ class Movie {
       emoji,
       releaseDate,
       watchDate,
+      updatedAt,
       duration,
       genres == null ? null : Object.hashAll(genres!),
       description,

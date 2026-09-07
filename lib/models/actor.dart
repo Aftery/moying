@@ -11,7 +11,8 @@ class Actor {
     this.avatar,
     this.bio,
     required this.createdAt,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? createdAt;
 
   /// 唯一标识（如 `a_1725512345678`）
   final String id;
@@ -28,6 +29,9 @@ class Actor {
   /// 创建时间
   final DateTime createdAt;
 
+  /// 最后修改时间（WebDAV 记录级 LWW 合并的时间戳基准；新增即创建时间）
+  final DateTime updatedAt;
+
   /// 复制并替换部分字段
   ///
   /// `avatar` / `bio` 使用 sentinel：省略保留原值，显式传 null 清空。
@@ -35,6 +39,7 @@ class Actor {
     String? name,
     Object? avatar = _unset,
     Object? bio = _unset,
+    Object? updatedAt = _unset,
   }) {
     return Actor(
       id: id,
@@ -42,6 +47,7 @@ class Actor {
       avatar: _take(avatar, this.avatar),
       bio: _take(bio, this.bio),
       createdAt: createdAt,
+      updatedAt: _take(updatedAt, this.updatedAt),
     );
   }
 
@@ -56,6 +62,7 @@ class Actor {
         'id': id,
         'name': name,
         'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
         if (avatar != null) 'avatar': avatar!.toJson(),
         if (bio != null) 'bio': bio,
       };
@@ -68,6 +75,9 @@ class Actor {
             : MediaRef.fromJson(json['avatar'] as Map<String, dynamic>),
         bio: json['bio'] as String?,
         createdAt: DateTime.parse(json['createdAt'] as String),
+        updatedAt: json['updatedAt'] == null
+            ? DateTime.parse(json['createdAt'] as String) // 旧数据兜底
+            : DateTime.parse(json['updatedAt'] as String),
       );
 
   @override
@@ -78,8 +88,9 @@ class Actor {
           other.name == name &&
           other.avatar == avatar &&
           other.bio == bio &&
-          other.createdAt == createdAt;
+          other.createdAt == createdAt &&
+          other.updatedAt == updatedAt;
 
   @override
-  int get hashCode => Object.hash(id, name, avatar, bio, createdAt);
+  int get hashCode => Object.hash(id, name, avatar, bio, createdAt, updatedAt);
 }

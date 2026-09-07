@@ -211,9 +211,15 @@ class ProfileScreen extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     // 编辑弹层自管输入控制器生命周期（随 route 销毁释放），
     // 规避「pop 退出动画未结束即 dispose controller」的 framework 断言。
-    final result = await showDialog<_ProfileEditResult>(
+    final result = await showModalBottomSheet<_ProfileEditResult>(
       context: context,
-      builder: (_) => _ProfileEditDialog(profile: profile),
+      isScrollControlled: true,
+      backgroundColor: context.colors.surfaceHigh,
+      elevation: 3,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ProfileEditSheet(profile: profile),
     );
     if (result == null || !context.mounted) return;
     final nickname = result.nickname.trim();
@@ -545,16 +551,16 @@ class _ProfileEditResult {
   final bool avatarTouched;
 }
 
-class _ProfileEditDialog extends StatefulWidget {
-  const _ProfileEditDialog({required this.profile});
+class _ProfileEditSheet extends StatefulWidget {
+  const _ProfileEditSheet({required this.profile});
 
   final UserProfile profile;
 
   @override
-  State<_ProfileEditDialog> createState() => _ProfileEditDialogState();
+  State<_ProfileEditSheet> createState() => _ProfileEditSheetState();
 }
 
-class _ProfileEditDialogState extends State<_ProfileEditDialog> {
+class _ProfileEditSheetState extends State<_ProfileEditSheet> {
   late final TextEditingController _nicknameCtrl;
   late final TextEditingController _signatureCtrl;
   late final TextEditingController _avatarUrlCtrl;
@@ -638,137 +644,181 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: context.colors.surfaceHigh,
-      title: Text(
-        '编辑资料',
-        style: TextStyle(
-            color: context.colors.textPrimary,
-            fontSize: 17,
-            fontWeight: FontWeight.w700),
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ---------- 头像区 ----------
-            Row(
-              children: [
-                // H4：只重建头像预览，昵称输入不再重建整个 Dialog
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _nicknameCtrl,
-                  builder: (_, value, __) {
-                    final name = value.text.trim();
-                    return SizedBox(
-                      width: 56,
-                      height: 56,
-                      child: MediaCover(
-                        circular: true,
-                        media: _previewAvatar,
-                        pendingFile: _picked,
-                        title: name.isEmpty ? '书友' : name,
-                        hue: 262,
-                        fontSize: 24,
-                      ),
-                    );
-                  },
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(24, 12, 24, 20 + bottomInset),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 拖拽指示条
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: context.colors.outline,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_canPick)
+              ),
+              // 标题
+              Text(
+                '编辑资料',
+                style: TextStyle(
+                  color: context.colors.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // ---------- 头像区 ----------
+              Row(
+                children: [
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _nicknameCtrl,
+                    builder: (_, value, __) {
+                      final name = value.text.trim();
+                      return SizedBox(
+                        width: 56,
+                        height: 56,
+                        child: MediaCover(
+                          circular: true,
+                          media: _previewAvatar,
+                          pendingFile: _picked,
+                          title: name.isEmpty ? '书友' : name,
+                          hue: 262,
+                          fontSize: 24,
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_canPick)
+                          TextButton.icon(
+                            onPressed: _pickFromGallery,
+                            style: TextButton.styleFrom(
+                              foregroundColor: context.colors.textSecondary,
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(0, 36),
+                            ),
+                            icon: const Icon(Icons.photo_library_outlined,
+                                size: 17),
+                            label: const Text('从相册选择',
+                                style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600)),
+                          ),
                         TextButton.icon(
-                          onPressed: _pickFromGallery,
+                          onPressed: () => setState(() {
+                            _cleared = true;
+                            _picked = null;
+                            _avatarUrlCtrl.clear();
+                          }),
                           style: TextButton.styleFrom(
-                            foregroundColor: context.colors.textSecondary,
+                            foregroundColor: context.colors.danger,
                             padding: EdgeInsets.zero,
                             minimumSize: const Size(0, 36),
                           ),
-                          icon: const Icon(Icons.photo_library_outlined,
-                              size: 17),
-                          label: const Text('从相册选择',
+                          icon: const Icon(Icons.image_not_supported_outlined,
+                              size: 16),
+                          label: const Text('清除头像',
                               style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w600)),
                         ),
-                      TextButton.icon(
-                        onPressed: () => setState(() {
-                          _cleared = true;
-                          _picked = null;
-                          _avatarUrlCtrl.clear();
-                        }),
-                        style: TextButton.styleFrom(
-                          foregroundColor: context.colors.danger,
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(0, 36),
-                        ),
-                        icon: const Icon(Icons.image_not_supported_outlined,
-                            size: 16),
-                        label: const Text('清除头像',
-                            style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600)),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _avatarUrlCtrl,
-              keyboardType: TextInputType.url,
-              // H4：URL 与本地图互斥（URL 优先）。仅在真有本地图时重建一次，
-              // 后续每个字符不再触发整页 setState。
-              onChanged: (_) {
-                if (_picked != null) setState(() => _picked = null);
-              },
-              style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
-              cursorColor: context.colors.accent,
-              decoration: _dec('网络头像链接', 'https://…（可选）'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _nicknameCtrl,
-              style: TextStyle(color: context.colors.textPrimary, fontSize: 15),
-              cursorColor: context.colors.accent,
-              decoration: _dec('昵称', '怎么称呼你'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _signatureCtrl,
-              minLines: 2,
-              maxLines: 4,
-              style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
-              cursorColor: context.colors.accent,
-              decoration: _dec('个性签名', '一句话签名（可选）'),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('取消', style: TextStyle(color: context.colors.textMuted)),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(_ProfileEditResult(
-            nickname: _nicknameCtrl.text,
-            signature: _signatureCtrl.text,
-            avatarFile: _picked,
-            avatarUrl: _avatarUrlCtrl.text.trim(),
-            avatarTouched: _avatarTouched,
-          )),
-          child: Text(
-            '保存',
-            style: TextStyle(
-                color: context.colors.accent, fontWeight: FontWeight.w700),
+                ],
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _avatarUrlCtrl,
+                keyboardType: TextInputType.url,
+                onChanged: (_) {
+                  if (_picked != null) setState(() => _picked = null);
+                },
+                style:
+                    TextStyle(color: context.colors.textPrimary, fontSize: 13),
+                cursorColor: context.colors.accent,
+                decoration: _dec('网络头像链接', 'https://…（可选）'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _nicknameCtrl,
+                style:
+                    TextStyle(color: context.colors.textPrimary, fontSize: 15),
+                cursorColor: context.colors.accent,
+                decoration: _dec('昵称', '怎么称呼你'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _signatureCtrl,
+                minLines: 2,
+                maxLines: 4,
+                style:
+                    TextStyle(color: context.colors.textPrimary, fontSize: 14),
+                cursorColor: context.colors.accent,
+                decoration: _dec('个性签名', '一句话签名（可选）'),
+              ),
+              const SizedBox(height: 20),
+              // 按钮行
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        backgroundColor: context.colors.surface,
+                        foregroundColor: context.colors.textMuted,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text('取消',
+                          style: TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(
+                          _ProfileEditResult(
+                        nickname: _nicknameCtrl.text,
+                        signature: _signatureCtrl.text,
+                        avatarFile: _picked,
+                        avatarUrl: _avatarUrlCtrl.text.trim(),
+                        avatarTouched: _avatarTouched,
+                      )),
+                      style: TextButton.styleFrom(
+                        backgroundColor: context.colors.accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text('保存',
+                          style: TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }

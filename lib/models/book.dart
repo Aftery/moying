@@ -40,6 +40,7 @@ class Book {
     required this.author,
     required this.totalPages,
     required this.createdAt,
+    DateTime? updatedAt,
     this.currentPage = 0,
     this.status = BookStatus.planToRead,
     this.coverHue = 250,
@@ -54,7 +55,7 @@ class Book {
     this.cover,
     this.isbn,
     this.source,
-  });
+  }) : updatedAt = updatedAt ?? createdAt;
 
   /// 唯一标识
   final String id;
@@ -70,6 +71,9 @@ class Book {
 
   /// 添加时间（开始阅读时间的默认值来源）
   final DateTime createdAt;
+
+  /// 最后修改时间（WebDAV 记录级 LWW 合并的时间戳基准；新增即创建时间）
+  final DateTime updatedAt;
 
   /// 开始阅读时间（可为空：尚未开始阅读）
   final DateTime? startedAt;
@@ -152,6 +156,7 @@ class Book {
     Object? cover = _unset,
     Object? isbn = _unset,
     Object? source = _unset,
+    Object? updatedAt = _unset,
   }) {
     return Book(
       id: id,
@@ -173,6 +178,7 @@ class Book {
       cover: _take(cover, this.cover),
       isbn: _take(isbn, this.isbn),
       source: _take(source, this.source),
+      updatedAt: _take(updatedAt, this.updatedAt),
     );
   }
 
@@ -194,6 +200,7 @@ class Book {
         'author': author,
         'totalPages': totalPages,
         'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
         'currentPage': currentPage,
         'status': status.name,
         'coverHue': coverHue,
@@ -216,6 +223,9 @@ class Book {
         author: json['author'] as String,
         totalPages: (json['totalPages'] as num).toInt(),
         createdAt: DateTime.parse(json['createdAt'] as String),
+        updatedAt: json['updatedAt'] == null
+            ? DateTime.parse(json['createdAt'] as String) // 旧数据兜底
+            : DateTime.parse(json['updatedAt'] as String),
         currentPage: (json['currentPage'] as num?)?.toInt() ?? 0,
         status: json['status'] == null
             ? BookStatus.planToRead
@@ -251,6 +261,7 @@ class Book {
           other.author == author &&
           other.totalPages == totalPages &&
           other.createdAt == createdAt &&
+          other.updatedAt == updatedAt &&
           other.currentPage == currentPage &&
           other.status == status &&
           other.coverHue == coverHue &&
@@ -268,6 +279,6 @@ class Book {
 
   @override
   int get hashCode => Object.hash(id, title, author, totalPages, createdAt,
-      currentPage, status, coverHue, rating, year, emoji, category, description,
-      notes, startedAt, finishedAt, cover, isbn, source);
+      updatedAt, currentPage, status, coverHue, rating, year, emoji, category,
+      description, notes, startedAt, finishedAt, cover, isbn, source);
 }

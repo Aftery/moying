@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -240,7 +239,7 @@ class LibraryProvider extends ChangeNotifier {
   // ==================== 书库查询 ====================
 
   /// 全量书库（图书模块列表页/筛选/搜索的数据源）
-  List<Book> get books => _booksCache ??= UnmodifiableListView(_books);
+  List<Book> get books => _booksCache ??= List.unmodifiable(_books);
 
   /// 仪表盘「阅读列表」展示的书目（读完优先，最多 6 本，保持旧观感）
   List<Book> get readingList {
@@ -344,7 +343,7 @@ class LibraryProvider extends ChangeNotifier {
 
   /// 新增一本书（插入列表头部，网格立即刷新）
   void addBook(Book book) {
-    _books.insert(0, book);
+    _books.insert(0, book.copyWith(updatedAt: DateTime.now()));
     _invalidateCache();
     notifyListeners();
     _persistBooks();
@@ -355,8 +354,10 @@ class LibraryProvider extends ChangeNotifier {
     final i = _books.indexWhere((b) => b.id == updated.id);
     if (i < 0) return;
     final old = _books[i];
-    if (old.cover != null) _recycleImage(old.cover, updated.cover);
-    _books[i] = updated;
+    // LWW 时间戳：用户写操作统一打 now（merge 写回走 store+reload，不经过此处）
+    final withStamp = updated.copyWith(updatedAt: DateTime.now());
+    if (old.cover != null) _recycleImage(old.cover, withStamp.cover);
+    _books[i] = withStamp;
     _invalidateCache();
     notifyListeners();
     _persistBooks();
@@ -385,7 +386,7 @@ class LibraryProvider extends ChangeNotifier {
       _movieList.where((m) => m.rating != null).toList();
 
   /// 全部电影（仪表盘网格/电影库）
-  List<Movie> get movieList => _movieListCache ??= UnmodifiableListView(_movieList);
+  List<Movie> get movieList => _movieListCache ??= List.unmodifiable(_movieList);
 
   /// 想看电影（仪表盘横向任务卡）—— 来自电影库真实 watchlist，前 2 部
   List<Movie> get upcomingMovies => _upcomingMoviesCache ??=
@@ -492,7 +493,7 @@ class LibraryProvider extends ChangeNotifier {
 
   /// 新增一部电影（追加到列表尾部）
   void addMovie(Movie movie) {
-    _movieList.add(movie);
+    _movieList.add(movie.copyWith(updatedAt: DateTime.now()));
     _invalidateCache();
     notifyListeners();
     _persistMovies();
@@ -503,8 +504,10 @@ class LibraryProvider extends ChangeNotifier {
     final i = _movieList.indexWhere((m) => m.id == updated.id);
     if (i < 0) return;
     final old = _movieList[i];
-    if (old.poster != null) _recycleImage(old.poster, updated.poster);
-    _movieList[i] = updated;
+    // LWW 时间戳：与 updateBook 同一策略
+    final withStamp = updated.copyWith(updatedAt: DateTime.now());
+    if (old.poster != null) _recycleImage(old.poster, withStamp.poster);
+    _movieList[i] = withStamp;
     _invalidateCache();
     notifyListeners();
     _persistMovies();
@@ -532,7 +535,7 @@ class LibraryProvider extends ChangeNotifier {
 
   /// 新增演员
   void addActor(Actor actor) {
-    _actors.add(actor);
+    _actors.add(actor.copyWith(updatedAt: DateTime.now()));
     _invalidateCache();
     notifyListeners();
     _persistActors();
@@ -543,8 +546,10 @@ class LibraryProvider extends ChangeNotifier {
     final i = _actors.indexWhere((a) => a.id == updated.id);
     if (i < 0) return;
     final old = _actors[i];
-    if (old.avatar != null) _recycleImage(old.avatar, updated.avatar);
-    _actors[i] = updated;
+    // LWW 时间戳：与 updateBook 同一策略
+    final withStamp = updated.copyWith(updatedAt: DateTime.now());
+    if (old.avatar != null) _recycleImage(old.avatar, withStamp.avatar);
+    _actors[i] = withStamp;
     _invalidateCache();
     notifyListeners();
     _persistActors();
