@@ -3,6 +3,7 @@ import 'dart:collection';
 import '../data/library_store.dart';
 import '../models/data_source.dart';
 import 'data_source_interface.dart';
+import 'data_sources/custom_data_source.dart';
 import 'data_sources/google_books_data_source.dart';
 import 'data_sources/open_library_data_source.dart';
 import 'data_sources/tmdb_data_source.dart';
@@ -23,6 +24,8 @@ class DataSourceManager {
     MovieDataSource? tmdb,
     BookDataSource? openLibrary,
     BookDataSource? googleBooks,
+    MovieDataSource? customMovie,
+    BookDataSource? customBook,
   })  : _store = store,
         _credentials = credentials ?? DataSourceSecureCredentials() {
     registerMovie(tmdb ?? TmdbDataSource());
@@ -30,6 +33,9 @@ class DataSourceManager {
     // Google Books 实现保留注册：旧配置 / 手动添加仍可用（配合 429 友好提示与节流）。
     registerBook(openLibrary ?? OpenLibraryDataSource());
     registerBook(googleBooks ?? GoogleBooksDataSource());
+    // 自定义源（用户自建 API，智能解析）：单例实现按 config 参数化请求
+    registerMovie(customMovie ?? CustomMovieDataSource());
+    registerBook(customBook ?? CustomBookDataSource());
   }
 
   /// null = 无本地存储环境（Web / 测试内存模式）：配置仅内存预设、不落盘
@@ -240,6 +246,18 @@ class DataSourceManager {
 
   /// 测试连接并更新状态落盘（成功 → connected；超时 → timeout；其他 → error）
   Future<DataSourceConfig> testConnection(DataSourceConfig config) async {
+    final updated = await runTest(config);
+    await updateConfig(updated);
+    return updated;
+  }
+
+  /// 测试未落盘的草稿配置（新增数据源弹窗内「测试连接」用；
+  /// 凭据仍按 config.id 从安全存储读取，结果不回写配置列表）
+  Future<DataSourceConfig> testDraft(DataSourceConfig config) =>
+      runTest(config);
+
+  /// 测试内核：执行实现类 testConnection 并归一化状态（不落盘）
+  Future<DataSourceConfig> runTest(DataSourceConfig config) async {
     final credentials = await credentialsOf(config);
     final implMovie = _movieImpls[config.type];
     final implBook = _bookImpls[config.type];
@@ -265,23 +283,23 @@ class DataSourceManager {
       summary = e.message;
     }
 
-    final updated = config.copyWith(
+    return config.copyWith(
       status: status,
       lastTestedAt: DateTime.now(),
       summary: summary,
     );
-    await updateConfig(updated);
-    return updated;
   }
 
   /// 释放各数据源实现占用的底层网络连接与资源
   void close() {
     for (final impl in _movieImpls.values) {
       if (impl is TmdbDataSource) impl.close();
+      if (impl is CustomMovieDataSource) impl.close();
     }
     for (final impl in _bookImpls.values) {
       if (impl is GoogleBooksDataSource) impl.close();
       if (impl is OpenLibraryDataSource) impl.close();
+      if (impl is CustomBookDataSource) impl.close();
     }
   }
 }

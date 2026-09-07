@@ -32,7 +32,13 @@ enum DataSourceType {
   openLibrary('Open Library', DataSourceCategory.book),
 
   /// 豆瓣（书籍；官方 API 已关闭，需自建代理，后续迭代开放）
-  douban('豆瓣 Douban', DataSourceCategory.book);
+  douban('豆瓣 Douban', DataSourceCategory.book),
+
+  /// 自定义影视 API（用户自建代理 / 私有服务；智能解析返回数据）
+  customMovie('自定义影视 API', DataSourceCategory.movie),
+
+  /// 自定义书籍 API（用户自建代理 / 私有服务；智能解析返回数据）
+  customBook('自定义书籍 API', DataSourceCategory.book);
 
   const DataSourceType(this.displayName, this.category);
 
@@ -41,6 +47,9 @@ enum DataSourceType {
 
   /// 所属类别
   final DataSourceCategory category;
+
+  /// 是否为自定义类型（智能解析源，UI 添加入口直接弹配置表单）
+  bool get isCustom => this == customMovie || this == customBook;
 }
 
 /// 数据源连接状态（管理页状态标签）

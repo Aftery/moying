@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 import '../data/library_store.dart';
 import '../data/mock_data.dart';
@@ -154,6 +155,44 @@ class LibraryProvider extends ChangeNotifier {
       return s.resolveImageFile(localFile);
     } on StoreException {
       return null;
+    }
+  }
+
+  /// 下载网络图片并缓存到本地 images/ 目录，返回相对文件名
+  /// （MediaRef.localFile 用）；下载失败 / 无 store / URL 非法返回 null，
+  /// 调用方回退用原始 URL。
+  ///
+  /// [prefix] 区分类型（book_cover / movie_poster），保证图片展示时优先读本地；
+  /// 缓存的图片随备份 images/ 目录一起打包（见 BackupService）。
+  Future<String?> cacheRemoteImage(String? url, String prefix) async {
+    final s = _store;
+    final uri = Uri.tryParse(url ?? '');
+    if (s == null ||
+        uri == null ||
+        !(uri.isScheme('http') || uri.isScheme('https'))) {
+      return null;
+    }
+    final client = http.Client();
+    try {
+      final resp = await client
+          .get(uri)
+          .timeout(const Duration(seconds: 12));
+      if (resp.statusCode != 200 || resp.bodyBytes.isEmpty) return null;
+      // 从 URL 解析扩展名，默认 .jpg
+      var ext = '.jpg';
+      final p = uri.path.toLowerCase();
+      for (final e in ['.png', '.webp', '.jpeg', '.gif']) {
+        if (p.endsWith(e)) {
+          ext = e;
+          break;
+        }
+      }
+      return await s.saveImageBytes(resp.bodyBytes, prefix, ext);
+    } catch (e) {
+      debugPrint('[LibraryProvider] 缓存网络图片失败：$e');
+      return null;
+    } finally {
+      client.close();
     }
   }
 

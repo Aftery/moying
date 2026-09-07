@@ -85,30 +85,39 @@ class MediaCover extends StatelessWidget {
       local = pendingFile;
     } else {
       final m = media;
-      if (m != null && m.isNetwork) {
-        network = m.remoteUrl;
-      } else if (m != null && m.isLocal) {
-        local = _libOf(context)?.resolveLocalImage(m.localFile);
+      if (m != null) {
+        if (m.isLocal) {
+          local = _libOf(context)?.resolveLocalImage(m.localFile);
+        }
+        if (m.isNetwork) {
+          network = m.remoteUrl;
+        }
       }
     }
 
     final fallback = circular ? _buildCircularFallback() : _buildRectFallback();
 
-    Widget? img;
-    if (local != null) {
-      img = Image.file(
-        local,
-        fit: BoxFit.cover,
-        cacheWidth: 300,
-        errorBuilder: (_, __, ___) => fallback,
-      );
-    } else if (network != null) {
-      img = Image.network(
+    Widget buildNetworkImage() {
+      if (network == null) return fallback;
+      return Image.network(
         network,
         fit: BoxFit.cover,
         cacheWidth: 300,
         errorBuilder: (_, __, ___) => fallback,
       );
+    }
+
+    Widget? img;
+    if (local != null && local.existsSync()) {
+      // 优先本地：加载失败回退到网络图，网络图失败回退占位
+      img = Image.file(
+        local,
+        fit: BoxFit.cover,
+        cacheWidth: 300,
+        errorBuilder: (_, __, ___) => buildNetworkImage(),
+      );
+    } else if (network != null) {
+      img = buildNetworkImage();
     }
     if (img == null) return fallback;
 

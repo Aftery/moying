@@ -259,7 +259,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
   /// 计算保存时的封面引用：
   /// - 选中了本地图 → 先复制进 images/<id><ext> 再返回 local 引用；
   /// - 没动过封面 → 沿用原图（含 null）；
-  /// - 动过：填了 URL → 网络引用；URL 为空 → 移除封面（null）。
+  /// - 动过：填了 URL → **先缓存到本地**（成功 = local+remote 双引用，
+  ///   展示优先读本地、离线回退 URL；缓存失败 = 纯网络引用）；URL 空 → 移除。
   Future<MediaRef?> _resolveDraftCover(
     LibraryProvider provider,
     String id,
@@ -271,7 +272,10 @@ class _BookEditScreenState extends State<BookEditScreen> {
     }
     if (!_coverEdited) return _book?.cover;
     final url = _coverUrlCtrl.text.trim();
-    return url.isEmpty ? null : MediaRef.network(url);
+    if (url.isEmpty) return null;
+    final cached = await provider.cacheRemoteImage(url, 'book_cover');
+    if (cached != null) return MediaRef(localFile: cached, remoteUrl: url);
+    return MediaRef.network(url);
   }
 
   /// 完成时间兜底：进度 100% 却无完成记录时补今天（如旧数据/直接拖满场景）。

@@ -70,11 +70,13 @@ class WebDavClientHttp implements WebDavClient {
       Uri.parse(fileName == null ? remoteDirUrl : '$remoteDirUrl$fileName');
 
   /// 归一化 HTTP 错误 → 用户可读文案
-  Never _fail(http.Response resp, String action) {
+  Never _fail(http.Response resp, String action, {bool isPropfind = false}) {
     final code = resp.statusCode;
     String reason;
     if (code == 401 || code == 403) {
-      reason = '账号或密码（应用授权码）错误';
+      reason = isPropfind
+          ? '连接测试通过，但服务器禁止目录列表（PROPFIND 受限），不影响备份上传'
+          : '账号或密码（应用授权码）错误';
     } else if (code == 404) {
       reason = '云端目录不存在';
     } else if (code >= 500) {
@@ -87,14 +89,14 @@ class WebDavClientHttp implements WebDavClient {
 
   @override
   Future<bool> testConnection() async {
-    // 1) PROPFIND base 目录：验证 URL 与凭据
+    // 1) PROPFIND base 目录：验证 URL 与凭据（PROPFIND 失败不视为配置错误）
     final probe = await _http
         .get(
           _uri(null),
           headers: {..._authHeaders, 'Depth': '0'},
         )
         .timeout(_kTimeout, onTimeout: () => _timeout('连接测试'));
-    if (probe.statusCode >= 400) _fail(probe, '连接测试');
+    if (probe.statusCode >= 400) _fail(probe, '连接测试', isPropfind: true);
 
     // 2) MKCOL 远程目录：不存在则创建；405=已存在视为成功
     final req = http.Request('MKCOL', _uri(null))..headers.addAll(_authHeaders);
@@ -110,6 +112,20 @@ class WebDavClientHttp implements WebDavClient {
 
   @override
   Future<void> upload(String fileName, Uint8List bytes) async {
+    // 确保远程目录存在（幂等：已存在则 MKCOL 返回 405 视为成功）
+    try {
+      final req = http.Request('MKCOL', _uri(null))..headers.addAll(_authHeaders);
+      final streamed = await _http
+          .send(req)
+          .timeout(_kTimeout, onTimeout: () => _timeout('创建云端目录'));
+      final mkdir = await http.Response.fromStream(streamed);
+      if (mkdir.statusCode >= 400 && mkdir.statusCode != 405) {
+        _fail(mkdir, '创建云端目录');
+      }
+    } catch (_) {
+      // 容错：MKCOL 失败不阻断上传，后续 PUT 会有明确错误
+    }
+
     final resp = await _http
         .put(
           _uri(fileName),

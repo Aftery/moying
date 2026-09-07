@@ -381,7 +381,8 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
 
   /// 计算保存时的海报引用（与书编辑 _resolveDraftCover 同构）：
   /// 选中本地图 → 先复制进 images/ 再返回 local；没动过 → 沿用原图；
-  /// 动过且填了 URL → 网络；URL 空 → 移除（null）。
+  /// 动过且填了 URL → **先缓存到本地**（成功 = local+remote 双引用，
+  /// 展示优先读本地、离线回退 URL；缓存失败 = 纯网络引用）；URL 空 → 移除。
   Future<MediaRef?> _resolveDraftPoster(
     LibraryProvider provider,
     String id,
@@ -393,7 +394,10 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     }
     if (!_posterEdited) return _movie?.poster;
     final url = _posterUrlCtrl.text.trim();
-    return url.isEmpty ? null : MediaRef.network(url);
+    if (url.isEmpty) return null;
+    final cached = await provider.cacheRemoteImage(url, 'movie_poster');
+    if (cached != null) return MediaRef(localFile: cached, remoteUrl: url);
+    return MediaRef.network(url);
   }
 
   // ---------- 删除 ----------

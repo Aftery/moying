@@ -248,6 +248,24 @@ class DataSourceProvider extends ChangeNotifier {
     }
   }
 
+  /// 测试未落盘的草稿配置（新增数据源弹窗内「测试连接」用）。
+  /// [testingId] 沿用草稿 id——编辑弹窗行内 loading 可正常驱动。
+  Future<bool> testDraft(DataSourceConfig config) async {
+    _testingId = config.id;
+    _actionError = null;
+    notifyListeners();
+    try {
+      await _manager.testDraft(config);
+      return true;
+    } on DataSourceException catch (e) {
+      _actionError = e.message;
+      return false;
+    } finally {
+      _testingId = null;
+      notifyListeners();
+    }
+  }
+
   /// 设为默认源
   Future<void> setDefault(String id) async {
     await _manager.setDefault(id);

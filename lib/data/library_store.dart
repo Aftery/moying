@@ -328,6 +328,25 @@ class LibraryStore {
     if (await f.exists()) await f.delete();
   }
 
+  /// 将图片字节流保存至 images/ 目录，返回相对文件名。
+  /// [prefix] 区分图片类型（如 book_cover / movie_poster），
+  /// [ext] 扩展名（.jpg/.png/.webp）。文件名含微秒时间戳，天然不重名；
+  /// 临时文件写完再 rename，与 [copyImage] 同样的原子写契约。
+  Future<String> saveImageBytes(
+    Uint8List bytes,
+    String prefix,
+    String ext,
+  ) async {
+    await imagesDir.create(recursive: true);
+    final name = '${prefix}_${DateTime.now().microsecondsSinceEpoch}$ext';
+    _ensureSafeRelativePath(name);
+    final dest = File(_join('images', name));
+    final tmp = File(_join('images', '$name.tmp'));
+    await tmp.writeAsBytes(bytes);
+    await tmp.rename(dest.path);
+    return name;
+  }
+
   /// 解析 images/ 目录下的文件（展示层 `Image.file` 用）。
   ///
   /// 不做存在性校验——文件可能已被外部清理，渲染层以 errorBuilder 兜底。

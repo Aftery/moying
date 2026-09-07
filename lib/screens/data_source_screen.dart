@@ -135,96 +135,24 @@ class DataSourceScreen extends StatelessWidget {
     );
   }
 
-  // ---------- 添加数据源（类型选择弹层）----------
+  // ---------- 添加数据源（直接弹自定义配置表单）----------
 
+  /// 点击「添加影视/书籍数据源」→ 直接进入自定义 API 配置表单，
+  /// 不再先选类型——自定义源通过 Base URL + API Key 对接用户自建服务，
+  /// 返回数据由智能解析器启发式提取。
   Future<void> _showAddSheet(
     BuildContext context,
     DataSourceCategory category,
   ) async {
     final ds = context.read<DataSourceProvider>();
-    // 各类别当前可添加的内置类型（豆瓣后续迭代，占位禁用）
-    final candidates = DataSourceType.values
-        .where((t) => t.category == category)
-        .toList()
-      ..sort((a, b) {
-        // 已存在同类型源的类型排后（不禁止重复添加——用户可能配多个节点）
-        final aExists = ds.sourcesOf(category).any((s) => s.type == a);
-        final bExists = ds.sourcesOf(category).any((s) => s.type == b);
-        if (aExists != bExists) return aExists ? 1 : -1;
-        return 0;
-      });
-
-    final selected = await showModalBottomSheet<DataSourceType>(
-      context: context,
-      backgroundColor: context.colors.surfaceHigh,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Text(
-              '选择数据源类型',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: context.colors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            for (final type in candidates)
-              ListTile(
-                leading: Icon(
-                  _typeIcon(type),
-                  color: context.colors.accent,
-                  size: 22,
-                ),
-                title: Text(
-                  type.displayName,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: context.colors.textPrimary,
-                  ),
-                ),
-                subtitle: Text(
-                  _typeSubtitle(type),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: context.colors.textMuted,
-                  ),
-                ),
-                // 豆瓣：官方 API 已关闭，需自建代理 → 后续迭代开放
-                enabled: type != DataSourceType.douban,
-                trailing: type == DataSourceType.douban
-                    ? Text(
-                        '即将支持',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: context.colors.textMuted,
-                        ),
-                      )
-                    : Icon(
-                        Icons.chevron_right_rounded,
-                        size: 20,
-                        color: context.colors.textMuted,
-                      ),
-                onTap: () => Navigator.of(ctx).pop(type),
-              ),
-            const SizedBox(height: 10),
-          ],
-        ),
-      ),
-    );
-    if (selected == null || !context.mounted) return;
-
-    final id = 'user_${selected.name}_${DateTime.now().millisecondsSinceEpoch}';
+    final type = category == DataSourceCategory.movie
+        ? DataSourceType.customMovie
+        : DataSourceType.customBook;
+    final id = 'user_${type.name}_${DateTime.now().millisecondsSinceEpoch}';
     var config = DataSourceConfig(
       id: id,
-      type: selected,
-      name: selected.displayName,
+      type: type,
+      name: type.displayName,
       status: DataSourceStatus.inactive,
     );
     final saved = await _showEditSheet(context, config, isNew: true);
@@ -233,20 +161,6 @@ class DataSourceScreen extends StatelessWidget {
       await ds.addSource(config);
     }
   }
-
-  IconData _typeIcon(DataSourceType type) => switch (type) {
-        DataSourceType.tmdb => Icons.local_movies_outlined,
-        DataSourceType.googleBooks => Icons.menu_book_outlined,
-        DataSourceType.openLibrary => Icons.auto_stories_outlined,
-        DataSourceType.douban => Icons.bookmarks_outlined,
-      };
-
-  String _typeSubtitle(DataSourceType type) => switch (type) {
-        DataSourceType.tmdb => '影视元数据最全，需免费申请 API Key',
-        DataSourceType.googleBooks => '免 API Key，开箱即用',
-        DataSourceType.openLibrary => '免 API Key，无速率限制，适合国内',
-        DataSourceType.douban => '官方 API 已关闭，需自建代理',
-      };
 
   // ---------- 编辑 / 配置弹层（添加与编辑共用）----------
 
@@ -639,10 +553,15 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
           await _ds.saveCredential(_config, f.key, typed);
         }
       }
-      if (!widget.isNew) {
+      // 新增流程：草稿未落盘，走 testDraft（配置/凭据按草稿直接测试）；
+      // 编辑流程：先落盘草稿再按 id 测试，保证列表状态同步更新
+      final bool ok;
+      if (widget.isNew) {
+        ok = await _ds.testDraft(draft);
+      } else {
         await _ds.updateSource(draft);
+        ok = await _ds.testSource(_config.id);
       }
-      final ok = await _ds.testSource(_config.id);
       if (!mounted) return;
       final matches =
           _ds.configs.where((c) => c.id == _config.id).toList(growable: false);

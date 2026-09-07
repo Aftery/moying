@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -261,26 +260,18 @@ class SyncProvider extends ChangeNotifier {
     );
   }
 
-  /// 默认导出实现：系统「另存为」对话框选位置 → 写文件。
-  /// 用户取消（返回 null）→ false；选了位置但 dart:io 写入失败（部分机型
-  /// SAF 路径不可直接写）→ 自动回退到系统分享面板兜底。
+  /// 默认导出实现：写入临时目录后调用系统分享面板。
+  /// 优势：跨平台一致行为（桌面也可在分享面板选「保存到文件夹」；
+  /// Android / iOS 无需依赖 file_picker 不可靠的 saveFile 实现）。
   static Future<bool> _defaultSaveFile(String fileName, Uint8List bytes) async {
-    final path = await FilePicker.platform.saveFile(
-      fileName: fileName,
-      type: FileType.custom,
-      allowedExtensions: [fileName.endsWith('.zip') ? 'zip' : 'json'],
+    final tmp = File(
+      '${Directory.systemTemp.path}${Platform.pathSeparator}$fileName',
     );
-    if (path == null || path.isEmpty) return false; // 用户取消
-    try {
-      await File(path).writeAsBytes(bytes);
-      return true;
-    } on FileSystemException {
-      final tmp = File(
-        '${Directory.systemTemp.path}${Platform.pathSeparator}$fileName',
-      );
-      await tmp.writeAsBytes(bytes);
-      await Share.shareXFiles([XFile(tmp.path)], subject: '墨影数据备份');
-      return true;
-    }
+    await tmp.writeAsBytes(bytes);
+    await Share.shareXFiles(
+      [XFile(tmp.path)],
+      subject: '墨影数据备份',
+    );
+    return true;
   }
 }
