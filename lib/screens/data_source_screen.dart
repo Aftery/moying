@@ -636,11 +636,23 @@ class _SourceEditSheetState extends State<_SourceEditSheet> {
       ),
       child: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 拖拽指示条（与编辑资料/查看资料统一风格）
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: c.outline,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               Text(
                 widget.isNew ? '配置数据源' : '编辑数据源',
                 style: TextStyle(

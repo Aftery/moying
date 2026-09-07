@@ -647,13 +647,14 @@ void main() {
       // 结果列表出现
       expect(find.text('刘慈欣 · 重庆出版社 (2008)'), findsOneWidget);
 
-      // 点击结果 → 回填 + 「已填充」标记（输入框与结果条目都含「三体」，精确匹配结果条目）
+      // 点击结果 → 回填 + 结果列表收起（输入框与结果条目都含「三体」，精确匹配结果条目）
       await tester.tap(find.byWidgetPredicate(
         (w) => w is Text && w.data == '三体',
       ));
       await tester.pump();
 
-      expect(find.text('已填充'), findsOneWidget);
+      // 回填后结果列表收起，展示「已填充《三体》，修改关键词可重新搜索」
+      expect(find.textContaining('已填充《三体》'), findsOneWidget);
       final isbnField = tester.widget<TextField>(find.byWidgetPredicate(
         (w) => w is TextField && w.decoration?.labelText == 'ISBN',
       ));
@@ -736,7 +737,8 @@ void main() {
       // 详情接口异步 → 轮询推进（SnackBar 动画一并收敛）
       await tester.pumpAndSettle();
 
-      expect(find.text('已填充'), findsOneWidget);
+      // 回填后结果列表收起，展示「已填充《星际穿越》，修改关键词可重新搜索」
+      expect(find.textContaining('已填充《星际穿越》'), findsOneWidget);
       final directorField = tester.widget<TextField>(find.byWidgetPredicate(
         (w) => w is TextField && w.decoration?.labelText == '导演',
       ));

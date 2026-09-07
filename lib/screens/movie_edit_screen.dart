@@ -581,6 +581,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
                 ))
             .toList(),
         filledExternalId: _filledResult?.externalId,
+        filledTitle: _filledResult?.title,
         tagColor: context.colors.movieStart,
         fallbackIcon: Icons.movie_outlined,
         onClear: () {
@@ -589,12 +590,16 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
           ds.clearResults();
           setState(() {});
         },
-        onPick: (item) {
+        onPick: (item) async {
           // 从展示投影找回原始结果对象再回填（回填消费完整模型字段）
           final matches =
               ds.movieResults?.where((r) => r.externalId == item.externalId);
           if (matches == null || matches.isEmpty) return;
-          _applyMovieResult(matches.first, ds);
+          final searchResult = matches.first;
+          setState(() {});
+          await _applyMovieResult(searchResult, ds);
+          // 回填完成后收起结果列表（保留搜索框文本，展示「已填充《片名》」）
+          ds.clearResults();
         },
       ),
       const SizedBox(height: 26),
@@ -645,7 +650,9 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     MovieSearchResult detail = r;
     final full = await ds.fetchMovieDetail(r);
     if (!mounted) return;
-    if (full != null) detail = full;
+    // 合并而非替换：详情非空字段覆盖，缺失字段保留搜索结果
+    //（避免详情接口不含海报/年份/类型时被 null 覆盖丢失）
+    if (full != null) detail = r.mergeWith(full);
 
     final source = ds.defaultMovieSource;
     setState(() {

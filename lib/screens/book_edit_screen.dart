@@ -641,7 +641,11 @@ class _BookEditScreenState extends State<BookEditScreen> {
           } catch (_) {
             // 详情失败静默回退搜索结果
           }
-          final resultToApply = detailResult ?? searchResult;
+          // 合并而非替换：搜索结果 = 基础，详情非空字段覆盖。
+          // 避免「详情接口不返回 isbn/页数/出版社时被 null 覆盖丢失」。
+          final resultToApply = detailResult == null
+              ? searchResult
+              : searchResult.mergeWith(detailResult);
 
           // 详情拉完后清空列表（保留搜索框文本），再回填
           ds.clearResults();

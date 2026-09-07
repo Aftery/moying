@@ -112,11 +112,11 @@ class ProfileScreen extends StatelessWidget {
       backgroundColor: context.colors.surfaceHigh,
       elevation: 3,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(28, 12, 28, 28),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -124,7 +124,7 @@ class ProfileScreen extends StatelessWidget {
               Container(
                 width: 36,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
+                margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
                   color: context.colors.outline,
                   borderRadius: BorderRadius.circular(2),

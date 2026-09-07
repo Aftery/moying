@@ -139,11 +139,12 @@ class OpenLibraryDataSource implements BookDataSource {
     final json = await _getJson('$_workBase/$workKey.json', {});
 
     final title = (json['title'] ?? '') as String;
+    // OpenLibrary work 详情 authors 结构：{"author": {"key": "/authors/OL...W", "name": "..."}}
+    // 取 name（不是 key！）—— 否则会回填出 "OL12111758A" 这种 id
     final authors = (json['authors'] as List? ?? const [])
         .whereType<Map<String, dynamic>>()
-        .map((a) => (a['author']?['key'] as String?))
+        .map((a) => (a['author']?['name'] as String?))
         .whereType<String>()
-        .map((k) => k.split('/').last)
         .toList();
     final categories = (json['subjects'] as List? ?? const [])
         .cast<String>()

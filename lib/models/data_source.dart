@@ -260,6 +260,29 @@ class BookSearchResult {
     if (head.isEmpty) return year == null ? '' : '($year)';
     return year == null ? head : '$head ($year)';
   }
+
+  /// 合并详情：当前实例为「搜索结果基础」，[detail] 为「详情补全」；
+  /// 详情中非空的字段覆盖基础值；空字段保留基础。
+  ///
+  /// 解决「详情接口不返回 isbn/页数/出版社时，覆盖搜索结果导致字段丢失」。
+  /// 用法：`final merged = searchResult.mergeWith(detailResult);`
+  BookSearchResult mergeWith(BookSearchResult detail) {
+    bool hasText(String? s) => s != null && s.isNotEmpty;
+    return BookSearchResult(
+      externalId: externalId,
+      // title：detail 非空且与 base 不同时覆盖（同 title 时省去一次 controller.setText 抖动）
+      title: hasText(detail.title) && detail.title != title ? detail.title : title,
+      authors: detail.authors.isNotEmpty ? detail.authors : authors,
+      publisher: hasText(detail.publisher) ? detail.publisher : publisher,
+      year: detail.year ?? year,
+      isbn: hasText(detail.isbn) ? detail.isbn : isbn,
+      pageCount: detail.pageCount ?? pageCount,
+      coverUrl: hasText(detail.coverUrl) ? detail.coverUrl : coverUrl,
+      rating: detail.rating ?? rating,
+      description: hasText(detail.description) ? detail.description : description,
+      categories: detail.categories.isNotEmpty ? detail.categories : categories,
+    );
+  }
 }
 
 /// 演员条目（电影详情回填演员区用）
@@ -329,6 +352,30 @@ class MovieSearchResult {
       if (year != null) '$year',
     ];
     return parts.join(' · ');
+  }
+
+  /// 合并详情：当前实例为「搜索结果基础」，[detail] 为「详情补全」；
+  /// 详情中非空的字段覆盖基础值；空字段保留基础。
+  ///
+  /// 解决「详情接口不返回海报/年份/类型时，覆盖搜索结果导致字段丢失」
+  /// （与 [BookSearchResult.mergeWith] 同语义）。
+  MovieSearchResult mergeWith(MovieSearchResult detail) {
+    bool hasText(String? s) => s != null && s.isNotEmpty;
+    return MovieSearchResult(
+      externalId: externalId,
+      title: hasText(detail.title) && detail.title != title ? detail.title : title,
+      originalTitle: hasText(detail.originalTitle)
+          ? detail.originalTitle
+          : originalTitle,
+      year: detail.year ?? year,
+      director: hasText(detail.director) ? detail.director : director,
+      genres: detail.genres.isNotEmpty ? detail.genres : genres,
+      posterUrl: hasText(detail.posterUrl) ? detail.posterUrl : posterUrl,
+      rating: detail.rating ?? rating,
+      overview: hasText(detail.overview) ? detail.overview : overview,
+      runtimeMinutes: detail.runtimeMinutes ?? runtimeMinutes,
+      cast: detail.cast.isNotEmpty ? detail.cast : cast,
+    );
   }
 }
 
