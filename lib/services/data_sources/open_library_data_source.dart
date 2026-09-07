@@ -123,10 +123,10 @@ class OpenLibraryDataSource implements BookDataSource {
     );
   }
 
-  /// 取作品详情（作者 / 出版社 / 描述补全；非作品 ID 返回 null）。
-  /// 注意：BookDataSource 接口未声明此方法（书籍回填只消费搜索结果），
-  /// 保留为 OpenLibrary 额外能力，供后续「详情补全」迭代调用。
-  Future<BookSearchResult?> getBookDetail(
+  /// 取作品详情（分类 / 页数 / 描述补全）；
+  /// 仅 OL 开头的作品 ID 可取详情，其余格式抛 [DataSourceException]
+  @override
+  Future<BookSearchResult> getBookDetail(
     String externalId, {
     required Map<String, dynamic> config,
     required Map<String, String> credentials,
@@ -134,7 +134,7 @@ class OpenLibraryDataSource implements BookDataSource {
     // externalId 形如 /works/OL123W 或 /books/OL456M
     final workKey = externalId.split('/').last;
     if (!workKey.startsWith('OL') || !workKey.endsWith('W')) {
-      return null; // 非作品 ID，无法取详情
+      throw const DataSourceException('OpenLibrary 仅支持 OL…W 格式作品 ID 查询详情');
     }
     final json = await _getJson('$_workBase/$workKey.json', {});
 
@@ -145,9 +145,9 @@ class OpenLibraryDataSource implements BookDataSource {
         .whereType<String>()
         .map((k) => k.split('/').last)
         .toList();
-    final publisher = (json['subjects'] as List? ?? const [])
+    final categories = (json['subjects'] as List? ?? const [])
         .cast<String>()
-        .firstOrNull;
+        .toList();
     final yearStr = (json['first_publish_date'] as String?);
     final coverId = json['covers'] as List<dynamic>?;
 
@@ -155,7 +155,7 @@ class OpenLibraryDataSource implements BookDataSource {
       externalId: externalId,
       title: title,
       authors: authors,
-      publisher: publisher,
+      categories: categories,
       year: yearStr != null && yearStr.length >= 4 ? int.tryParse(yearStr.substring(0, 4)) : null,
       isbn: null,
       pageCount: null,

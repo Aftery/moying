@@ -1,7 +1,7 @@
 name: moying
 description: "墨影 —— 一个现代暗色风格的书籍与电影记录应用（Flutter UI 框架 + 虚拟数据）"
 publish_to: 'none'
-version: 0.9.0+2
+version: 0.9.1+1
 
 environment:
   sdk: '>=3.5.0 <4.0.0'

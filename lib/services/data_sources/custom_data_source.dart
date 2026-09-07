@@ -397,6 +397,29 @@ class CustomBookDataSource extends _CustomDataSourceBase
       notFoundMessage: '自定义 API 返回格式不正确：未能从返回数据中解析出书籍信息',
     );
   }
+
+  @override
+  Future<BookSearchResult> getBookDetail(
+    String externalId, {
+    required Map<String, dynamic> config,
+    required Map<String, String> credentials,
+  }) async {
+    final template = (config['detailUrlTemplate'] as String? ?? '').trim();
+    if (template.isEmpty) {
+      throw const DataSourceException('未配置详情接口模板（detailUrlTemplate）');
+    }
+    final url = template.replaceAll('{id}', Uri.encodeComponent(externalId));
+    final json = await _getJson(url, credentials: credentials);
+    final list = SmartResponseParser.findFirstList(json);
+    if (list == null || list.isEmpty) {
+      throw const DataSourceException('自定义 API 详情返回格式不正确：未找到数据');
+    }
+    final item = SmartResponseParser.parseBookItem(list.first);
+    if (item == null) {
+      throw const DataSourceException('自定义 API 详情返回格式不正确：无法解析条目');
+    }
+    return item;
+  }
 }
 
 /// 自定义影视数据源

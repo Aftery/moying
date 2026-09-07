@@ -125,6 +125,8 @@ class GoogleBooksDataSource implements BookDataSource {
         : (isbn13 ?? isbns.first['identifier'] as String?);
     final thumbnail =
         (volume['imageLinks'] as Map<String, dynamic>?)?['thumbnail'] as String?;
+    final categories =
+        (volume['categories'] as List? ?? const []).cast<String>().toList();
 
     return BookSearchResult(
       externalId: '${item['id']}',
@@ -140,7 +142,20 @@ class GoogleBooksDataSource implements BookDataSource {
       coverUrl: thumbnail?.replaceFirst('http://', 'https://'),
       rating: (volume['averageRating'] as num?)?.toDouble(),
       description: _nonEmpty(volume['description'] as String?),
+      categories: categories,
     );
+  }
+
+  @override
+  Future<BookSearchResult> getBookDetail(
+    String externalId, {
+    required Map<String, dynamic> config,
+    required Map<String, String> credentials,
+  }) async {
+    final json = await _getJson('/volumes/$externalId', {
+      ..._countryQuery(config),
+    });
+    return _parseVolume(json);
   }
 
   Map<String, String> _countryQuery(Map<String, dynamic> config) {

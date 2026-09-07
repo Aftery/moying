@@ -215,6 +215,26 @@ class DataSourceProvider extends ChangeNotifier {
     }
   }
 
+  /// 取书籍详情（分类 / 简介 / 页数补全；失败返回 null——调用方回退搜索结果）
+  Future<BookSearchResult?> fetchBookDetail(
+    BookSearchResult result,
+  ) async {
+    final source = defaultBookSource;
+    final impl =
+        source == null ? null : _manager.bookImplOf(source.type);
+    if (source == null || impl == null) return null;
+    try {
+      final credentials = await _manager.credentialsOf(source);
+      return await impl.getBookDetail(
+        result.externalId,
+        config: source.config,
+        credentials: credentials,
+      );
+    } on DataSourceException {
+      return null;
+    }
+  }
+
   void clearResults() {
     _lastQuery = '';
     _bookResults = null;

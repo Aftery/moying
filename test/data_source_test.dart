@@ -87,9 +87,25 @@ class _FakeBookSource implements BookDataSource {
         coverUrl: 'https://example.com/cover.jpg',
         rating: 4.5,
         description: '文化大革命期间……',
+        categories: ['科幻', '小说'],
       ),
     ];
   }
+
+  @override
+  Future<BookSearchResult> getBookDetail(
+    String externalId, {
+    required Map<String, dynamic> config,
+    required Map<String, String> credentials,
+  }) async =>
+      const BookSearchResult(
+        externalId: 'gb-1',
+        title: '三体',
+        authors: ['刘慈欣'],
+        pageCount: 302,
+        description: '文化大革命期间……',
+        categories: ['科幻', '小说'],
+      );
 }
 
 class _FakeMovieSource implements MovieDataSource {

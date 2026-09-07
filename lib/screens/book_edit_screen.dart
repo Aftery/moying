@@ -617,6 +617,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
                 ))
             .toList(),
         filledExternalId: _filledResult?.externalId,
+        filledTitle: _filledResult?.title,
         tagColor: context.colors.readingStart,
         fallbackIcon: Icons.menu_book_outlined,
         onClear: () {
@@ -625,12 +626,26 @@ class _BookEditScreenState extends State<BookEditScreen> {
           ds.clearResults();
           setState(() {});
         },
-        onPick: (item) {
+        onPick: (item) async {
           // 从展示投影找回原始结果对象再回填（回填消费完整模型字段）
           final matches =
               ds.bookResults?.where((r) => r.externalId == item.externalId);
           if (matches == null || matches.isEmpty) return;
-          _applyBookResult(matches.first, ds);
+          final searchResult = matches.first;
+          setState(() {});
+
+          // 先用搜索结果回填基本信息，同时拉详情补全
+          BookSearchResult? detailResult;
+          try {
+            detailResult = await ds.fetchBookDetail(searchResult);
+          } catch (_) {
+            // 详情失败静默回退搜索结果
+          }
+          final resultToApply = detailResult ?? searchResult;
+
+          // 详情拉完后清空列表（保留搜索框文本），再回填
+          ds.clearResults();
+          _applyBookResult(resultToApply, ds);
         },
       ),
       const SizedBox(height: 24),
@@ -684,6 +699,11 @@ class _BookEditScreenState extends State<BookEditScreen> {
       if (r.isbn != null && r.isbn!.isNotEmpty) _isbnCtrl.text = r.isbn!;
       if (r.description != null && r.description!.isNotEmpty) {
         _descCtrl.text = r.description!;
+      }
+      // 分类：多值时取第一个（书籍 category 是单值）
+      final primary = r.primaryCategory;
+      if (primary != null && _categoryCtrl.text.trim().isEmpty) {
+        _categoryCtrl.text = primary;
       }
       if (r.rating != null && r.rating! > 0) _rating = r.rating!;
       if (r.coverUrl != null && r.coverUrl!.isNotEmpty) {

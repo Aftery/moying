@@ -68,6 +68,14 @@ abstract class BookDataSource {
     required Map<String, String> credentials,
     int limit = 10,
   });
+
+  /// 书籍详情（分类 / 简介 / 页数补全——搜索接口常缺失这些字段）；
+  /// 不支持详情的源抛 [DataSourceException]，调用方回退用搜索结果回填
+  Future<BookSearchResult> getBookDetail(
+    String externalId, {
+    required Map<String, dynamic> config,
+    required Map<String, String> credentials,
+  });
 }
 
 /// 影视数据源契约（TMDB 等）

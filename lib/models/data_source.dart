@@ -190,7 +190,7 @@ class DataSourceConfig {
 
 // ==================== 搜索结果（数据源 → 应用的统一形态）====================
 
-/// 书籍搜索结果条目（列表态；[BookDetail] 补全后用于回填）
+/// 书籍搜索结果条目（列表态；详情补全后用于回填）
 class BookSearchResult {
   const BookSearchResult({
     required this.externalId,
@@ -203,6 +203,7 @@ class BookSearchResult {
     this.coverUrl,
     this.rating,
     this.description,
+    this.categories = const [],
   });
 
   /// 外部数据源内的条目 id（取详情时回传）
@@ -234,6 +235,18 @@ class BookSearchResult {
 
   /// 内容简介
   final String? description;
+
+  /// 分类标签（多值；书籍 [category] 是单值，回填用 [primaryCategory]）
+  final List<String> categories;
+
+  /// 第一个非空分类（编辑页单值分类字段回填用）
+  String? get primaryCategory {
+    for (final c in categories) {
+      final t = c.trim();
+      if (t.isNotEmpty) return t;
+    }
+    return null;
+  }
 
   /// 作者展示串（列表 UI 用）
   String get authorsText => authors.join('、');

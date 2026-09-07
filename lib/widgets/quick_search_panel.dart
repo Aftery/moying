@@ -34,6 +34,7 @@ class QuickSearchPanel extends StatelessWidget {
     required this.error,
     required this.results,
     required this.filledExternalId,
+    this.filledTitle,
     required this.tagColor,
     required this.fallbackIcon,
     required this.onClear,
@@ -55,6 +56,9 @@ class QuickSearchPanel extends StatelessWidget {
 
   /// 最近一次已回填结果的外部 id（用于「已填充」标记）
   final String? filledExternalId;
+
+  /// 最近一次已回填结果的标题（折叠态展示「已填充《xxx》」）
+  final String? filledTitle;
 
   /// 「已填充」标签主色（书 readingStart / 影 movieStart）
   final Color tagColor;
@@ -177,6 +181,28 @@ class QuickSearchPanel extends StatelessWidget {
       );
     }
     if (results == null) {
+      // 填充后收起列表：展示「已填充《xxx》」
+      if (filledExternalId != null &&
+          filledTitle != null &&
+          filledTitle!.isNotEmpty) {
+        return Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Row(
+            children: [
+              Icon(Icons.check_circle_rounded, size: 14, color: tagColor),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '已填充《${filledTitle!}》，修改关键词可重新搜索',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: c.textMuted),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
       return Padding(
         padding: const EdgeInsets.only(top: 10),
         child: Text(
