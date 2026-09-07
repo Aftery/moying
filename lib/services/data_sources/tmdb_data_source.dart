@@ -21,6 +21,11 @@ class TmdbDataSource implements MovieDataSource {
   static const String _baseUrl = 'https://api.themoviedb.org/3';
   static const String _imageBase = 'https://image.tmdb.org/t/p/w500';
 
+  /// 请求超时（H3：弱网下不设超时会让 UI 永久转圈，无任何恢复路径）
+  static const Duration _kTimeout = Duration(seconds: 15);
+  static Never _onTimeout() =>
+      throw const DataSourceException('请求超时，请检查网络连接后重试');
+
   /// 内置类型 id → 中文名（搜索结果只有 genre_ids 时兜底展示）
   static const Map<int, String> _genreNames = {
     28: '动作',
@@ -85,7 +90,9 @@ class TmdbDataSource implements MovieDataSource {
     final uri = Uri.parse('$_baseUrl$path').replace(queryParameters: query);
     late final http.Response resp;
     try {
-      resp = await _client.get(uri, headers: headers);
+      resp = await _client
+          .get(uri, headers: headers)
+          .timeout(_kTimeout, onTimeout: _onTimeout);
     } on Exception catch (_) {
       throw const DataSourceException('网络请求失败，请检查网络连接');
     }

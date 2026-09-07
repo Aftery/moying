@@ -99,49 +99,90 @@ class ProfileScreen extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: context.colors.surfaceHigh,
+      elevation: 3,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+          padding: const EdgeInsets.fromLTRB(28, 12, 28, 28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // 拖拽指示条
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: context.colors.outline,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // 头像
               SizedBox(
-                width: 96,
-                height: 96,
+                width: 80,
+                height: 80,
                 child: MediaCover(
                   circular: true,
                   media: profile.avatar,
                   title: profile.nickname,
                   hue: 262,
-                  fontSize: 40,
+                  fontSize: 32,
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 18),
+              // 昵称
               Text(
                 profile.nickname,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: context.colors.textPrimary,
                 ),
               ),
+              // 签名
               if (signature.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  signature,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.5,
-                    color: context.colors.textSecondary,
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: context.colors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    signature,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.6,
+                      color: context.colors.textSecondary,
+                    ),
                   ),
                 ),
               ],
+              const SizedBox(height: 24),
+              // 关闭按钮
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: TextButton.styleFrom(
+                    backgroundColor: context.colors.surface,
+                    foregroundColor: context.colors.textSecondary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text('知道了',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w600)),
+                ),
+              ),
             ],
           ),
         ),
@@ -210,33 +251,54 @@ class ProfileScreen extends StatelessWidget {
     final selected = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: context.colors.surfaceHigh,
+      elevation: 3,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 10),
-            for (final (mode, label, icon) in options)
-              ListTile(
-                leading: Icon(icon, color: context.colors.accent, size: 22),
-                title: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: context.colors.textPrimary,
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 拖拽指示条
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: context.colors.outline,
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                trailing: current == mode
-                    ? Icon(Icons.check_rounded,
-                        color: context.colors.accent, size: 20)
-                    : null,
-                onTap: () => Navigator.of(ctx).pop(mode),
               ),
-            const SizedBox(height: 8),
-          ],
+              for (final (mode, label, icon) in options)
+                ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: context.colors.accent.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, color: context.colors.accent, size: 20),
+                  ),
+                  title: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: context.colors.textPrimary,
+                    ),
+                  ),
+                  trailing: current == mode
+                      ? Icon(Icons.check_rounded,
+                          color: context.colors.accent, size: 22)
+                      : null,
+                  onTap: () => Navigator.of(ctx).pop(mode),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
@@ -564,8 +626,6 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final previewName =
-        _nicknameCtrl.text.trim().isEmpty ? '书友' : _nicknameCtrl.text.trim();
     return AlertDialog(
       backgroundColor: context.colors.surfaceHigh,
       title: Text(
@@ -583,17 +643,24 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
             // ---------- 头像区 ----------
             Row(
               children: [
-                SizedBox(
-                  width: 56,
-                  height: 56,
-                  child: MediaCover(
-                    circular: true,
-                    media: _previewAvatar,
-                    pendingFile: _picked,
-                    title: previewName,
-                    hue: 262,
-                    fontSize: 24,
-                  ),
+                // H4：只重建头像预览，昵称输入不再重建整个 Dialog
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _nicknameCtrl,
+                  builder: (_, value, __) {
+                    final name = value.text.trim();
+                    return SizedBox(
+                      width: 56,
+                      height: 56,
+                      child: MediaCover(
+                        circular: true,
+                        media: _previewAvatar,
+                        pendingFile: _picked,
+                        title: name.isEmpty ? '书友' : name,
+                        hue: 262,
+                        fontSize: 24,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -642,10 +709,11 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
             TextField(
               controller: _avatarUrlCtrl,
               keyboardType: TextInputType.url,
-              onChanged: (_) => setState(() {
-                // 一旦输入 URL，丢弃已选本地图（两者互斥，URL 优先）
-                _picked = null;
-              }),
+              // H4：URL 与本地图互斥（URL 优先）。仅在真有本地图时重建一次，
+              // 后续每个字符不再触发整页 setState。
+              onChanged: (_) {
+                if (_picked != null) setState(() => _picked = null);
+              },
               style: TextStyle(color: context.colors.textPrimary, fontSize: 13),
               cursorColor: context.colors.accent,
               decoration: _dec('网络头像链接', 'https://…（可选）'),
@@ -653,7 +721,6 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
             const SizedBox(height: 10),
             TextField(
               controller: _nicknameCtrl,
-              onChanged: (_) => setState(() {}),
               style: TextStyle(color: context.colors.textPrimary, fontSize: 15),
               cursorColor: context.colors.accent,
               decoration: _dec('昵称', '怎么称呼你'),

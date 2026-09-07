@@ -543,12 +543,41 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
   bool _overflow = false;
   bool _measured = false;
 
+  /// 上次测量的可用宽度（M23：文本或宽度变化才重测，避免每次 rebuild 重复排版）
+  double _lastWidth = -1;
+
+  /// 测量简介是否超过 [_foldLines] 行，结果按（文本, 宽度）缓存。
+  ///
+  /// 排版是同步重活，不在 build 阶段执行——由 postFrame 调度本方法，
+  /// 避免长简介下每次 rebuild 都触发一次 TextPainter.layout()。
+  void _measure(double maxWidth) {
+    _measured = true;
+    _lastWidth = maxWidth;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: widget.text,
+        style: TextStyle(
+          fontSize: 14,
+          height: 1.7,
+          color: context.colors.textSecondary,
+        ),
+      ),
+      maxLines: _foldLines,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: maxWidth);
+    final needFold = painter.didExceedMaxLines;
+    if (needFold != _overflow && mounted) {
+      setState(() => _overflow = needFold);
+    }
+  }
+
   @override
   void didUpdateWidget(covariant _ExpandableSynopsis oldWidget) {
     super.didUpdateWidget(oldWidget);
     // 内容变化（如编辑后返回）时重新测量折叠状态
     if (oldWidget.text != widget.text) {
       _measured = false;
+      _lastWidth = -1;
       _overflow = false;
       _expanded = false;
     }
@@ -566,28 +595,12 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          if (!_measured) {
-            _measured = true;
-            final span = TextSpan(
-              text: widget.text,
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.7,
-                color: context.colors.textSecondary,
-              ),
-            );
-            final painter = TextPainter(
-              text: span,
-              maxLines: _foldLines,
-              textDirection: TextDirection.ltr,
-            )..layout(maxWidth: constraints.maxWidth);
-            final needFold = painter.didExceedMaxLines;
-            if (needFold != _overflow) {
-              _overflow = needFold;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) setState(() {});
-              });
-            }
+          // M23：排版不在 build 阶段同步执行，交给 postFrame（_measure 内缓存结果）
+          if (!_measured || constraints.maxWidth != _lastWidth) {
+            final width = constraints.maxWidth;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _measure(width);
+            });
           }
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,

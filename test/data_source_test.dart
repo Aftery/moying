@@ -624,7 +624,7 @@ void main() {
         (w) => w is TextField && w.decoration?.hintText == '输入书名 / 作者，联网搜索并回填',
       );
       await tester.enterText(searchField, '三体');
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 900)); // > 800ms debounce
       await tester.pump();
       await tester.pump();
 
@@ -708,7 +708,7 @@ void main() {
         (w) => w is TextField && w.decoration?.hintText == '输入片名，联网搜索并回填',
       );
       await tester.enterText(searchField, '星际穿越');
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 900)); // > 800ms debounce
       await tester.pump();
       await tester.pump();
 

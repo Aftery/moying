@@ -39,6 +39,11 @@ flutter build apk --release
 # 产物：build/app/outputs/flutter-apk/app-release.apk
 ```
 
+## 版本历史
+
+- **v0.8.1**：优化个人页档案展示弹层体验；电影编辑页片长输入框回显修复；数据源全局请求节流防 429；图书默认源从 Google Books 换为 OpenLibrary（免 Key 无速率限制）；OpenLibrary 数据源实现；图书/电影编辑页公共组件去重（M4/M5）；代码审查报告收尾（规范细节/依赖清理/测试隔离）。
+- **v0.8.0**：深浅双主题、离线优先、书籍电影双轨记录、WebDAV 云同步、联网信息补全。
+
 ## 目录结构
 
 ```

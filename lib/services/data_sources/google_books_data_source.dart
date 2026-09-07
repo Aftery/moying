@@ -18,6 +18,11 @@ class GoogleBooksDataSource implements BookDataSource {
 
   static const String _baseUrl = 'https://www.googleapis.com/books/v1';
 
+  /// 请求超时（H3：弱网下不设超时会让 UI 永久转圈，无任何恢复路径）
+  static const Duration _kTimeout = Duration(seconds: 15);
+  static Never _onTimeout() =>
+      throw const DataSourceException('请求超时，请检查网络连接后重试');
+
   @override
   DataSourceType get type => DataSourceType.googleBooks;
 
@@ -38,7 +43,9 @@ class GoogleBooksDataSource implements BookDataSource {
     final uri = Uri.parse('$_baseUrl$path').replace(queryParameters: query);
     late final http.Response resp;
     try {
-      resp = await _client.get(uri);
+      resp = await _client
+          .get(uri)
+          .timeout(_kTimeout, onTimeout: _onTimeout);
     } on Exception catch (_) {
       throw const DataSourceException('网络请求失败，请检查网络连接');
     }

@@ -59,6 +59,8 @@ class ActorDetailScreen extends StatelessWidget {
     );
     try {
       if (!result.avatarTouched) {
+        // updateActor 为同步 void（内部 _persistActors 自行 catchError 兜底），
+        // 不能 await；try/catch 保留用于兜住下方 attachImage 的落盘异常。
         lib.updateActor(base);
         return;
       }
@@ -516,8 +518,6 @@ class _ActorEditDialogState extends State<_ActorEditDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final previewName =
-        _nameCtrl.text.trim().isEmpty ? '演员' : _nameCtrl.text.trim();
     return AlertDialog(
       backgroundColor: context.colors.surfaceHigh,
       title:  Text(
@@ -535,17 +535,24 @@ class _ActorEditDialogState extends State<_ActorEditDialog> {
             // ---------- 头像区 ----------
             Row(
               children: [
-                SizedBox(
-                  width: 56,
-                  height: 56,
-                  child: MediaCover(
-                    circular: true,
-                    media: _previewAvatar,
-                    pendingFile: _picked,
-                    title: previewName,
-                    hue: widget.hue,
-                    fontSize: 24,
-                  ),
+                // H4：只重建头像预览，姓名输入不再重建整个 Dialog
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _nameCtrl,
+                  builder: (_, value, __) {
+                    final name = value.text.trim();
+                    return SizedBox(
+                      width: 56,
+                      height: 56,
+                      child: MediaCover(
+                        circular: true,
+                        media: _previewAvatar,
+                        pendingFile: _picked,
+                        title: name.isEmpty ? '演员' : name,
+                        hue: widget.hue,
+                        fontSize: 24,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -594,10 +601,11 @@ class _ActorEditDialogState extends State<_ActorEditDialog> {
             TextField(
               controller: _avatarUrlCtrl,
               keyboardType: TextInputType.url,
-              onChanged: (_) => setState(() {
-                // 一旦输入 URL，丢弃已选本地图（两者互斥，URL 优先）
-                _picked = null;
-              }),
+              // H4：URL 与本地图互斥（URL 优先）。仅在真有本地图时重建一次，
+              // 后续每个字符不再触发整页 setState。
+              onChanged: (_) {
+                if (_picked != null) setState(() => _picked = null);
+              },
               style:
                    TextStyle(color: context.colors.textPrimary, fontSize: 13),
               cursorColor: context.colors.accent,
@@ -606,7 +614,6 @@ class _ActorEditDialogState extends State<_ActorEditDialog> {
             const SizedBox(height: 10),
             TextField(
               controller: _nameCtrl,
-              onChanged: (_) => setState(() {}),
               style:  TextStyle(color: context.colors.textPrimary, fontSize: 15),
               cursorColor: context.colors.accent,
               decoration: _dec('姓名', '演员姓名'),

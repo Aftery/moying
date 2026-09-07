@@ -57,6 +57,15 @@ class WebDavClientHttp implements WebDavClient {
             'Basic ${base64Encode(utf8.encode('$username:$password'))}',
       };
 
+  /// 普通请求超时（H3：不设超时会让同步按钮永久转圈，无任何恢复路径）
+  static const Duration _kTimeout = Duration(seconds: 15);
+
+  /// 备份包可能几 MB，上传/下载单独放宽
+  static const Duration _kTransferTimeout = Duration(seconds: 60);
+
+  Never _timeout(String action) =>
+      throw WebDavException(null, '$action：请求超时，请检查网络或服务器地址');
+
   Uri _uri(String? fileName) =>
       Uri.parse(fileName == null ? remoteDirUrl : '$remoteDirUrl$fileName');
 
@@ -79,15 +88,20 @@ class WebDavClientHttp implements WebDavClient {
   @override
   Future<bool> testConnection() async {
     // 1) PROPFIND base 目录：验证 URL 与凭据
-    final probe = await _http.get(
-      _uri(null),
-      headers: {..._authHeaders, 'Depth': '0'},
-    );
+    final probe = await _http
+        .get(
+          _uri(null),
+          headers: {..._authHeaders, 'Depth': '0'},
+        )
+        .timeout(_kTimeout, onTimeout: () => _timeout('连接测试'));
     if (probe.statusCode >= 400) _fail(probe, '连接测试');
 
     // 2) MKCOL 远程目录：不存在则创建；405=已存在视为成功
     final req = http.Request('MKCOL', _uri(null))..headers.addAll(_authHeaders);
-    final mkdir = await http.Response.fromStream(await _http.send(req));
+    final streamed = await _http
+        .send(req)
+        .timeout(_kTimeout, onTimeout: () => _timeout('创建云端目录'));
+    final mkdir = await http.Response.fromStream(streamed);
     if (mkdir.statusCode >= 400 && mkdir.statusCode != 405) {
       _fail(mkdir, '创建云端目录');
     }
@@ -96,27 +110,33 @@ class WebDavClientHttp implements WebDavClient {
 
   @override
   Future<void> upload(String fileName, Uint8List bytes) async {
-    final resp = await _http.put(
-      _uri(fileName),
-      headers: _authHeaders,
-      body: bytes,
-    );
+    final resp = await _http
+        .put(
+          _uri(fileName),
+          headers: _authHeaders,
+          body: bytes,
+        )
+        .timeout(_kTransferTimeout, onTimeout: () => _timeout('上传备份'));
     if (resp.statusCode >= 400) _fail(resp, '上传备份');
   }
 
   @override
   Future<Uint8List> download(String fileName) async {
-    final resp = await _http.get(_uri(fileName), headers: _authHeaders);
+    final resp = await _http
+        .get(_uri(fileName), headers: _authHeaders)
+        .timeout(_kTransferTimeout, onTimeout: () => _timeout('下载备份'));
     if (resp.statusCode >= 400) _fail(resp, '下载备份');
     return resp.bodyBytes;
   }
 
   @override
   Future<List<String>> listBackups() async {
-    final resp = await _http.get(
-      _uri(null),
-      headers: {..._authHeaders, 'Depth': '1'},
-    );
+    final resp = await _http
+        .get(
+          _uri(null),
+          headers: {..._authHeaders, 'Depth': '1'},
+        )
+        .timeout(_kTimeout, onTimeout: () => _timeout('读取云端备份列表'));
     if (resp.statusCode >= 400) _fail(resp, '读取云端备份列表');
     // 轻量解析：WebDAV PROPFIND 的 XML 里提取 moying-*.zip 文件名。
     // 备份文件名由本应用生成（无特殊字符），正则足够，不值得引 xml 依赖。

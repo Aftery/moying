@@ -81,7 +81,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
   /// 搜索词输入
   final TextEditingController _searchCtrl = TextEditingController();
 
-  /// 搜索 debounce 定时器（500ms，避免逐字符打接口）
+  /// 搜索 debounce 定时器（800ms，避免逐字符/逐拼音打接口）
   Timer? _searchDebounce;
 
   /// 最近一次选中回填的搜索结果（结果行「已填充」标记）
@@ -124,6 +124,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
     _progress = _book?.progress ?? 0;
     _categoryCtrl = TextEditingController(text: _book?.category ?? '');
     _categoryFocus = FocusNode();
+    // 快速检索框：listener 驱动搜索（可读 IME composing，见 _onSearchCtrlChanged）
+    _searchCtrl.addListener(_onSearchCtrlChanged);
   }
 
   @override
@@ -479,9 +481,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
   }
 
   Widget _buildHeader() {
-    // 新增模式下封面预览实时跟随书名输入，色相为 initState 生成的随机值
-    final previewTitle =
-        _titleCtrl.text.trim().isEmpty ? '书籍' : _titleCtrl.text.trim();
+    // 色相为 initState 生成的随机值
     final hue = _book?.coverHue ?? _addCoverHue;
     final emoji = _book?.emoji ?? '';
     return Row(
@@ -494,15 +494,23 @@ class _BookEditScreenState extends State<BookEditScreen> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: MediaCover(
-                  media: _previewCoverMedia,
-                  pendingFile: _pendingCoverFile,
-                  title: previewTitle,
-                  emoji: emoji,
-                  hue: hue,
-                  aspectRatio: 3 / 4,
-                  borderRadius: 0,
-                  fontSize: 30,
+                // H4：封面预览实时跟随书名输入，但只重建封面本身
+                // （此前是 onChanged → setState 整页重建）
+                child: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _titleCtrl,
+                  builder: (_, value, __) {
+                    final title = value.text.trim();
+                    return MediaCover(
+                      media: _previewCoverMedia,
+                      pendingFile: _pendingCoverFile,
+                      title: title.isEmpty ? '书籍' : title,
+                      emoji: emoji,
+                      hue: hue,
+                      aspectRatio: 3 / 4,
+                      borderRadius: 0,
+                      fontSize: 30,
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 6),
@@ -551,8 +559,6 @@ class _BookEditScreenState extends State<BookEditScreen> {
                 controller: _titleCtrl,
                 label: '书名',
                 hint: '输入书名',
-                // 书名实时联动左侧封面预览
-                onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 10),
               EditInputField(
@@ -572,8 +578,6 @@ class _BookEditScreenState extends State<BookEditScreen> {
                 label: '总页数',
                 hint: '如 328',
                 keyboardType: TextInputType.number,
-                // 页数变化联动进度条换算
-                onChanged: (_) => setState(() {}),
               ),
             ],
           ),
@@ -648,7 +652,6 @@ class _BookEditScreenState extends State<BookEditScreen> {
           TextField(
             controller: _searchCtrl,
             textInputAction: TextInputAction.search,
-            onChanged: _onSearchChanged,
             style: TextStyle(color: c.textPrimary, fontSize: 14),
             cursorColor: c.accent,
             decoration: InputDecoration(
@@ -844,16 +847,22 @@ class _BookEditScreenState extends State<BookEditScreen> {
     );
   }
 
-  /// 搜索词变化：setState 刷新清除按钮 + 500ms debounce 后发起搜索
-  void _onSearchChanged(String v) {
+  /// 搜索词变化（controller listener）：
+  /// - 每次变更 setState 刷新清除按钮显隐（原 onChanged 同款开销）；
+  /// - IME 拼音组合输入中（composing 有效）不发起搜索，避免输入
+  ///   「三体」的拼音过程打出多次半成品查询；
+  /// - 组合结束/普通输入 → 取消旧 timer，800ms debounce 后搜索。
+  void _onSearchCtrlChanged() {
+    final value = _searchCtrl.value;
     setState(() {});
+    if (value.composing.isValid) return;
     _searchDebounce?.cancel();
-    final q = v.trim();
+    final q = value.text.trim();
     if (q.isEmpty) {
       _tryReadDataSource(context, listen: false)?.clearResults();
       return;
     }
-    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 800), () {
       if (!mounted) return;
       _tryReadDataSource(context, listen: false)?.searchBooks(q);
     });
@@ -1040,9 +1049,15 @@ class _BookEditScreenState extends State<BookEditScreen> {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            '状态：${_statusFromProgress.label} · ${(_progress * _effectiveTotalPages).round()} / $_effectiveTotalPages 页',
-            style:  TextStyle(color: context.colors.textMuted, fontSize: 12),
+          // H4：总页数输入实时联动这里的「已读 / 总页」文案，
+          // 只重建这一行，不再 setState 整页。
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _pagesCtrl,
+            builder: (_, __, ___) => Text(
+              '状态：${_statusFromProgress.label} · '
+              '${(_progress * _effectiveTotalPages).round()} / $_effectiveTotalPages 页',
+              style: TextStyle(color: context.colors.textMuted, fontSize: 12),
+            ),
           ),
         ],
       ),

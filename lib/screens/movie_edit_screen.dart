@@ -109,7 +109,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
   /// 搜索词输入
   final TextEditingController _searchCtrl = TextEditingController();
 
-  /// 搜索 debounce 定时器（500ms）
+  /// 搜索 debounce 定时器（800ms）
   Timer? _searchDebounce;
 
   /// 最近一次选中回填的搜索结果（结果行「已填充」标记）
@@ -161,6 +161,8 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     // 编辑模式回填后同步一次导演（首帧前执行，无需 setState）；
     // 新增模式导演为空 → no-op
     _applyDirectorSync();
+    // 快速检索框：listener 驱动搜索（可读 IME composing，见 _onSearchCtrlChanged）
+    _searchCtrl.addListener(_onSearchCtrlChanged);
   }
 
   @override
@@ -616,7 +618,6 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
           TextField(
             controller: _searchCtrl,
             textInputAction: TextInputAction.search,
-            onChanged: _onSearchChanged,
             style: TextStyle(color: c.textPrimary, fontSize: 14),
             cursorColor: c.accent,
             decoration: InputDecoration(
@@ -812,16 +813,22 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     );
   }
 
-  /// 搜索词变化：setState 刷新清除按钮 + 500ms debounce 后发起搜索
-  void _onSearchChanged(String v) {
+  /// 搜索词变化（controller listener）：
+  /// - 每次变更 setState 刷新清除按钮显隐（原 onChanged 同款开销）；
+  /// - IME 拼音组合输入中（composing 有效）不发起搜索，避免输入
+  ///   片名拼音的过程打出多次半成品查询；
+  /// - 组合结束/普通输入 → 取消旧 timer，800ms debounce 后搜索。
+  void _onSearchCtrlChanged() {
+    final value = _searchCtrl.value;
     setState(() {});
+    if (value.composing.isValid) return;
     _searchDebounce?.cancel();
-    final q = v.trim();
+    final q = value.text.trim();
     if (q.isEmpty) {
       _tryReadDataSource(context, listen: false)?.clearResults();
       return;
     }
-    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 800), () {
       if (!mounted) return;
       _tryReadDataSource(context, listen: false)?.searchMovies(q);
     });
