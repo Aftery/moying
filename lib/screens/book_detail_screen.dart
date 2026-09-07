@@ -34,8 +34,9 @@ class BookDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final library = context.watch<LibraryProvider>();
-    final matches = library.books.where((b) => b.id == bookId).toList();
+    // H6/M6：select 只订阅书库列表引用；个人页/主题等无关变化不再触发重建
+    final books = context.select<LibraryProvider, List<Book>>((p) => p.books);
+    final matches = books.where((b) => b.id == bookId).toList();
     final book = matches.isEmpty ? null : matches.first;
 
     return Scaffold(

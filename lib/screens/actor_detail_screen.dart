@@ -161,10 +161,17 @@ class ActorDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lib = context.watch<LibraryProvider>();
-    final matches = lib.actors.where((a) => a.id == actorId).toList();
+    // H6/M6：select 订阅演员表与影库引用；无关变化（档案/主题等）不再重建
+    final lib = context.read<LibraryProvider>();
+    final actors =
+        context.select<LibraryProvider, List<Actor>>((p) => p.actors);
+    final movies =
+        context.select<LibraryProvider, List<Movie>>((p) => p.movieList);
+    final matches = actors.where((a) => a.id == actorId).toList();
     final actor = matches.isEmpty ? null : matches.first;
-    final works = actor == null ? const <Movie>[] : lib.moviesByActor(actor.id);
+    final works = actor == null
+        ? const <Movie>[]
+        : movies.where((m) => m.actorIds?.contains(actor.id) == true).toList();
 
     return Scaffold(
       backgroundColor: context.colors.background,

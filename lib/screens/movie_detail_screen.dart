@@ -42,9 +42,15 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final library = context.watch<LibraryProvider>();
-    final matches =
-        library.movieList.where((m) => m.id == widget.movieId).toList();
+    // H6/M6：select 只订阅影库与演员表引用；个人页/书库等无关变化不再触发重建。
+    // 注意演员表必须订阅——演员改名/删除不影响 movieList 引用，
+    // 不订阅会导致详情页演员条不刷新（actor_flow_test 回归教训）。
+    final library = context.read<LibraryProvider>();
+    final movies =
+        context.select<LibraryProvider, List<Movie>>((p) => p.movieList);
+    final actors =
+        context.select<LibraryProvider, List<Actor>>((p) => p.actors);
+    final matches = movies.where((m) => m.id == widget.movieId).toList();
     final movie = matches.isEmpty ? null : matches.first;
     // 演员区数据源：id → 实体解析（悬空引用由 actorsByIds 静默跳过）。
     // seed 阶段 id=name，此处解析前后显示完全一致——本步是纯消费端重构。
@@ -52,7 +58,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         ? const <Actor>[]
         : (movie.actorIds == null
             ? const <Actor>[]
-            : library.actorsByIds(movie.actorIds!));
+            : library.actorsByIds(movie.actorIds!, source: actors));
 
     return Scaffold(
       backgroundColor: context.colors.background,

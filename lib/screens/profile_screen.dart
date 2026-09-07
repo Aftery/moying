@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../config/app_palette.dart';
 import '../models/media_ref.dart';
+import '../models/stats.dart';
 import '../models/user_profile.dart';
 import '../providers/library_provider.dart';
 import '../widgets/media_cover.dart';
@@ -22,7 +23,17 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final library = context.watch<LibraryProvider>();
+    // H6/M6：select 收窄订阅——书库数据变化不再触发个人页 rebuild，
+    // 仅档案/主题/统计摘要变化时重建；回调用 read 即可。
+    final profile = context
+        .select<LibraryProvider, UserProfile>((p) => p.userProfile);
+    final themeMode =
+        context.select<LibraryProvider, String>((p) => p.themeMode);
+    final bookStats =
+        context.select<LibraryProvider, BookStats>((p) => p.bookStats);
+    final movieStats =
+        context.select<LibraryProvider, MovieStats>((p) => p.movieStats);
+    final library = context.read<LibraryProvider>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('个人')),
@@ -31,13 +42,13 @@ class ProfileScreen extends StatelessWidget {
         children: [
           // 头像 + 昵称（点击只读展示，编辑走下方「编辑资料」入口）
           _ProfileCard(
-            profile: library.userProfile,
-            onTap: () => _showProfileInfo(context, library.userProfile),
+            profile: profile,
+            onTap: () => _showProfileInfo(context, profile),
           ),
           const SizedBox(height: 20),
 
           // 年度统计摘要
-          _StatSummary(library: library),
+          _StatSummary(bookStats: bookStats, movieStats: movieStats),
           const SizedBox(height: 24),
 
           // 设置入口
@@ -56,7 +67,7 @@ class ProfileScreen extends StatelessWidget {
           _SettingItem(
             icon: Icons.dark_mode_rounded,
             label: '深色模式',
-            trailing: _ThemeModeLabel(mode: library.themeMode),
+            trailing: _ThemeModeLabel(mode: themeMode),
             onTap: () => _chooseThemeMode(context, library),
           ),
           // Web 平台无本地存储 / 真实网络栈受限 → 隐藏数据源与同步入口
@@ -397,14 +408,15 @@ class _ProfileCard extends StatelessWidget {
 }
 
 class _StatSummary extends StatelessWidget {
-  const _StatSummary({required this.library});
+  const _StatSummary({required this.bookStats, required this.movieStats});
 
-  final LibraryProvider library;
+  final BookStats bookStats;
+  final MovieStats movieStats;
 
   @override
   Widget build(BuildContext context) {
-    final b = library.bookStats;
-    final m = library.movieStats;
+    final b = bookStats;
+    final m = movieStats;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(

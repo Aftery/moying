@@ -73,8 +73,15 @@ class BackupService {
 
   final LibraryStore store;
 
-  static /// 备份包 ZIP/JSON 外层协议版本（区别于 LibraryStore.schemaVersion 的单集合存储格式版本）
-const int backupSchemaVersion = 2;
+  /// 备份包 ZIP/JSON **外层协议**版本（M16）。
+  ///
+  /// 与 [LibraryStore.schemaVersion]（=1）是两套互不相同的版本号，勿混用：
+  /// - 本常量：manifest.json 里的备份协议版本，校验逻辑在 [_ensureCompatible]
+  ///   （双向严格相等：过高拒绝 = 需升级 App；过低拒绝 = 需迁移器）；
+  /// - LibraryStore.schemaVersion：单个集合 JSON 文件（books.json 等）的
+  ///   存储格式版本，随集合文件原样字节进备份、恢复时不重新校验。
+  /// 升级任一侧时须同步检查另一方是否受影响。
+  static const int backupSchemaVersion = 2;
   static const List<String> _collectionFiles = [
     'books.json',
     'movies.json',

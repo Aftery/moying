@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_palette.dart';
+import '../models/stats.dart';
 import '../providers/library_provider.dart';
 import '../widgets/progress_ring.dart';
 
@@ -11,9 +12,12 @@ class PersonalStatsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lib = context.watch<LibraryProvider>();
-    final b = lib.bookStats;
-    final m = lib.movieStats;
+    // H6/M6：select 只订阅本页消费的统计聚合，无关变化不再触发重建
+    final b = context.select<LibraryProvider, BookStats>((p) => p.bookStats);
+    final m =
+        context.select<LibraryProvider, MovieStats>((p) => p.movieStats);
+    final planCount =
+        context.select<LibraryProvider, int>((p) => p.planToReadBooks.length);
 
     return Scaffold(
       appBar: AppBar(title: const Text('个人统计')),
@@ -37,7 +41,7 @@ class PersonalStatsScreen extends StatelessWidget {
             ),
             centerCaption: '平均进度',
             details: [
-              ('想读', '${lib.planToReadBooks.length} 本'),
+              ('想读', '$planCount 本'),
               ('已读', '${b.pagesRead} 页'),
             ],
           ),

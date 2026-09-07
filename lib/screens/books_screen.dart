@@ -49,15 +49,22 @@ class _BooksScreenState extends State<BooksScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final library = context.watch<LibraryProvider>();
+    // H6/M6：select 只订阅书库列表引用（provider 侧有缓存），个人页/电影
+    // 等无关变化不再触发本页 rebuild；过滤方法经 read 调用，数据同源。
+    final library = context.read<LibraryProvider>();
+    final allBooks =
+        context.select<LibraryProvider, List<Book>>((p) => p.books);
     final books = library.getFilteredBooks(
       query: _query,
       status: _statusFilter,
       category: _categoryFilter,
+      source: allBooks,
     );
     // 分类筛选候选：预设 ∪ 书库实际使用过的分类（自定义分类可筛）
-    final categoryOptions =
-        <String>{...kBookCategories, ...library.usedCategories}.toList();
+    final categoryOptions = <String>{
+      ...kBookCategories,
+      ...library.usedCategories,
+    }.toList();
     // 防御：当前筛选值因删书等原因不在候选中时补回，避免 Dropdown 值断言失败
     if (_categoryFilter != null && !categoryOptions.contains(_categoryFilter)) {
       categoryOptions.insert(0, _categoryFilter!);

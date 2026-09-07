@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../config/app_palette.dart';
 import '../models/book.dart';
 import '../models/movie.dart';
+import '../models/stats.dart';
 import '../providers/library_provider.dart';
 import '../widgets/grid_item_card.dart';
 import '../widgets/media_tile.dart';
@@ -26,7 +27,23 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final library = context.watch<LibraryProvider>();
+    // H6/M6：select 收窄订阅——其他 Tab 的数据变化（如改个人资料）不再
+    // 触发仪表盘整页 rebuild；仅本页消费的派生数据引用变化时重建。
+    // 依赖的 getter 均有 provider 侧缓存（引用稳定），select 才有意义。
+    final bookStats =
+        context.select<LibraryProvider, BookStats>((p) => p.bookStats);
+    final movieStats =
+        context.select<LibraryProvider, MovieStats>((p) => p.movieStats);
+    final planToReadCount =
+        context.select<LibraryProvider, int>((p) => p.planToReadBooks.length);
+    final readingList =
+        context.select<LibraryProvider, List<Book>>((p) => p.readingList);
+    final currentlyReading = context.select<LibraryProvider, List<Book>>(
+        (p) => p.currentlyReadingBooks);
+    final movieList =
+        context.select<LibraryProvider, List<Movie>>((p) => p.movieList);
+    final upcoming = context
+        .select<LibraryProvider, List<Movie>>((p) => p.upcomingMovies);
 
     return SafeArea(
       bottom: false,
@@ -46,18 +63,18 @@ class DashboardScreen extends StatelessWidget {
                 Expanded(
                   child: StatsCard(
                     type: StatsCardType.reading,
-                    bookStats: library.bookStats,
-                    movieStats: library.movieStats,
-                    planToReadCount: library.planToReadBooks.length,
+                    bookStats: bookStats,
+                    movieStats: movieStats,
+                    planToReadCount: planToReadCount,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: StatsCard(
                     type: StatsCardType.movie,
-                    bookStats: library.bookStats,
-                    movieStats: library.movieStats,
-                    planToReadCount: library.planToReadBooks.length,
+                    bookStats: bookStats,
+                    movieStats: movieStats,
+                    planToReadCount: planToReadCount,
                   ),
                 ),
               ],
@@ -74,7 +91,7 @@ class DashboardScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _CurrentTasks(library: library),
+          _CurrentTasks(books: currentlyReading, movies: upcoming),
           const SizedBox(height: 26),
 
           // ---------- 阅读列表 ----------
@@ -86,7 +103,7 @@ class DashboardScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _BookGrid(books: library.readingList.take(4).toList()),
+          _BookGrid(books: readingList.take(4).toList()),
           const SizedBox(height: 26),
 
           // ---------- 电影列表 ----------
@@ -98,7 +115,7 @@ class DashboardScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _MovieGrid(movies: library.movieList.take(4).toList()),
+          _MovieGrid(movies: movieList.take(4).toList()),
         ],
       ),
     );
@@ -219,16 +236,17 @@ class _Header extends StatelessWidget {
 
 /// 当前任务横向滚动区（在读的书 + 想看的电影）
 class _CurrentTasks extends StatelessWidget {
-  const _CurrentTasks({required this.library});
+  const _CurrentTasks({required this.books, required this.movies});
 
-  final LibraryProvider library;
+  final List<Book> books;
+  final List<Movie> movies;
 
   @override
   Widget build(BuildContext context) {
     // 组装横向卡片序列：在读 2 本 + 想看 2 部电影
     final tiles = <Widget>[];
 
-    for (final Book b in library.currentlyReadingBooks.take(2)) {
+    for (final Book b in books.take(2)) {
       tiles.add(
         MediaTile.book(
           title: b.title,
@@ -241,7 +259,7 @@ class _CurrentTasks extends StatelessWidget {
         ),
       );
     }
-    for (final Movie m in library.upcomingMovies.take(2)) {
+    for (final Movie m in movies.take(2)) {
       tiles.add(
         MediaTile.movie(
           title: m.title,

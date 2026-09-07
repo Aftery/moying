@@ -169,7 +169,8 @@ class _AppShellState extends State<_AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final rawTheme = context.watch<LibraryProvider>().themeMode;
+    // M6：select 只订阅主题模式，书库/档案变化不再触发整棵 MaterialApp 重建
+    final rawTheme = context.select<LibraryProvider, String>((p) => p.themeMode);
     final themeMode = resolveThemeMode(rawTheme);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _syncSystemChrome(rawTheme);

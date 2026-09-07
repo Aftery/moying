@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 
 import '../models/actor.dart';
 import '../models/book.dart';
@@ -58,6 +59,13 @@ class LibraryStore {
   /// 首次启动（文件缺失）时的初始数据
   final LibrarySnapshot seed;
 
+  /// 单个集合 JSON 文件（books.json / movies.json / actors.json /
+  /// profile.json / settings / data_sources）的**存储格式**版本（M16）。
+  ///
+  /// 与 BackupService.backupSchemaVersion（=2，备份包外层协议版本）是
+  /// 两套互不相同的版本号，勿混用：本常量在每个集合文件写入
+  /// `schemaVersion` 字段并在 [_loadList] 严格校验；备份恢复时集合文件
+  /// 原样字节拷贝、不经过本校验链。
   static const int schemaVersion = 1;
   static const String _booksFile = 'books.json';
   static const String _moviesFile = 'movies.json';
@@ -331,9 +339,10 @@ class LibraryStore {
 
   // ==================== 内部实现 ====================
 
-  String _join(String a, [String? b]) => b == null
-      ? '${dataDir.path}${Platform.pathSeparator}$a'
-      : '${dataDir.path}${Platform.pathSeparator}$a${Platform.pathSeparator}$b';
+  // L4：改用 package:path 拼接，替代手写 Platform.pathSeparator
+  // （桌面端路径分隔符/规范化差异交给成熟库处理）
+  String _join(String a, [String? b]) =>
+      b == null ? p.join(dataDir.path, a) : p.join(dataDir.path, a, b);
 
   /// 将损坏文件改名隔离（保留证据），后缀加时间戳避免覆盖
   Future<void> _quarantine(File file) async {

@@ -84,11 +84,22 @@ class LibraryProvider extends ChangeNotifier {
   List<Book>? _booksCache;
   List<Movie>? _movieListCache;
 
+  /// dashboard 派生列表缓存：引用稳定是 UI 层 `context.select` 的前提
+  /// （select 靠 == 判断是否需要 rebuild，每次新建 List 会让 select 失效）
+  List<Book>? _readingListCache;
+  List<Book>? _currentlyReadingCache;
+  List<Movie>? _upcomingMoviesCache;
+  List<Actor>? _actorsCache;
+
   void _invalidateCache() {
     _bookStatsCache = null;
     _movieStatsCache = null;
     _booksCache = null;
     _movieListCache = null;
+    _readingListCache = null;
+    _currentlyReadingCache = null;
+    _upcomingMoviesCache = null;
+    _actorsCache = null;
   }
 
   /// 清除持久化错误
@@ -194,6 +205,7 @@ class LibraryProvider extends ChangeNotifier {
 
   /// 仪表盘「阅读列表」展示的书目（读完优先，最多 6 本，保持旧观感）
   List<Book> get readingList {
+    if (_readingListCache != null) return _readingListCache!;
     const order = {
       BookStatus.finished: 0,
       BookStatus.reading: 1,
@@ -201,12 +213,15 @@ class LibraryProvider extends ChangeNotifier {
     };
     final sorted = List.of(_books)
       ..sort((a, b) => order[a.status]!.compareTo(order[b.status]!));
-    return sorted.take(6).toList();
+    return _readingListCache = sorted.take(6).toList();
   }
 
   /// 当前在读书籍（仪表盘横向任务卡，最多 2 本）
   List<Book> get currentlyReadingBooks =>
-      _books.where((b) => b.status == BookStatus.reading).take(2).toList();
+      _currentlyReadingCache ??= _books
+          .where((b) => b.status == BookStatus.reading)
+          .take(2)
+          .toList();
 
   /// 在读书籍
   List<Book> get activeBooks =>
@@ -257,13 +272,16 @@ class LibraryProvider extends ChangeNotifier {
         .toList();
   }
 
-  /// 组合筛选：关键词 + 阅读状态 + 分类（均为可选项，null 表示不过滤）
+  /// 组合筛选：关键词 + 阅读状态 + 分类（均为可选项，null 表示不过滤）。
+  /// [source] 供 UI 层传入 select 订阅到的列表（与 [_books] 同源），
+  /// 缺省用内部列表。
   List<Book> getFilteredBooks({
     String? query,
     BookStatus? status,
     String? category,
+    List<Book>? source,
   }) {
-    Iterable<Book> result = _books;
+    Iterable<Book> result = source ?? _books;
     final q = query?.trim().toLowerCase();
     if (q != null && q.isNotEmpty) {
       result = result.where((b) =>
@@ -331,10 +349,11 @@ class LibraryProvider extends ChangeNotifier {
   List<Movie> get movieList => _movieListCache ??= UnmodifiableListView(_movieList);
 
   /// 想看电影（仪表盘横向任务卡）—— 来自电影库真实 watchlist，前 2 部
-  List<Movie> get upcomingMovies => List.unmodifiable(_movieList
-      .where((m) => m.status == MovieStatus.watchlist)
-      .take(2)
-      .toList());
+  List<Movie> get upcomingMovies => _upcomingMoviesCache ??=
+      List.unmodifiable(_movieList
+          .where((m) => m.status == MovieStatus.watchlist)
+          .take(2)
+          .toList());
 
   /// 电影统计聚合（仪表盘 StatsCard 数据源；实时计算，保证与列表状态一致）
   ///
@@ -378,8 +397,9 @@ class LibraryProvider extends ChangeNotifier {
     String? query,
     String? genre,
     MovieSort sort = MovieSort.ratingHigh,
+    List<Movie>? source,
   }) {
-    Iterable<Movie> result = _movieList;
+    Iterable<Movie> result = source ?? _movieList;
     final q = query?.trim().toLowerCase();
     if (q != null && q.isNotEmpty) {
       result = result.where((m) =>
@@ -466,11 +486,15 @@ class LibraryProvider extends ChangeNotifier {
   // ==================== 演员 ====================
 
   /// 全部演员实体（演员库 / 编辑页联想候选数据源）
-  List<Actor> get actors => List.unmodifiable(_actors);
+  ///
+  /// 缓存引用（H6/M6）：UI 层 select 依赖引用稳定性；
+  /// 演员 写操作 走 [_invalidateCache] 失效。
+  List<Actor> get actors => _actorsCache ??= List.unmodifiable(_actors);
 
   /// 新增演员
   void addActor(Actor actor) {
     _actors.add(actor);
+    _invalidateCache();
     notifyListeners();
     _persistActors();
   }
@@ -482,13 +506,15 @@ class LibraryProvider extends ChangeNotifier {
     final old = _actors[i];
     if (old.avatar != null) _recycleImage(old.avatar, updated.avatar);
     _actors[i] = updated;
+    _invalidateCache();
     notifyListeners();
     _persistActors();
   }
 
-  /// 按 id 取多个演员（保持 [ids] 顺序，缺失静默跳过——渲染层对悬空引用兜底）
-  List<Actor> actorsByIds(Iterable<String> ids) {
-    final byId = {for (final a in _actors) a.id: a};
+  /// 按 id 取多个演员（保持 [ids] 顺序，缺失静默跳过——渲染层对悬空引用兜底）。
+  /// [source] 供 UI 层传入 select 订阅到的演员列表（与 [_actors] 同源）。
+  List<Actor> actorsByIds(Iterable<String> ids, {List<Actor>? source}) {
+    final byId = {for (final a in (source ?? _actors)) a.id: a};
     return ids.map((id) => byId[id]).whereType<Actor>().toList();
   }
 
@@ -507,6 +533,7 @@ class LibraryProvider extends ChangeNotifier {
     final old = _actors[i];
     _actors.removeAt(i);
     if (old.avatar != null) _recycleImage(old.avatar, null);
+    _invalidateCache();
     notifyListeners();
     _persistActors();
     return true;

@@ -14,6 +14,7 @@ import '../providers/data_source_provider.dart';
 import '../providers/library_provider.dart';
 import '../widgets/edit_form_widgets.dart';
 import '../widgets/media_cover.dart';
+import '../widgets/quick_search_panel.dart';
 import '../widgets/star_rating_picker.dart';
 
 /// 图书编辑 / 新增界面（双模式）
@@ -590,11 +591,44 @@ class _BookEditScreenState extends State<BookEditScreen> {
 
   /// 检索区块：未注入 DataSourceProvider（部分测试只给 LibraryProvider）
   /// 或无默认书籍数据源时整块隐藏，不影响手动录入。
+  /// 呈现由 [QuickSearchPanel] 承担（M5 与 movie_edit 共用）；
+  /// 搜索触发（debounce）与结果回填差异留在本 State。
   List<Widget> _quickSearchBlocks() {
     final DataSourceProvider? ds = _tryReadDataSource(context);
-    if (ds == null || ds.defaultBookSource == null) return const [];
+    final source = ds?.defaultBookSource;
+    if (ds == null || source == null) return const [];
     return [
-      _buildQuickSearch(ds),
+      QuickSearchPanel(
+        controller: _searchCtrl,
+        hint: '输入书名 / 作者，联网搜索并回填',
+        sourceName: source.name,
+        isSearching: ds.isSearching,
+        error: ds.searchError,
+        results: ds.bookResults
+            ?.map((r) => QuickSearchItem(
+                  title: r.title,
+                  subtitle: r.subtitle,
+                  coverUrl: r.coverUrl,
+                  externalId: r.externalId,
+                ))
+            .toList(),
+        filledExternalId: _filledResult?.externalId,
+        tagColor: context.colors.readingStart,
+        fallbackIcon: Icons.menu_book_outlined,
+        onClear: () {
+          _searchDebounce?.cancel();
+          _searchCtrl.clear();
+          ds.clearResults();
+          setState(() {});
+        },
+        onPick: (item) {
+          // 从展示投影找回原始结果对象再回填（回填消费完整模型字段）
+          final matches =
+              ds.bookResults?.where((r) => r.externalId == item.externalId);
+          if (matches == null || matches.isEmpty) return;
+          _applyBookResult(matches.first, ds);
+        },
+      ),
       const SizedBox(height: 24),
     ];
   }
@@ -611,240 +645,6 @@ class _BookEditScreenState extends State<BookEditScreen> {
     } on ProviderNotFoundException {
       return null;
     }
-  }
-
-  Widget _buildQuickSearch(DataSourceProvider ds) {
-    final c = context.colors;
-    final source = ds.defaultBookSource!;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: c.surfaceHigh,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.travel_explore_rounded, size: 18, color: c.accent),
-              const SizedBox(width: 6),
-              Text(
-                '快速检索',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: c.textPrimary,
-                ),
-              ),
-              const Spacer(),
-              Flexible(
-                child: Text(
-                  '数据源：${source.name}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, color: c.textMuted),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _searchCtrl,
-            textInputAction: TextInputAction.search,
-            style: TextStyle(color: c.textPrimary, fontSize: 14),
-            cursorColor: c.accent,
-            decoration: InputDecoration(
-              prefixIcon:
-                  Icon(Icons.search_rounded, size: 20, color: c.textMuted),
-              suffixIcon: _searchCtrl.text.isEmpty
-                  ? null
-                  : GestureDetector(
-                      onTap: () {
-                        _searchDebounce?.cancel();
-                        _searchCtrl.clear();
-                        ds.clearResults();
-                        setState(() {});
-                      },
-                      behavior: HitTestBehavior.opaque,
-                      child: Icon(Icons.close_rounded,
-                          size: 18, color: c.textMuted),
-                    ),
-              hintText: '输入书名 / 作者，联网搜索并回填',
-              hintStyle: TextStyle(color: c.textMuted, fontSize: 13),
-              isDense: true,
-              filled: true,
-              fillColor: c.surface,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: c.outline, width: 0.8),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: c.outline, width: 0.8),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: c.accent, width: 1.3),
-              ),
-            ),
-          ),
-          _searchBody(ds),
-        ],
-      ),
-    );
-  }
-
-  /// 搜索结果区：进行中 loading / 错误提示 / 空结果 / 结果列表
-  Widget _searchBody(DataSourceProvider ds) {
-    final c = context.colors;
-    if (ds.isSearching) {
-      return const Padding(
-        padding: EdgeInsets.only(top: 14),
-        child: Center(
-          child: SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      );
-    }
-    final err = ds.searchError;
-    final results = ds.bookResults;
-    if (results == null && err != null && err.isNotEmpty) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: Row(
-          children: [
-            Icon(Icons.wifi_off_rounded,
-                size: 14, color: c.error),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                err,
-                style:
-                    TextStyle(fontSize: 12, color: c.error),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    if (results == null) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 10),
-        child: Text(
-          '搜索结果将显示在这里，点击条目自动回填表单',
-          style: TextStyle(fontSize: 12, color: c.textMuted),
-        ),
-      );
-    }
-    if (results.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 10),
-        child: Text(
-          '未找到相关结果，换个关键词试试',
-          style: TextStyle(fontSize: 12, color: c.textMuted),
-        ),
-      );
-    }
-    return Column(
-      children: [for (final r in results) _resultTile(r, ds)],
-    );
-  }
-
-  /// 结果条目：小封面 + 书名 + 「作者 · 出版社 (年份)」 + 回填入口
-  Widget _resultTile(BookSearchResult r, DataSourceProvider ds) {
-    final c = context.colors;
-    final filled = _filledResult?.externalId == r.externalId;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () => _applyBookResult(r, ds),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            _resultCover(r.coverUrl),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    r.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: c.textPrimary,
-                    ),
-                  ),
-                  if (r.subtitle.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        r.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: c.textMuted),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            if (filled)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: c.readingStart.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '已填充',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: c.readingStart,
-                  ),
-                ),
-              )
-            else
-              Icon(Icons.download_for_offline_outlined,
-                  size: 18, color: c.textMuted),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 结果封面缩略图（网络图失败回退占位图标）
-  Widget _resultCover(String? url) {
-    final c = context.colors;
-    Widget fallback() => ColoredBox(
-          color: c.surface,
-          child: Icon(Icons.menu_book_outlined,
-              size: 20, color: c.textMuted),
-        );
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(6),
-      child: SizedBox(
-        width: 40,
-        height: 56,
-        child: (url == null || url.isEmpty)
-            ? fallback()
-            : Image.network(
-                url,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => fallback(),
-              ),
-      ),
-    );
   }
 
   /// 搜索词变化（controller listener）：

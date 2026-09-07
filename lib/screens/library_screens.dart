@@ -40,11 +40,16 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final library = context.watch<LibraryProvider>();
+    // H6/M6：select 只订阅影库列表引用（provider 侧有缓存），书库/个人页
+    // 等无关变化不再触发本页 rebuild；过滤方法经 read 调用，数据同源。
+    final library = context.read<LibraryProvider>();
+    final allMovies =
+        context.select<LibraryProvider, List<Movie>>((p) => p.movieList);
     final movies = library.getFilteredMovies(
       query: _query,
       genre: _genreFilter,
       sort: _sort,
+      source: allMovies,
     );
     // 类型筛选候选：预设 ∪ 影库实际用过的类型（自定义类型可筛，去重）
     final genreOptions =
