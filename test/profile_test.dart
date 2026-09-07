@@ -205,8 +205,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('个人统计'), findsOneWidget); // AppBar
-      expect(find.text('READING'), findsOneWidget);
-      expect(find.text('WATCHING'), findsOneWidget);
+      expect(find.text('打卡记录'), findsOneWidget); // 三段式仪表盘
+      expect(find.text('类型偏好'), findsOneWidget);
     });
   });
 

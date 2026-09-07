@@ -41,13 +41,15 @@ flutter build apk --release
 
 ## 版本历史
 
+- **v0.9.0**：个人统计页三段式仪表盘重构——年度指标栏 + GitHub 风格打卡热力图（30 天/季度/年度切换）、类型偏好环形图 + 评分分布柱状图（纯 CustomPainter）、在读进度条 + 年度五星封面墙；年度报告页（最晚读完 / 最快阅读周 / 打破偏好的那本）。
+- **v0.8.2**：自定义数据源智能解析（支持用户自行添加接口配置）；图片本地缓存（避免重复下载）；WebDAV 兼容性修复
 - **v0.8.1**：优化个人页档案展示弹层体验；电影编辑页片长输入框回显修复；数据源全局请求节流防 429；图书默认源从 Google Books 换为 OpenLibrary（免 Key 无速率限制）；OpenLibrary 数据源实现；图书/电影编辑页公共组件去重（M4/M5）；代码审查报告收尾（规范细节/依赖清理/测试隔离）。
 - **v0.8.0**：深浅双主题、离线优先、书籍电影双轨记录、WebDAV 云同步、联网信息补全。
 
 ## 目录结构
 
 ```
-lib/（52 个 .dart 文件）
+lib/（63 个 .dart 文件）
 
 ├── main.dart                     # 入口（Provider + 主题接线 + 状态栏 + 持久化）
 ├── config/
@@ -67,7 +69,8 @@ lib/（52 个 .dart 文件）
 │   ├── mock_data.dart            # 种子数据（12 本书 / 8 部电影；演员由演员表派生）
 │   ├── persistence.dart          # 平台门面（条件导入）
 │   ├── persistence_io.dart       # 手机 / 桌面实现（dart:io + path_provider）
-│   └── persistence_stub.dart     # Web 回退（内存存储）
+│   ├── persistence_stub.dart     # Web 回退（内存存储）
+│   └── statistics.dart           # 三段式仪表盘聚合：热力图 / 类型占比 / 评分分布 / 年度指标与年报亮点
 ├── providers/
 │   ├── data_source_provider.dart # 联网检索状态（防抖搜索 / 结果缓存 / 错误兜底）
 │   ├── library_provider.dart     # 书影库状态（ChangeNotifier 单一数据源）
@@ -77,7 +80,9 @@ lib/（52 个 .dart 文件）
 │   ├── data_source_manager.dart  # 数据源注册表（预设 / 默认源 / 配置与凭据存取）
 │   ├── data_sources/
 │   │   ├── tmdb_data_source.dart # TMDB 影视源（搜索 / 详情 / 测连，API Key 走安全存储）
-│   │   └── google_books_data_source.dart # Google Books 图书源（免密钥）
+│   │   ├── open_library_data_source.dart # OpenLibrary 图书源（免 Key 无速率限制）
+│   │   └── custom_data_source.dart # 自定义数据源（用户接口配置 + 智能解析）
+│   ├── image_cache_service.dart  # 图片本地缓存（避免重复下载）
 │   ├── image_pick_service.dart   # 选图服务抽象（image_picker）
 │   ├── webdav_client.dart        # WebDAV 最小客户端（PROPFIND / MKCOL / PUT / GET，可注入 fake）
 │   ├── backup_service.dart       # 备份打包 / 还原（JSON 单文件 / 含图 ZIP；含 data_sources.json）
@@ -95,7 +100,8 @@ lib/（52 个 .dart 文件）
 │   ├── data_source_screen.dart   # 数据源管理（影视 / 图书两区，默认源单选、连接测试）
 │   ├── profile_screen.dart       # 个人中心（资料编辑 / 主题三选 / 统计与数据源入口）
 │   ├── data_sync_screen.dart     # 数据同步（WebDAV 云同步 + 本地导出导入）
-│   └── personal_stats_screen.dart # 个人数据统计
+│   ├── personal_stats_screen.dart # 个人统计（三段式仪表盘：热力图 / 偏好图表 / 在读进度）
+│   └── annual_report_screen.dart # 年度报告（最晚读完 / 最快阅读周 / 打破偏好）
 └── widgets/
     ├── media_cover.dart          # 媒体图三态展示（本地 / 网络 / 占位）
     ├── stats_card.dart           # 统计双卡（阅读渐变环 / 观影均分徽章，等高对齐）
@@ -108,11 +114,14 @@ lib/（52 个 .dart 文件）
     ├── cover_placeholder.dart    # 离线封面（渐变 + emoji，无网络依赖）
     ├── search_bar_widget.dart    # 圆角搜索栏
     ├── section_header.dart       # 区块标题（trailing 支持点击跳转）
+    ├── heatmap_calendar.dart     # GitHub 风格打卡热力图（周列 × 星期行，四级着色）
+    ├── chart_widgets.dart        # DonutChart 环形图 + RatingBarChart 评分柱状图（纯 CustomPainter）
     └── placeholder_view.dart     # 空态视图
 ```
 
-`test/` 下另有 18 个测试文件，共 195 个用例，覆盖模型序列化、存储层、Provider 持久化、
-图片管线、备份往返与 WebDAV 交互、数据源配置与检索回填、个人档案与主题、以及关键 UI 流程
+`test/` 下另有 21 个测试文件，共 236 个用例，覆盖模型序列化、存储层、Provider 持久化、
+图片管线、备份往返与 WebDAV 交互、数据源配置与检索回填、个人档案与主题、统计聚合
+（热力图去重规则 / 类型占比 / 评分分桶 / 年报亮点）、三段式仪表盘渲染，以及关键 UI 流程
 （联想输入、筛选恢复、卡片长按跳转、仪表盘空态点击直达新增页、本地导出落盘与含图分支、
 片长输入净化等）。
 
@@ -135,12 +144,24 @@ lib/（52 个 .dart 文件）
 - **图片管理**：相册选图 / 粘贴网络链接 / 移除封面，图片复制进应用私有目录，更换或删除时自动回收孤儿文件
 - **仪表盘真实数据联动**：统计双卡、当前任务、阅读与观影网格全部由书影数据实时计算，含空态兜底；书库 / 影库为空时，空态卡整卡可点击，直达「添加图书 / 添加电影」页；「查看全部」跳转对应 Tab
 - **个人中心**：昵称 / 签名 / 头像编辑（头像卡片点击为只读展示，「编辑资料」行进入编辑）、数据统计页、主题三选
+- **三段式仪表盘统计（个人统计页）**：顶部年度指标栏（年度读书 X 本 · 观影 Y 部 · 观影时长 Z 小时）+
+  GitHub 风格打卡热力图（30 天 / 季度 / 年度切换，计数规则为「同一实体同一天去重 1 次、
+  不同实体累加」，0 / 1 / 2 / 3+ 四级着色，聚合书 createdAt / startedAt / finishedAt 与
+  电影 watchDate）；中部类型偏好环形图（Top5 + 百分比图例）与 1~5 星评分分布柱状图
+  （均纯 `CustomPainter` 实现，零第三方依赖）；底部在读进度条（默认 3 本 + 底部弹层「查看全部」）、
+  年度五星封面墙与年报入口；每个区块均有空态兜底文案
+- **年度报告**：年度快照页（`annual_report_screen.dart`）——年度总览渐变卡
+  （读完本数 / 页数 / 观影时长 / 年度偏好分类）、最晚读完的一本书、阅读页数最多的一周、
+  打破偏好的那一本（分类与整体最高频分类不同的当年完成书）；数据实时计算，记录变化即更新
 - **数据同步 / 备份（P5）**：WebDAV 云同步（坚果云 / Nextcloud 等标准网盘）——4 项服务器配置 +
   测试连接、立即备份 / 从云端恢复（恢复前二次确认 + 本地快照兜底）、启动时自动同步（可限 Wi-Fi、
   节流 1 小时）、备份可选包含本地图片（JSON 单文件 / 含图 ZIP）；本地导出改为弹「保存位置选择器」
   由用户自选落盘路径（含图开关跟随同步偏好，开 → ZIP、关 → JSON），断网环境的保底手段。
   凭据存系统安全存储（Keystore / Keychain），`settings.json` 不含密码；Web 平台隐藏该功能入口
-- **联网信息补全（可选）**：个人中心「数据源管理」——影视源（内置 TMDB）与图书源（内置 Google Books）
+- **联网信息补全（可选）**：个人中心「数据源管理」——影视源内置 TMDB、图书源内置 OpenLibrary（默认）
+  与 Google Books。**接入第三方站点无需内置预设**：自定义数据源填 Base URL + API Key 即可，
+  返回 JSON 由智能解析兜底（递归找数据列表 + 中英文字段别名映射，支持数组 / `{data:[…]}` /
+  `{results:[…]}` 等常见结构），豆瓣、Bangumi 等站点走这条路径即可
   可添加多个并单选默认，支持连接测试与配置编辑；书籍 / 电影编辑页顶部「快速检索」输入名称即
   联网搜索（500ms 防抖），点选结果自动回填表单（图书含 ISBN 与封面，电影含导演 / 主演 / 片长 /
   类型 / 海报），保存时记录溯源 `source`。TMDB 的 API Key 存系统安全存储；数据源配置随
@@ -149,8 +170,8 @@ lib/（52 个 .dart 文件）
 
 ## 路线图（未实现）
 
-- [ ] 更多数据源：豆瓣（用户自行配置）、Bangumi、OpenBD 等内置预设接入
-- [ ] 年度目标设定与图表统计（当前「数据统计」页为数字汇总 + 进度环）
+- [ ] 年度目标设定：设定年度读书 / 观影目标并在统计仪表盘追踪完成度
+  （图表统计与年报已实现，目标追踪尚未开始）
 - [ ] 仪表盘顶栏搜索 / 通知按钮接上功能（当前为空实现）
 
 ## 开发约定
