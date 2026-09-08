@@ -48,6 +48,7 @@ class Book {
     this.year,
     this.emoji,
     this.category,
+    this.publisher,
     this.description,
     this.notes,
     this.startedAt,
@@ -102,6 +103,9 @@ class Book {
   /// 图书分类（来自 [kBookCategories]）
   final String? category;
 
+  /// 出版社（联网检索回填或手动录入，详情/编辑页以标签展示）
+  final String? publisher;
+
   /// 内容简介（这本书讲什么，供详情页展示）
   final String? description;
 
@@ -146,9 +150,10 @@ class Book {
     BookStatus? status,
     double? coverHue,
     double? rating,
-    int? year,
+    Object? year = _unset,
     String? emoji,
     String? category,
+    Object? publisher = _unset,
     String? description,
     String? notes,
     Object? startedAt = _unset,
@@ -167,9 +172,10 @@ class Book {
       status: status ?? this.status,
       coverHue: coverHue ?? this.coverHue,
       rating: rating ?? this.rating,
-      year: year ?? this.year,
+      year: _take(year, this.year),
       emoji: emoji ?? this.emoji,
       category: category ?? this.category,
+      publisher: _take(publisher, this.publisher),
       description: description ?? this.description,
       notes: notes ?? this.notes,
       createdAt: createdAt,
@@ -208,6 +214,7 @@ class Book {
         if (year != null) 'year': year,
         if (emoji != null) 'emoji': emoji,
         if (category != null) 'category': category,
+        if (publisher != null) 'publisher': publisher,
         if (description != null) 'description': description,
         if (notes != null) 'notes': notes,
         if (startedAt != null) 'startedAt': startedAt!.toIso8601String(),
@@ -235,6 +242,7 @@ class Book {
         year: (json['year'] as num?)?.toInt(),
         emoji: json['emoji'] as String?,
         category: json['category'] as String?,
+        publisher: json['publisher'] as String?,
         description: json['description'] as String?,
         notes: json['notes'] as String?,
         startedAt: json['startedAt'] == null
@@ -269,6 +277,7 @@ class Book {
           other.year == year &&
           other.emoji == emoji &&
           other.category == category &&
+          other.publisher == publisher &&
           other.description == description &&
           other.notes == notes &&
           other.startedAt == startedAt &&
@@ -278,7 +287,9 @@ class Book {
           other.source == source;
 
   @override
-  int get hashCode => Object.hash(id, title, author, totalPages, createdAt,
-      updatedAt, currentPage, status, coverHue, rating, year, emoji, category,
-      description, notes, startedAt, finishedAt, cover, isbn, source);
+  int get hashCode => Object.hashAll(<Object?>[
+        id, title, author, totalPages, createdAt, updatedAt, currentPage,
+        status, coverHue, rating, year, emoji, category, publisher,
+        description, notes, startedAt, finishedAt, cover, isbn, source,
+      ]);
 }

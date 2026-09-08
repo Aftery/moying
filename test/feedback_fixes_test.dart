@@ -200,7 +200,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(BookEditScreen), findsOneWidget);
-      expect(find.text('编辑图书'), findsOneWidget);
+      expect(find.text('修改书籍记录'), findsOneWidget);
     });
 
     testWidgets('长按电影卡片进入电影编辑页', (tester) async {

@@ -14,6 +14,17 @@ import 'package:moying/widgets/book_list_card.dart';
 import 'package:moying/widgets/search_bar_widget.dart';
 
 void main() {
+  // 输入框按 hint 定位（v2 卡片式布局中字段不再有 labelText）
+  Finder fieldByHint(String hint) => find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.hintText == hint,
+      );
+
+  // 顶栏保存胶囊（Material+InkWell 包裹）
+  Finder saveButton() => find.ancestor(
+        of: find.text('保存'),
+        matching: find.byType(InkWell),
+      );
+
   group('图书列表页', () {
     testWidgets('切换到书籍 Tab：渲染搜索栏 / 筛选下拉 / 双排网格', (tester) async {
       await tester.pumpWidget(const MoYingApp());
@@ -46,8 +57,8 @@ void main() {
       expect(find.byType(BookDetailScreen), findsOneWidget);
       expect(find.text('阅读进度'), findsOneWidget);
 
-      // 返回列表
-      await tester.tap(find.byType(BackButton));
+      // 返回列表（v2 详情页为自定义圆形返回按钮）
+      await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
       await tester.pumpAndSettle();
       expect(find.byType(BooksScreen), findsOneWidget);
     });
@@ -105,11 +116,9 @@ void main() {
       final provider = await pumpEditor(tester);
       final oldTitle = provider.books.first.title;
 
-      await tester.enterText(find.byType(TextField).first, '重命名后的书');
+      await tester.enterText(fieldByHint('输入书名'), '重命名后的书');
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('保存修改'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('保存修改'), warnIfMissed: false);
+      await tester.tap(saveButton(), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       // 已返回宿主页
@@ -125,11 +134,9 @@ void main() {
     testWidgets('书名留空时保存被拦截并提示', (tester) async {
       final provider = await pumpEditor(tester);
       // 只清空书名，作者保留
-      await tester.enterText(find.byType(TextField).first, '');
+      await tester.enterText(fieldByHint('输入书名'), '');
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('保存修改'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('保存修改'), warnIfMissed: false);
+      await tester.tap(saveButton(), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(find.text('书名与作者不能为空'), findsOneWidget);
@@ -208,8 +215,9 @@ void main() {
     testWidgets('新增模式：AppBar「添加图书」，无删除按钮', (tester) async {
       await pumpCreator(tester);
 
-      // AppBar 与保存按钮共用「添加图书」文案 → 恰好 2 处
-      expect(find.text('添加图书'), findsNWidgets(2));
+      // 顶栏标题「添加图书」唯一；保存胶囊为「保存」
+      expect(find.text('添加图书'), findsOneWidget);
+      expect(find.text('保存'), findsOneWidget);
       // 新增模式不显示删除入口
       expect(find.text('删除图书'), findsNothing);
     });
@@ -235,22 +243,14 @@ void main() {
       final provider = await pumpCreator(tester);
       final before = provider.books.length;
 
-      await tester.enterText(find.byType(TextField).first, '测试新书');
+      await tester.enterText(fieldByHint('输入书名'), '测试新书');
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).at(1), '测试作者');
+      await tester.enterText(fieldByHint('输入作者'), '测试作者');
       await tester.pumpAndSettle();
-      // 联网检索上线后字段顺序：书名/作者/ISBN/总页数/分类
-      await tester.enterText(find.byType(TextField).at(3), '500');
+      await tester.enterText(fieldByHint('300'), '500');
       await tester.pumpAndSettle();
 
-      // 保存按钮：AppBar 标题与按钮文案重名，且 Scaffold 遍历顺序 body 在 appBar 前，
-      // 不能用 .last 区分 —— 用 InkWell 祖先唯一定位真实按钮
-      final saveBtn =
-          find.ancestor(of: find.text('添加图书'), matching: find.byType(InkWell));
-      expect(saveBtn, findsOneWidget);
-      await tester.ensureVisible(saveBtn);
-      await tester.pumpAndSettle();
-      await tester.tap(saveBtn, warnIfMissed: false);
+      await tester.tap(saveButton(), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       // 已返回宿主页
@@ -272,13 +272,9 @@ void main() {
       final before = provider.books.length;
 
       // 只填作者
-      await tester.enterText(find.byType(TextField).at(1), '只有作者');
+      await tester.enterText(fieldByHint('输入作者'), '只有作者');
       await tester.pumpAndSettle();
-      final saveBtn =
-          find.ancestor(of: find.text('添加图书'), matching: find.byType(InkWell));
-      await tester.ensureVisible(saveBtn);
-      await tester.pumpAndSettle();
-      await tester.tap(saveBtn, warnIfMissed: false);
+      await tester.tap(saveButton(), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(find.text('书名与作者不能为空'), findsOneWidget);
@@ -295,8 +291,8 @@ void main() {
 
       final provider = await pumpCreator(tester);
 
-      // 分类字段是第 5 个 TextField（书名/作者/ISBN/总页数之后）
-      final categoryField = find.byType(TextField).at(4);
+      // 分类为头部卡片中的胶囊输入（hint「分类」）
+      final categoryField = fieldByHint('分类');
       await tester.enterText(categoryField, '幻');
       await tester.pumpAndSettle();
 
@@ -313,13 +309,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // 补齐必填项后保存，category 应为点选的联想值
-      await tester.enterText(find.byType(TextField).first, '联想选书');
-      await tester.enterText(find.byType(TextField).at(1), '作者甲');
-      final saveBtn =
-          find.ancestor(of: find.text('添加图书'), matching: find.byType(InkWell));
-      await tester.ensureVisible(saveBtn);
-      await tester.pumpAndSettle();
-      await tester.tap(saveBtn, warnIfMissed: false);
+      await tester.enterText(fieldByHint('输入书名'), '联想选书');
+      await tester.enterText(fieldByHint('输入作者'), '作者甲');
+      await tester.tap(saveButton(), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(find.byType(BookEditScreen), findsNothing);
@@ -329,16 +321,12 @@ void main() {
     testWidgets('自定义分类直接保存：写入自定义值并进入联想候选', (tester) async {
       final provider = await pumpCreator(tester);
 
-      await tester.enterText(find.byType(TextField).first, '自定义分类的书');
-      await tester.enterText(find.byType(TextField).at(1), '作者乙');
-      await tester.enterText(find.byType(TextField).at(4), '科幻硬核');
+      await tester.enterText(fieldByHint('输入书名'), '自定义分类的书');
+      await tester.enterText(fieldByHint('输入作者'), '作者乙');
+      await tester.enterText(fieldByHint('分类'), '科幻硬核');
       await tester.pumpAndSettle();
 
-      final saveBtn =
-          find.ancestor(of: find.text('添加图书'), matching: find.byType(InkWell));
-      await tester.ensureVisible(saveBtn);
-      await tester.pumpAndSettle();
-      await tester.tap(saveBtn, warnIfMissed: false);
+      await tester.tap(saveButton(), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(find.byType(BookEditScreen), findsNothing);
@@ -363,7 +351,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(BookEditScreen), findsOneWidget);
-      expect(find.text('编辑图书'), findsOneWidget);
+      expect(find.text('修改书籍记录'), findsOneWidget);
     });
   });
 
@@ -436,17 +424,17 @@ void main() {
     testWidgets('在读书显示开始时间与区块，无完成时间行', (tester) async {
       await pumpEditOf(tester, kAllBooks.first.id);
 
-      expect(find.text('阅读时间'), findsOneWidget);
+      expect(find.text('开始阅读'), findsOneWidget);
       expect(find.text('2026-02-15'), findsOneWidget); // 开始时间原值
       expect(find.text('阅读完成'), findsNothing); // 未完成不显示
-      expect(find.text('保存修改'), findsOneWidget);
+      expect(find.text('保存'), findsOneWidget);
     });
 
     // b12 嫌疑人X：想读，仅 createdAt
     testWidgets('想读书隐藏整个阅读时间区块', (tester) async {
       await pumpEditOf(tester, kAllBooks.last.id);
 
-      expect(find.text('阅读时间'), findsNothing);
+      expect(find.text('开始阅读'), findsNothing);
       expect(find.text('2026-08-30'), findsNothing); // createdAt 不作为开始时间展示
     });
 
@@ -454,45 +442,27 @@ void main() {
     testWidgets('已读书显示完成时间行', (tester) async {
       final provider = await pumpEditOf(tester, kAllBooks[3].id);
 
-      expect(find.text('阅读时间'), findsOneWidget);
+      expect(find.text('阅读完成'), findsOneWidget);
       expect(find.text('2025-10-18'), findsOneWidget);
-      await tester.ensureVisible(find.text('保存修改'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('保存修改'), warnIfMissed: false);
+      await tester.tap(saveButton(), warnIfMissed: false);
       await tester.pumpAndSettle();
       final saved = provider.books.firstWhere((b) => b.id == kAllBooks[3].id);
       expect(saved.finishedAt, DateTime(2025, 10, 18));
     });
 
-    testWidgets('新增拉满进度：完成时间自动填今天、开始时间=添加时间', (tester) async {
+    testWidgets('新增填满已读页数：完成时间自动填今天、开始时间=添加时间', (tester) async {
       final provider = await pumpAdd(tester);
 
-      await tester.enterText(find.byType(TextField).at(0), '时间测试书');
-      await tester.enterText(find.byType(TextField).at(1), '作者');
+      await tester.enterText(fieldByHint('输入书名'), '时间测试书');
+      await tester.enterText(fieldByHint('输入作者'), '作者');
+      await tester.enterText(fieldByHint('0'), '300'); // 已读 = 默认总页数 300 → 完成
       await tester.pumpAndSettle();
-
-      final slider = find.byType(Slider);
-      await tester.ensureVisible(slider);
-      await tester.pumpAndSettle();
-      // 新增书 thumb 在轨道最左：从端点起拖，越过右边界钳制到 100%
-      final rect = tester.getRect(slider);
-      await tester.dragFrom(
-        Offset(rect.left + 4, rect.center.dy),
-        Offset(rect.width + 80, 0),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('100%'), findsOneWidget); // 拖动确实钳制到满进度
 
       final today = ymd(DateTime.now());
       expect(find.text('阅读完成'), findsOneWidget);
       expect(find.text(today), findsWidgets); // 完成时间 = 今天
 
-      // 保存：直接定位底部保存按钮（AppBar 标题同名文案不可点）
-      final saveBtn =
-          find.ancestor(of: find.text('添加图书'), matching: find.byType(InkWell));
-      await tester.ensureVisible(saveBtn);
-      await tester.pumpAndSettle();
-      await tester.tap(saveBtn, warnIfMissed: false);
+      await tester.tap(saveButton(), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       final added = provider.books.first;
@@ -502,59 +472,43 @@ void main() {
       expect(ymd(added.startedAt!), today);
     });
 
-    testWidgets('已读书拖回进度：确认后清除完成记录', (tester) async {
+    testWidgets('已读书改小已读页数：保存确认后清除完成记录', (tester) async {
       final provider = await pumpEditOf(tester, kAllBooks[3].id); // 1984
 
-      final slider = find.byType(Slider);
-      await tester.ensureVisible(slider);
-      await tester.pumpAndSettle();
-      // 已读书 thumb 在轨道最右（100%）：从端点向左拖约半轨 → 进度降到在读区间
-      final rect = tester.getRect(slider);
-      await tester.dragFrom(
-        Offset(rect.right - 4, rect.center.dy),
-        Offset(-rect.width * 0.55, 0),
-      );
+      // 已读 411 → 50：低于总页数，保存时触发回退确认
+      await tester.enterText(fieldByHint('0'), '50');
       await tester.pumpAndSettle();
 
+      await tester.tap(saveButton(), warnIfMissed: false);
+      await tester.pumpAndSettle();
       expect(find.text('回退阅读进度？'), findsOneWidget);
       await tester.tap(find.text('确认回退'));
       await tester.pumpAndSettle();
 
-      expect(find.text('阅读完成'), findsNothing); // 完成行随进度隐藏
-
-      await tester.ensureVisible(find.text('保存修改'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('保存修改'), warnIfMissed: false);
-      await tester.pumpAndSettle();
       final saved = provider.books.firstWhere((b) => b.id == kAllBooks[3].id);
       expect(saved.status, BookStatus.reading);
       expect(saved.finishedAt, isNull);
-      expect(saved.currentPage, lessThan(saved.totalPages));
+      expect(saved.currentPage, 50);
     });
 
-    testWidgets('已读书拖回进度：取消则进度保持完成态', (tester) async {
+    testWidgets('已读书改小已读页数：取消则不保存、完成记录保留', (tester) async {
       await pumpEditOf(tester, kAllBooks[3].id); // 1984
 
-      final slider = find.byType(Slider);
-      await tester.ensureVisible(slider);
-      await tester.pumpAndSettle();
-      final rect = tester.getRect(slider);
-      await tester.dragFrom(
-        Offset(rect.right - 4, rect.center.dy),
-        Offset(-rect.width * 0.55, 0),
-      );
+      await tester.enterText(fieldByHint('0'), '50');
       await tester.pumpAndSettle();
 
+      await tester.tap(saveButton(), warnIfMissed: false);
+      await tester.pumpAndSettle();
       expect(find.text('回退阅读进度？'), findsOneWidget);
-      // dialog 内「取消」（与底部按钮区分作用域）
+      // dialog 内「取消」→ 放弃保存
       await tester.tap(find.descendant(
         of: find.byType(AlertDialog),
         matching: find.text('取消'),
       ));
       await tester.pumpAndSettle();
 
-      // 进度回弹 100%，完成记录保留
-      expect(find.text('100%'), findsOneWidget);
+      // 仍在编辑页，完成记录保留
+      expect(find.byType(BookEditScreen), findsOneWidget);
       expect(find.text('阅读完成'), findsOneWidget);
       expect(find.text('2025-10-18'), findsOneWidget);
     });

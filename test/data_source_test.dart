@@ -655,24 +655,19 @@ void main() {
 
       // 回填后结果列表收起，展示「已填充《三体》，修改关键词可重新搜索」
       expect(find.textContaining('已填充《三体》'), findsOneWidget);
-      final isbnField = tester.widget<TextField>(find.byWidgetPredicate(
-        (w) => w is TextField && w.decoration?.labelText == 'ISBN',
-      ));
-      expect(isbnField.controller!.text, '9787536692930');
+      // v2 布局：ISBN 不再是 TextField，回填值展示在「ISBN / 标识」行
+      expect(find.text('9787536692930'), findsOneWidget);
       final titleField = tester.widget<TextField>(find.byWidgetPredicate(
-        (w) => w is TextField && w.decoration?.labelText == '书名',
+        (w) => w is TextField && w.decoration?.hintText == '输入书名',
       ));
       expect(titleField.controller!.text, '三体');
 
       final baseBooks = library.books.length;
-      // 保存（按钮「添加图书」与 AppBar 同名，取 InkWell 祖先的最后一个；
-      // 按钮在长表单底部，先滚到可见）
+      // 顶栏保存胶囊（Material+InkWell 包裹）
       final saveBtn = find.ancestor(
-        of: find.text('添加图书'),
+        of: find.text('保存'),
         matching: find.byType(InkWell),
-      ).last;
-      await tester.ensureVisible(saveBtn);
-      await tester.pumpAndSettle();
+      );
       await tester.tap(saveBtn);
       await tester.pump();
       await tester.pump();

@@ -225,9 +225,9 @@ void main() {
     testWidgets('内存模式：更换封面菜单不出现「从相册选择」', (tester) async {
       final p = LibraryProvider();
       await pumpEdit(tester, p);
-      await tester.ensureVisible(find.text('更换封面'));
+      await tester.ensureVisible(find.byTooltip('更换封面'));
       await settle(tester);
-      await tester.tap(find.text('更换封面'));
+      await tester.tap(find.byTooltip('更换封面'));
       await settle(tester);
       expect(find.text('从相册选择'), findsNothing);
       expect(find.text('粘贴网络图片链接'), findsOneWidget);
@@ -240,9 +240,9 @@ void main() {
       await fillRequired(tester);
       await tester.pump();
 
-      await tester.ensureVisible(find.text('更换封面'));
+      await tester.ensureVisible(find.byTooltip('更换封面'));
       await settle(tester);
-      await tester.tap(find.text('更换封面'));
+      await tester.tap(find.byTooltip('更换封面'));
       await settle(tester);
       await tester.tap(find.text('粘贴网络图片链接'));
       await settle(tester);
@@ -254,12 +254,10 @@ void main() {
       await tester.tap(find.text('确定'));
       await settle(tester);
 
-      // 「添加图书」同时出现在 AppBar 标题与底部保存按钮；Scaffold 遍历顺序 body 在
-      // appBar 前，.last 会命中 AppBar 标题（纯 Text 点了无效）→ 用 InkWell 祖先定位
+      // 顶栏保存胶囊
       final saveBtn =
-          find.ancestor(of: find.text('添加图书'), matching: find.byType(InkWell));
+          find.ancestor(of: find.text('保存'), matching: find.byType(InkWell));
       expect(saveBtn, findsOneWidget);
-      await tester.ensureVisible(saveBtn);
       await settle(tester);
       await tester.tap(saveBtn, warnIfMissed: false);
       await settle(tester);
@@ -279,9 +277,9 @@ void main() {
         p = await makePersistent(picker: _FakePicker(src));
       });
       await pumpEdit(tester, p);
-      await tester.ensureVisible(find.text('更换封面'));
+      await tester.ensureVisible(find.byTooltip('更换封面'));
       await settle(tester);
-      await tester.tap(find.text('更换封面'));
+      await tester.tap(find.byTooltip('更换封面'));
       await settle(tester);
       expect(find.text('从相册选择'), findsOneWidget,
           reason: '持久模式应显示相册入口');
