@@ -21,6 +21,12 @@ class TmdbDataSource implements MovieDataSource {
   static const String _baseUrl = 'https://api.themoviedb.org/3';
   static const String _imageBase = 'https://image.tmdb.org/t/p/w500';
 
+  /// 演员头像（credits.cast[].profile_path）—— w185 在 56~62px 圆头像下足够清晰
+  static const String _profileBase = 'https://image.tmdb.org/t/p/w185';
+
+  /// 剧照（images.backdrops[].file_path）—— w780 兼顾清晰度与流量
+  static const String _backdropBase = 'https://image.tmdb.org/t/p/w780';
+
   /// 请求超时（H3：弱网下不设超时会让 UI 永久转圈，无任何恢复路径）
   static const Duration _kTimeout = Duration(seconds: 15);
   static Never _onTimeout() =>
@@ -164,7 +170,10 @@ class TmdbDataSource implements MovieDataSource {
       {
         ...auth.query,
         'language': _language(config),
-        'append_to_response': 'credits',
+        // images 与 credits 一次取回：演职员头像(profile_path) + 剧照/海报墙
+        'append_to_response': 'credits,images',
+        // 中文物料优先，无中文时回退无语言图（null），避免清一色外文宣传图
+        'include_image_language': 'zh-CN,null',
       },
       auth.headers,
     );
@@ -180,10 +189,11 @@ class TmdbDataSource implements MovieDataSource {
 
     final castList = (credits['cast'] as List? ?? const [])
         .whereType<Map<String, dynamic>>()
-        .take(5)
+        .take(10)
         .map((c) => CastMember(
               name: (c['name'] ?? '') as String,
               character: c['character'] as String?,
+              profilePath: _imageUrl(c['profile_path'] as String?, _profileBase),
             ))
         .toList();
 
@@ -193,6 +203,11 @@ class TmdbDataSource implements MovieDataSource {
         .map((g) => g['name'] as String?)
         .whereType<String>()
         .toList();
+
+    // 剧照 / 海报墙（images 由 append_to_response 一并返回，缺失时为空数组）
+    final images = json['images'] as Map<String, dynamic>? ?? const {};
+    final backdrops = _imageUrls(images['backdrops'], _backdropBase);
+    final posters = _imageUrls(images['posters'], _imageBase);
 
     final base = _parseSearchItem(json);
     return MovieSearchResult(
@@ -207,6 +222,8 @@ class TmdbDataSource implements MovieDataSource {
       overview: base.overview,
       runtimeMinutes: runtime,
       cast: castList,
+      backdrops: backdrops,
+      posters: posters,
     );
   }
 
@@ -225,6 +242,22 @@ class TmdbDataSource implements MovieDataSource {
   String _language(Map<String, dynamic> config) {
     final lang = (config['language'] as String?)?.trim();
     return (lang == null || lang.isEmpty) ? 'zh-CN' : lang;
+  }
+
+  /// 单张图：相对路径 → 完整 URL（路径为空返回 null，UI 回退占位）
+  String? _imageUrl(String? path, String base) =>
+      (path == null || path.isEmpty) ? null : '$base$path';
+
+  /// 图片数组 → 完整 URL 列表（限 [limit] 张，避免剧照过多撑大落盘体积）
+  List<String> _imageUrls(Object? list, String base, {int limit = 20}) {
+    return (list as List? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map((e) => e['file_path'] as String?)
+        .whereType<String>()
+        .where((p) => p.isNotEmpty)
+        .take(limit)
+        .map((p) => '$base$p')
+        .toList();
   }
 
   /// 搜索结果条目解析（credits 搜索接口不返回，详情接口再补）

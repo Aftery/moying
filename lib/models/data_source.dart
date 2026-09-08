@@ -287,13 +287,42 @@ class BookSearchResult {
 
 /// 演员条目（电影详情回填演员区用）
 class CastMember {
-  const CastMember({required this.name, this.character});
+  const CastMember({required this.name, this.character, this.profilePath});
 
   /// 演员名
   final String name;
 
   /// 饰演角色（可为空）
   final String? character;
+
+  /// 演员头像地址（可为空）
+  ///
+  /// 源于 TMDB `credits.cast[].profile_path`，但**落盘时存完整 URL**
+  /// （由数据源层拼好 image base）——UI 层展示时无需再感知数据源配置。
+  final String? profilePath;
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        if (character != null) 'character': character,
+        if (profilePath != null) 'profilePath': profilePath,
+      };
+
+  factory CastMember.fromJson(Map<String, dynamic> json) => CastMember(
+        name: json['name'] as String,
+        character: json['character'] as String?,
+        profilePath: json['profilePath'] as String?,
+      );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CastMember &&
+          other.name == name &&
+          other.character == character &&
+          other.profilePath == profilePath;
+
+  @override
+  int get hashCode => Object.hash(name, character, profilePath);
 }
 
 /// 电影搜索结果条目
@@ -310,6 +339,8 @@ class MovieSearchResult {
     this.overview,
     this.runtimeMinutes,
     this.cast = const [],
+    this.backdrops = const [],
+    this.posters = const [],
   });
 
   /// 外部数据源内的条目 id
@@ -345,6 +376,18 @@ class MovieSearchResult {
   /// 主演（详情接口才返回，搜索结果常为空）
   final List<CastMember> cast;
 
+  /// 剧照（横版背景图）完整 URL 列表
+  ///
+  /// 源于 TMDB `images.backdrops[].file_path`，数据源层已拼好 image base；
+  /// 仅详情接口返回，搜索结果为空数组。
+  final List<String> backdrops;
+
+  /// 海报（竖版）完整 URL 列表
+  ///
+  /// 源于 TMDB `images.posters[].file_path`；与 [posterUrl] 的差异：
+  /// 后者是单张主海报，这里是官方海报墙的全量列表。
+  final List<String> posters;
+
   /// "原名 (年份)" 副标题（列表 UI 用）
   String get subtitle {
     final parts = <String>[
@@ -375,6 +418,8 @@ class MovieSearchResult {
       overview: hasText(detail.overview) ? detail.overview : overview,
       runtimeMinutes: detail.runtimeMinutes ?? runtimeMinutes,
       cast: detail.cast.isNotEmpty ? detail.cast : cast,
+      backdrops: detail.backdrops.isNotEmpty ? detail.backdrops : backdrops,
+      posters: detail.posters.isNotEmpty ? detail.posters : posters,
     );
   }
 }

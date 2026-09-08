@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show listEquals;
 
+import 'data_source.dart' show CastMember;
 import 'media_ref.dart';
 
 /// 观影状态
@@ -72,6 +73,8 @@ class Movie {
     this.review,
     this.actorIds,
     this.poster,
+    this.cast,
+    this.stills,
     this.source,
     this.updatedAt,
   });
@@ -127,6 +130,19 @@ class Movie {
 
   /// 海报图引用（可空：无图时 UI 用 coverHue + emoji 渐变占位）
   final MediaRef? poster;
+
+  /// 演职员表快照（可空）
+  ///
+  /// 与 [actorIds] 的分工：后者引用本地 [Actor] 实体（用于「参演作品」反查），
+  /// 这里是**这部电影**的演职员快照，带角色名与头像——角色名不能存 Actor 上
+  /// （同一演员在不同片中角色不同），故按片存快照。
+  /// 空数组语义 = 该片确实无演职员信息（不落盘时为 null = 未知）。
+  final List<CastMember>? cast;
+
+  /// 剧照缓存（可空）：TMDB images.backdrops 的完整 URL，落盘后离线可看
+  ///
+  /// 存 [MediaRef.network] 而非字符串——复用现有图片展示与序列化链路。
+  final List<MediaRef>? stills;
 
   /// 数据溯源标记（可空：P6 网络补全落地后记录来源与外部 id，如 tmdbId）
   final String? source;
@@ -196,6 +212,8 @@ class Movie {
     Object? review = _unset,
     Object? actorIds = _unset,
     Object? poster = _unset,
+    Object? cast = _unset,
+    Object? stills = _unset,
     Object? source = _unset,
     Object? updatedAt = _unset,
   }) {
@@ -217,6 +235,8 @@ class Movie {
       review: _take(review, this.review),
       actorIds: _take(actorIds, this.actorIds),
       poster: _take(poster, this.poster),
+      cast: _take(cast, this.cast),
+      stills: _take(stills, this.stills),
       source: _take(source, this.source),
       updatedAt: _take(updatedAt, this.updatedAt),
     );
@@ -253,6 +273,8 @@ class Movie {
         if (review != null) 'review': review,
         if (actorIds != null) 'actorIds': actorIds,
         if (poster != null) 'poster': poster!.toJson(),
+        if (cast != null) 'cast': cast!.map((c) => c.toJson()).toList(),
+        if (stills != null) 'stills': stills!.map((s) => s.toJson()).toList(),
         if (source != null) 'source': source,
       };
 
@@ -288,6 +310,14 @@ class Movie {
         poster: json['poster'] == null
             ? null
             : MediaRef.fromJson(json['poster'] as Map<String, dynamic>),
+        cast: (json['cast'] as List<dynamic>?)
+            ?.whereType<Map<String, dynamic>>()
+            .map(CastMember.fromJson)
+            .toList(),
+        stills: (json['stills'] as List<dynamic>?)
+            ?.whereType<Map<String, dynamic>>()
+            .map(MediaRef.fromJson)
+            .toList(),
         source: json['source'] as String?,
         updatedAt: json['updatedAt'] == null
             ? null // 旧数据兜底：无 updatedAt = 从未修改，合并时视为最旧
@@ -319,27 +349,33 @@ class Movie {
           other.review == review &&
           listEquals(other.actorIds, actorIds) &&
           other.poster == poster &&
+          listEquals(other.cast, cast) &&
+          listEquals(other.stills, stills) &&
           other.source == source;
 
+  // Object.hash 仅支持 20 个位置参数，字段超量后改用 hashAll（Book 同款教训）
   @override
-  int get hashCode => Object.hash(
-      id,
-      title,
-      englishTitle,
-      year,
-      director,
-      status,
-      rating,
-      coverHue,
-      emoji,
-      releaseDate,
-      watchDate,
-      updatedAt,
-      duration,
-      genres == null ? null : Object.hashAll(genres!),
-      description,
-      review,
-      actorIds == null ? null : Object.hashAll(actorIds!),
-      poster,
-      source);
+  int get hashCode => Object.hashAll([
+        id,
+        title,
+        englishTitle,
+        year,
+        director,
+        status,
+        rating,
+        coverHue,
+        emoji,
+        releaseDate,
+        watchDate,
+        updatedAt,
+        duration,
+        genres == null ? null : Object.hashAll(genres!),
+        description,
+        review,
+        actorIds == null ? null : Object.hashAll(actorIds!),
+        poster,
+        cast == null ? null : Object.hashAll(cast!),
+        stills == null ? null : Object.hashAll(stills!),
+        source,
+      ]);
 }

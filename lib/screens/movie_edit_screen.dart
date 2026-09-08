@@ -119,6 +119,15 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
   /// 数据溯源标记（保存时写入 Movie.source，如 'tmdb:123'）
   String? _sourceTag;
 
+  /// 演职员表快照（保存时写入 Movie.cast）
+  ///
+  /// 编辑模式进页面时先从原 Movie 载入——用户不重新检索也应保留既有快照；
+  /// 检索回填时用 TMDB credits 覆盖。
+  List<CastMember>? _cast;
+
+  /// 剧照缓存（保存时写入 Movie.stills，TMDB images.backdrops 的网络引用）
+  List<MediaRef>? _stills;
+
   @override
   void initState() {
     super.initState();
@@ -141,6 +150,9 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
     _releaseDate = movie?.releaseDate;
     _watchDate = movie?.watchDate;
     _rating = movie?.rating ?? 0;
+    // 演职员快照 / 剧照：沿用原值（用户不重新检索时不该丢），检索回填时被覆盖
+    _cast = movie?.cast;
+    _stills = movie?.stills;
     _selectedGenres = Set.of(movie?.genres ?? const <String>[]);
     _genreCtrl = TextEditingController();
     _genreFocus = FocusNode();
@@ -345,6 +357,8 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
         genres: genres,
         review: review.isEmpty ? null : review,
         actorIds: actorIds,
+        cast: _cast,
+        stills: _stills,
         // 未重新检索时保留原溯源标记（copyWith 传 null 会清字段）
         source: _sourceTag ?? original.source,
       );
@@ -371,6 +385,8 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
         genres: genres,
         review: review.isEmpty ? null : review,
         actorIds: actorIds,
+        cast: _cast,
+        stills: _stills,
         source: _sourceTag,
       );
       provider.addMovie(newMovie);
@@ -684,7 +700,16 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
         final name = member.name.trim();
         if (name.isEmpty) continue;
         if (_actorSlots.any((s) => s.ctrl.text.trim() == name)) continue;
-        _actorSlots.add(ActorSlot(ctrl: TextEditingController(text: name)));
+        _actorSlots.add(ActorSlot(
+          ctrl: TextEditingController(text: name),
+          // 头像随槽位带入：新建/吸附本地 Actor 时一并落库，演员页也能显示真头像
+          avatarUrl: member.profilePath,
+        ));
+      }
+      // 演职员快照 + 剧照：非空才覆盖（详情源缺图时不该清掉既有数据）
+      if (detail.cast.isNotEmpty) _cast = detail.cast;
+      if (detail.backdrops.isNotEmpty) {
+        _stills = detail.backdrops.map(MediaRef.network).toList();
       }
       _selectedGenres.addAll(detail.genres);
       _filledResult = r;
@@ -1475,9 +1500,12 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
           slot.picked = exact;
         } else {
           final now = DateTime.now();
+          final url = slot.avatarUrl;
           final created = Actor(
             id: 'a_${now.microsecondsSinceEpoch}',
             name: text,
+            // 检索带回的 TMDB 头像直接落库；无头像时保持 null（UI 回退占位）
+            avatar: (url == null || url.isEmpty) ? null : MediaRef.network(url),
             createdAt: now,
           );
           lib.addActor(created);
@@ -1662,7 +1690,7 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
 /// [picked] 为空表示当前文本尚未吸附到实体——保存时由编辑页
 /// `_collectActorIds` 做「精确吸附已有 / 兜底新建」。
 class ActorSlot {
-  ActorSlot({TextEditingController? ctrl, this.picked})
+  ActorSlot({TextEditingController? ctrl, this.picked, this.avatarUrl})
       : ctrl = ctrl ?? TextEditingController(),
         focus = FocusNode();
 
@@ -1671,6 +1699,12 @@ class ActorSlot {
 
   /// 已解析实体（回填 / 联想选中 / 新建产生）；null = 自由文本
   Actor? picked;
+
+  /// 检索带回的头像地址（TMDB profile_path 完整 URL）
+  ///
+  /// 仅用于**新建**本地 Actor 时落库；吸附到已有 Actor 时不覆盖其头像
+  /// （用户可能手动换过头像，不该被网络数据冲掉）。
+  final String? avatarUrl;
 
   /// true = 由导演框自动挂载的槽位（导演失焦/回车同步；用户改过文本或删除后降级）
   bool autoFromDirector = false;
