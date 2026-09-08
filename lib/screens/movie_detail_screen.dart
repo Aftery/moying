@@ -97,58 +97,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildPoster(movie),
-                    const SizedBox(height: 22),
-                    // ---------- 名称 / 英文名 / 导演 / 评分 ----------
-                    Text(
-                      movie.title,
-                      textAlign: TextAlign.center,
-                      style:  TextStyle(
-                        color: context.colors.textPrimary,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    if (movie.englishTitle != null &&
-                        movie.englishTitle!.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        movie.englishTitle!,
-                        textAlign: TextAlign.center,
-                        style:  TextStyle(
-                          color: context.colors.textMuted,
-                          fontSize: 13,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                    if (movie.director != null) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        movie.director!,
-                        textAlign: TextAlign.center,
-                        style:  TextStyle(
-                          color: context.colors.textSecondary,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                    ],
-                    if (movie.hasRating) ...[
-                      const SizedBox(height: 6),
-                      Center(
-                        child: RatingStars(
-                          rating: movie.rating!,
-                          size: 22,
-                          showValue: true,
-                          valueStyle:  TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: context.colors.textPrimary,
-                          ),
-                        ),
-                      ),
-                    ],
+                    _buildHeaderCard(movie),
                     const SizedBox(height: 26),
                     // ---------- 电影简介 ----------
                     if (movie.description != null &&
@@ -195,40 +144,163 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     );
   }
 
-  // ---------- 顶部海报 ----------
+  // ---------- 头部：海报 + 标题 / 英文名 / 导演 / 我的评分 / 类型标签 ----------
 
-  Widget _buildPoster(Movie movie) {
-    return Center(
-      child: Container(
-        width: 190,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.5),
-              blurRadius: 22,
-              offset: const Offset(0, 10),
+  Widget _buildHeaderCard(Movie movie) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: context.colors.surfaceHigh,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 海报
+          Container(
+            width: 116,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.45),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: MediaCover(
-            media: movie.poster,
-            title: movie.title,
-            emoji: movie.emoji ?? '',
-            hue: movie.coverHue,
-            aspectRatio: 3 / 4,
-            borderRadius: 0,
-            fontSize: 60,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: MediaCover(
+                media: movie.poster,
+                title: movie.title,
+                emoji: movie.emoji ?? '',
+                hue: movie.coverHue,
+                aspectRatio: 3 / 4,
+                borderRadius: 0,
+                fontSize: 44,
+              ),
+            ),
           ),
-        ),
+          const SizedBox(width: 16),
+          // 右侧信息列
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  movie.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                if (movie.englishTitle != null &&
+                    movie.englishTitle!.isNotEmpty)
+                  Text(
+                    movie.englishTitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
+                      fontSize: 13,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                if (movie.director != null && movie.director!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    movie.director!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: context.colors.textMuted,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                _buildRatingCard(movie),
+                const SizedBox(height: 12),
+                // 类型标签
+                if (movie.genres != null && movie.genres!.isNotEmpty)
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final g in movie.genres!) _InfoChip(label: g),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // ---------- 补充元数据卡（2×2 网格）----------
-  // 四项固定：看过日期 / 上映时间 / 片长 / 剧情类型
+  // ---------- 我的评分卡 ----------
+
+  Widget _buildRatingCard(Movie movie) {
+    final rating = movie.rating;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: rating == null
+          ? Row(
+              children: [
+                Icon(Icons.star_border_rounded,
+                    size: 16, color: context.colors.textMuted),
+                const SizedBox(width: 6),
+                Text(
+                  '未评分',
+                  style: TextStyle(
+                      color: context.colors.textMuted, fontSize: 12.5),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '我的评分',
+                  style: TextStyle(
+                    color: context.colors.success,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Row(
+                  children: [
+                    RatingStars(rating: rating, size: 19),
+                    const SizedBox(width: 8),
+                    Text(
+                      rating.toStringAsFixed(1),
+                      style: TextStyle(
+                        color: context.colors.star,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+    );
+  }
+
+  // ---------- 补充元数据卡（3 列单行）----------
+  // 三项：看过日期 / 上映时间 / 片长（剧情类型已上移至头部标签）
 
   Widget _buildMetaCard(Movie movie) {
     return Container(
@@ -238,50 +310,34 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: context.colors.outline, width: 0.7),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: _MetaCell(
-                  icon: Icons.visibility_rounded,
-                  label: '看过日期',
-                  value: movie.watchDateText.isEmpty
-                      ? '—'
-                      : movie.watchDateText,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _MetaCell(
-                  icon: Icons.calendar_month_rounded,
-                  label: '上映时间',
-                  value: movie.releaseDateText.isEmpty
-                      ? '${movie.year}'
-                      : movie.releaseDateText,
-                ),
-              ),
-            ],
+          Expanded(
+            child: _MetaCell(
+              icon: Icons.visibility_rounded,
+              label: '看过日期',
+              value: movie.watchDateText.isEmpty
+                  ? '—'
+                  : movie.watchDateText,
+            ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _MetaCell(
-                  icon: Icons.timer_outlined,
-                  label: '片长',
-                  value: movie.durationText.isEmpty ? '—' : movie.durationText,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _MetaCell(
-                  icon: Icons.local_movies_outlined,
-                  label: '剧情类型',
-                  value: movie.genresText.isEmpty ? '—' : movie.genresText,
-                ),
-              ),
-            ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: _MetaCell(
+              icon: Icons.calendar_month_rounded,
+              label: '上映时间',
+              value: movie.releaseDateText.isEmpty
+                  ? '${movie.year}'
+                  : movie.releaseDateText,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _MetaCell(
+              icon: Icons.timer_outlined,
+              label: '片长',
+              value: movie.durationText.isEmpty ? '—' : movie.durationText,
+            ),
           ),
         ],
       ),
@@ -940,6 +996,33 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// 类型标签 Chip（头部类型行与书籍详情同构）
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.colors.outline, width: 0.8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: context.colors.textSecondary,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

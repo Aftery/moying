@@ -174,6 +174,9 @@ class DataSourceScreen extends StatelessWidget {
     return showModalBottomSheet<DataSourceConfig>(
       context: context,
       isScrollControlled: true,
+      constraints: BoxConstraints(
+        minHeight: MediaQuery.of(context).size.height * 0.6,
+      ),
       backgroundColor: context.colors.surfaceHigh,
       elevation: 3,
       shape: const RoundedRectangleBorder(
@@ -303,6 +306,9 @@ class _SourceTile extends StatelessWidget {
     final saved = await showModalBottomSheet<DataSourceConfig>(
       context: context,
       isScrollControlled: true,
+      constraints: BoxConstraints(
+        minHeight: MediaQuery.of(context).size.height * 0.6,
+      ),
       backgroundColor: context.colors.surfaceHigh,
       elevation: 3,
       shape: const RoundedRectangleBorder(

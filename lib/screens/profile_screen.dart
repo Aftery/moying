@@ -109,6 +109,9 @@ class ProfileScreen extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      constraints: BoxConstraints(
+        minHeight: MediaQuery.of(context).size.height * 0.6,
+      ),
       backgroundColor: context.colors.surfaceHigh,
       elevation: 3,
       shape: const RoundedRectangleBorder(
@@ -214,6 +217,9 @@ class ProfileScreen extends StatelessWidget {
     final result = await showModalBottomSheet<_ProfileEditResult>(
       context: context,
       isScrollControlled: true,
+      constraints: BoxConstraints(
+        minHeight: MediaQuery.of(context).size.height * 0.6,
+      ),
       backgroundColor: context.colors.surfaceHigh,
       elevation: 3,
       shape: const RoundedRectangleBorder(
