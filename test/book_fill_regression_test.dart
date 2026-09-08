@@ -13,8 +13,16 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:moying/models/book.dart';
 import 'package:moying/models/data_source.dart';
+import 'package:moying/services/book_category_mapper.dart';
 import 'package:moying/services/data_sources/open_library_data_source.dart';
+
+/// 中文 mock 响应必须声明 UTF-8：`http.Response` 默认按 latin1 编码，
+/// 直接返回含中文的 JSON 会抛 "Contains invalid characters"。
+const Map<String, String> _utf8Json = {
+  'content-type': 'application/json; charset=utf-8',
+};
 
 void main() {
   group('BookSearchResult.mergeWith', () {
@@ -278,6 +286,161 @@ void main() {
       expect(merged.isbn, '9780684801223', reason: 'ISBN');
       expect(merged.pageCount, 127, reason: '页数');
       expect(merged.categories, ['Fiction'], reason: '分类（详情补全）');
+    });
+  });
+
+  group('搜索结果补全（subject 映射 / 作者清洗）', () {
+    test('搜索即带分类：subject → categories，作者去「著」与店铺名', () async {
+      final mockClient = MockClient((request) async {
+        // B：搜索显式声明 fields，保证 subject 不被省略
+        expect(request.url.queryParameters['fields'], isNotNull);
+        return http.Response('''
+        {
+          "docs": [
+            {
+              "key": "/works/OL262758W",
+              "title": "百年孤独(精)",
+              "author_name": ["新华书店北美网 加西亚·马尔克斯 著"],
+              "first_publish_year": 2017,
+              "cover_i": 12345,
+              "subject": ["Fiction", "Classic Literature", "Magic realism"]
+            }
+          ]
+        }
+        ''', 200, headers: _utf8Json);
+      });
+
+      final ds = OpenLibraryDataSource(client: mockClient);
+      final results = await ds.searchBooks(
+        '百年孤独',
+        config: const {},
+        credentials: const {},
+      );
+
+      final r = results.single;
+      expect(r.categories, ['Fiction', 'Classic Literature', 'Magic realism'],
+          reason: '分类不该等到详情才有——搜索接口已返回 subject');
+      expect(r.authors, ['加西亚·马尔克斯'], reason: '店铺名与「著」后缀需清洗');
+      expect(r.year, 2017);
+    });
+  });
+
+  group('详情补全（work + edition 两级串联）', () {
+    test('版本接口补全出版社 / ISBN / 页数，不覆盖作品级字段', () async {
+      final requested = <String>[];
+      final mockClient = MockClient((request) async {
+        requested.add(request.url.path);
+        if (request.url.path.endsWith('/editions.json')) {
+          return http.Response('''
+          {"entries": [
+            {"title": "百年孤独", "publishers": [], "isbn_13": [], "number_of_pages": null},
+            {"title": "百年孤独(精)",
+             "publishers": ["南海出版公司"],
+             "isbn_13": ["9787544253994"],
+             "number_of_pages": 360}
+          ]}
+          ''', 200, headers: _utf8Json);
+        }
+        return http.Response('''
+        {
+          "title": "百年孤独",
+          "authors": [{"author": {"key": "/authors/OL1A", "name": "加西亚·马尔克斯 著"}}],
+          "subjects": ["Fiction", "Magic realism"],
+          "first_publish_date": "1967",
+          "description": "布恩迪亚家族的故事",
+          "covers": [12345]
+        }
+        ''', 200, headers: _utf8Json);
+      });
+
+      final ds = OpenLibraryDataSource(client: mockClient);
+      final detail = await ds.getBookDetail(
+        '/works/OL262758W',
+        config: const {},
+        credentials: const {},
+      );
+
+      expect(requested,
+          ['/works/OL262758W.json', '/works/OL262758W/editions.json']);
+      // 版本级（作品详情没有的字段）
+      expect(detail.publisher, '南海出版公司');
+      expect(detail.isbn, '9787544253994');
+      expect(detail.pageCount, 360);
+      // 作品级字段不被版本覆盖
+      expect(detail.title, '百年孤独', reason: '版本标题带副标题，不能覆盖作品标题');
+      expect(detail.year, 1967);
+      expect(detail.description, '布恩迪亚家族的故事');
+      expect(detail.categories, ['Fiction', 'Magic realism']);
+      expect(detail.authors, ['加西亚·马尔克斯']);
+    });
+
+    test('版本接口失败时作品级字段仍可用（静默降级）', () async {
+      final mockClient = MockClient((request) async {
+        if (request.url.path.endsWith('/editions.json')) {
+          return http.Response('Not Found', 404);
+        }
+        return http.Response(
+          '{"title":"T","subjects":["Fiction"],"description":"d"}',
+          200,
+        );
+      });
+
+      final ds = OpenLibraryDataSource(client: mockClient);
+      final detail = await ds.getBookDetail(
+        '/works/OL1W',
+        config: const {},
+        credentials: const {},
+      );
+
+      expect(detail.description, 'd');
+      expect(detail.categories, ['Fiction']);
+      expect(detail.publisher, isNull);
+      expect(detail.pageCount, isNull);
+    });
+  });
+
+  group('BookCategoryMapper 中文分类映射', () {
+    test('具体主题优先于兜底「文学」', () {
+      expect(BookCategoryMapper.map(['Science fiction']), '科幻');
+      expect(BookCategoryMapper.map(['Fiction', 'Science fiction']), '科幻',
+          reason: '同时有 Fiction 与 Science fiction 时必须命中更具体的');
+      expect(BookCategoryMapper.map(['Biography & autobiography']), '传记');
+      expect(BookCategoryMapper.map(['Dystopias']), '反乌托邦');
+      expect(BookCategoryMapper.map(['Magic realism']), '魔幻现实主义');
+      expect(BookCategoryMapper.map(['Fantasy fiction']), '奇幻');
+      expect(BookCategoryMapper.map(['Historical fiction']), '历史');
+      expect(BookCategoryMapper.map(['Classic Literature']), '经典');
+      expect(BookCategoryMapper.map(['Detective and mystery stories']), '悬疑');
+    });
+
+    test('泛化主题与高频无对应项主题兜底为「文学」', () {
+      expect(BookCategoryMapper.map(['Fiction']), '文学');
+      expect(BookCategoryMapper.map(['Adventure fiction']), '文学');
+      expect(BookCategoryMapper.map(['Young adult fiction']), '文学');
+      expect(BookCategoryMapper.map(['Love stories']), '文学');
+    });
+
+    test('未命中保留原文，空列表返回 null', () {
+      expect(BookCategoryMapper.map(['Astrophysics']), 'Astrophysics');
+      expect(BookCategoryMapper.map([]), isNull);
+    });
+
+    test('映射结果均属于 kBookCategories（分类筛选可用）', () {
+      const samples = [
+        'Science fiction',
+        'Fiction',
+        'Biography',
+        'Mystery',
+        'Romance',
+        'History',
+        'Classic',
+        'Fantasy',
+        'Dystopia',
+      ];
+      for (final s in samples) {
+        expect(kBookCategories, contains(BookCategoryMapper.map([s])),
+            reason: '$s 映射结果必须是本地分类体系的成员');
+      }
     });
   });
 }

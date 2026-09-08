@@ -12,6 +12,7 @@ import '../models/data_source.dart';
 import '../models/media_ref.dart';
 import '../providers/data_source_provider.dart';
 import '../providers/library_provider.dart';
+import '../services/book_category_mapper.dart';
 import '../widgets/edit_form_widgets.dart' show showCoverActionSheet;
 import '../widgets/media_cover.dart';
 import '../widgets/quick_search_panel.dart';
@@ -1490,12 +1491,14 @@ class _BookEditScreenState extends State<BookEditScreen> {
           final resultToApply = detailResult == null
               ? searchResult
               : searchResult.mergeWith(detailResult);
+          // 详情失败原因（null = 成功）：简介 / 分类依赖详情，失败要让用户看见
+          final detailError = ds.lastDetailError;
 
           // 页面可能在详情请求期间被关闭；此时不能再触碰 State 或页面上下文。
           if (!mounted) return;
           // 详情拉完后清空列表（保留搜索框文本），再回填
           ds.clearResults();
-          _applyBookResult(resultToApply, ds);
+          _applyBookResult(resultToApply, ds, detailWarning: detailError);
         },
       ),
       const SizedBox(height: 16),
@@ -1538,7 +1541,14 @@ class _BookEditScreenState extends State<BookEditScreen> {
   }
 
   /// 选中搜索结果 → 自动回填表单（可继续手动修改；封面走网络 URL 通道）
-  void _applyBookResult(BookSearchResult r, DataSourceProvider ds) {
+  ///
+  /// [detailWarning] 详情补全的失败原因（null = 详情成功）；
+  /// 简介 / 分类多数来自详情接口，失败时必须在提示里说明，不能静默。
+  void _applyBookResult(
+    BookSearchResult r,
+    DataSourceProvider ds, {
+    String? detailWarning,
+  }) {
     final source = ds.defaultBookSource;
     setState(() {
       _titleCtrl.text = r.title;
@@ -1554,11 +1564,11 @@ class _BookEditScreenState extends State<BookEditScreen> {
       if (r.description != null && r.description!.isNotEmpty) {
         _descCtrl.text = r.description!;
       }
-      // 分类：多值时取第一个（书籍 category 是单值）
-      final primary = r.primaryCategory;
-      if (primary != null && _categoryCtrl.text.trim().isEmpty) {
-        _categoryCtrl.text = primary;
-      }
+      // 分类：数据源给的是英文主题词（Fiction / Science fiction…），
+      // 经 BookCategoryMapper 映射成本地中文分类（未命中则保留原文）。
+      // 换选新书时一律覆盖——否则会残留上一本书的分类。
+      final mapped = BookCategoryMapper.map(r.categories);
+      if (mapped != null) _categoryCtrl.text = mapped;
       if (r.rating != null && r.rating! > 0) _rating = r.rating!;
       if (r.coverUrl != null && r.coverUrl!.isNotEmpty) {
         _coverEdited = true;
@@ -1571,8 +1581,14 @@ class _BookEditScreenState extends State<BookEditScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('已自动填充《${r.title}》'),
-        duration: const Duration(seconds: 2),
+        content: Text(
+          detailWarning == null
+              ? '已自动填充《${r.title}》'
+              : '已填充《${r.title}》（基础信息）；简介/分类补全失败：$detailWarning',
+        ),
+        duration: detailWarning == null
+            ? const Duration(seconds: 2)
+            : const Duration(seconds: 4),
       ),
     );
   }

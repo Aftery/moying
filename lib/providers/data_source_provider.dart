@@ -233,6 +233,13 @@ class DataSourceProvider extends ChangeNotifier {
     }
   }
 
+  /// 最近一次详情补全的失败原因（null = 成功或未发起）。
+  ///
+  /// [fetchBookDetail] 本身仍返回 null 以保持「失败回退搜索结果」的契约；
+  /// 调用方需要区分「源不支持详情」与「网络失败」时读本字段提示用户。
+  String? _lastDetailError;
+  String? get lastDetailError => _lastDetailError;
+
   /// 取书籍详情（分类 / 简介 / 页数补全；失败返回 null——调用方回退搜索结果）
   Future<BookSearchResult?> fetchBookDetail(
     BookSearchResult result,
@@ -240,6 +247,7 @@ class DataSourceProvider extends ChangeNotifier {
     final source = defaultBookSource;
     final impl = source == null ? null : _manager.bookImplOf(source.type);
     if (source == null || impl == null) return null;
+    _lastDetailError = null;
     try {
       final credentials = await _manager.credentialsOf(source);
       return await impl.getBookDetail(
@@ -247,7 +255,8 @@ class DataSourceProvider extends ChangeNotifier {
         config: source.config,
         credentials: credentials,
       );
-    } on DataSourceException {
+    } on DataSourceException catch (e) {
+      _lastDetailError = e.message;
       return null;
     }
   }
