@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:moying/models/media_ref.dart';
 import 'package:moying/providers/library_provider.dart';
 import 'package:moying/widgets/media_cover.dart';
+import 'package:moying/widgets/media_tile.dart';
 import 'package:provider/provider.dart';
 
 /// 1×1 透明 PNG
@@ -49,8 +50,30 @@ void main() {
     expect(find.byType(Image), findsNothing);
   });
 
-  testWidgets('网络图：渲染 Image.network，加载失败由 errorBuilder 兜底不抛异常',
-      (tester) async {
+  testWidgets('空 emoji：回退标题首字符而不是空白占位', (tester) async {
+    final p = LibraryProvider();
+    await tester.pumpWidget(shell(p, cover(emoji: '')));
+    await tester.pumpAndSettle();
+    expect(find.text('三'), findsOneWidget);
+  });
+
+  testWidgets('电影卡片：评分非空时显示评分', (tester) async {
+    final p = LibraryProvider();
+    await tester.pumpWidget(shell(
+      p,
+      const MediaTile.movie(
+        title: '电影',
+        subtitle: '2024',
+        emoji: '🎬',
+        hue: 200,
+        rating: 4.5,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('4.5'), findsOneWidget);
+  });
+
+  testWidgets('网络图：渲染 Image.network，加载失败由 errorBuilder 兜底不抛异常', (tester) async {
     final p = LibraryProvider();
     await tester.pumpWidget(shell(
       p,

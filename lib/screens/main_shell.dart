@@ -30,6 +30,29 @@ class _MainShellState extends State<MainShell> {
     const ProfileScreen(),
   ];
 
+  // M7：SnackBar 一次性调度锁——同一帧多次 rebuild 只弹一次，
+  // 消费完错误才复位，避免排队多个重复 SnackBar
+  bool _persistToastScheduled = false;
+
+  void _schedulePersistToast(String message) {
+    if (_persistToastScheduled || !mounted) return;
+    _persistToastScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: context.colors.error,
+          ),
+        );
+      } finally {
+        _persistToastScheduled = false;
+        context.read<LibraryProvider>().clearPersistError();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // 监听写盘错误并及时提示
@@ -37,16 +60,7 @@ class _MainShellState extends State<MainShell> {
       (p) => p.lastPersistError,
     );
     if (persistError.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(persistError),
-            backgroundColor: context.colors.error,
-          ),
-        );
-        context.read<LibraryProvider>().clearPersistError();
-      });
+      _schedulePersistToast(persistError);
     }
 
     return Scaffold(

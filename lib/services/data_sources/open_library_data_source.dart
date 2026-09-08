@@ -40,9 +40,9 @@ class OpenLibraryDataSource implements BookDataSource {
     final uri = Uri.parse(url).replace(queryParameters: query);
     late final http.Response resp;
     try {
-      resp = await _client
-          .get(uri)
-          .timeout(_kTimeout, onTimeout: _onTimeout);
+      resp = await _client.get(uri).timeout(_kTimeout, onTimeout: _onTimeout);
+    } on DataSourceException {
+      rethrow;
     } on Exception catch (_) {
       throw const DataSourceException('网络请求失败，请检查网络连接');
     }
@@ -98,16 +98,13 @@ class OpenLibraryDataSource implements BookDataSource {
         (doc['publisher'] as List? ?? const []).cast<String>().firstOrNull;
     final year = (doc['first_publish_year'] as int?) ??
         (doc['publish_year'] as List? ?? const []).cast<int>().firstOrNull;
-    final isbns =
-        (doc['isbn'] as List? ?? const []).cast<String>().toList();
+    final isbns = (doc['isbn'] as List? ?? const []).cast<String>().toList();
     final isbn13 = isbns.firstWhere(
       (isbn) => isbn.length == 13,
       orElse: () => isbns.isNotEmpty ? isbns.first : '',
     );
     final coverId = doc['cover_i'] as int?;
-    final coverUrl = coverId != null
-        ? '$_coverBase/$coverId-M.jpg'
-        : null;
+    final coverUrl = coverId != null ? '$_coverBase/$coverId-M.jpg' : null;
 
     return BookSearchResult(
       externalId: (doc['key'] ?? doc['work_key'] ?? '') as String,
@@ -115,7 +112,8 @@ class OpenLibraryDataSource implements BookDataSource {
       authors: authors,
       publisher: publisher,
       year: year,
-      isbn: isbn13.isNotEmpty ? isbn13 : (isbns.isNotEmpty ? isbns.first : null),
+      isbn:
+          isbn13.isNotEmpty ? isbn13 : (isbns.isNotEmpty ? isbns.first : null),
       pageCount: (doc['number_of_pages_median'] as num?)?.toInt(),
       coverUrl: coverUrl,
       rating: null, // OpenLibrary 搜索不返回评分
@@ -146,9 +144,8 @@ class OpenLibraryDataSource implements BookDataSource {
         .map((a) => (a['author']?['name'] as String?))
         .whereType<String>()
         .toList();
-    final categories = (json['subjects'] as List? ?? const [])
-        .cast<String>()
-        .toList();
+    final categories =
+        (json['subjects'] as List? ?? const []).cast<String>().toList();
     final yearStr = (json['first_publish_date'] as String?);
     final coverId = json['covers'] as List<dynamic>?;
 
@@ -157,16 +154,27 @@ class OpenLibraryDataSource implements BookDataSource {
       title: title,
       authors: authors,
       categories: categories,
-      year: yearStr != null && yearStr.length >= 4 ? int.tryParse(yearStr.substring(0, 4)) : null,
+      year: yearStr != null && yearStr.length >= 4
+          ? int.tryParse(yearStr.substring(0, 4))
+          : null,
       isbn: null,
       pageCount: null,
       coverUrl: coverId != null && coverId.isNotEmpty
           ? '$_coverBase/${coverId.first}-M.jpg'
           : null,
       rating: null,
-      description: _nonEmpty(json['description'] as String? ??
-          (json['description'] as Map<String, dynamic>?)?['value'] as String?),
+      description: _description(json['description']),
     );
+  }
+
+  String? _description(Object? raw) {
+    final value = switch (raw) {
+      String text => text,
+      Map<String, dynamic> map =>
+        map['value'] is String ? map['value'] as String : null,
+      _ => null,
+    };
+    return _nonEmpty(value);
   }
 
   String? _nonEmpty(String? value) {

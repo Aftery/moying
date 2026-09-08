@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
 
 import '../data/library_store.dart';
 import '../data/mock_data.dart';
@@ -12,6 +13,7 @@ import '../models/media_ref.dart';
 import '../models/movie.dart';
 import '../models/stats.dart';
 import '../models/user_profile.dart';
+import '../services/image_compress_service.dart';
 import '../services/image_pick_service.dart';
 
 /// 全局书影库状态（ChangeNotifier，配合 Provider 使用）
@@ -34,6 +36,11 @@ class LibraryProvider extends ChangeNotifier {
 
   /// 图片选择服务（null = 不支持选图：Web / 内存模式）
   final ImagePickService? _picker;
+  bool _disposed = false;
+
+  void _notifyIfAlive() {
+    if (!_disposed) notifyListeners();
+  }
 
   /// 是否持久模式（接入了本地存储）
   bool get isPersistent => _store != null;
@@ -65,7 +72,7 @@ class LibraryProvider extends ChangeNotifier {
     _actors = List.of(snap.actors);
     _userProfile = await store.loadProfile();
     _invalidateCache();
-    notifyListeners();
+    _notifyIfAlive();
   }
 
   /// 立即把未落盘的合并写冲盘（App 生命周期挂起/退出前调用）
@@ -106,7 +113,7 @@ class LibraryProvider extends ChangeNotifier {
   void clearPersistError() {
     if (_lastPersistError.isNotEmpty) {
       _lastPersistError = '';
-      notifyListeners();
+      _notifyIfAlive();
     }
   }
 
@@ -119,7 +126,7 @@ class LibraryProvider extends ChangeNotifier {
   Future<void> updateProfile(UserProfile updated) async {
     _recycleImage(_userProfile.avatar, updated.avatar);
     _userProfile = updated;
-    notifyListeners();
+    _notifyIfAlive();
     await _store?.saveProfile(updated);
   }
 
@@ -140,10 +147,28 @@ class LibraryProvider extends ChangeNotifier {
   /// 复制图片进 `images/<entryId><ext>`，返回 [MediaRef.localFile] 相对名。
   ///
   /// 内存模式（无 store）返回 null——调用方需保证仅在持久模式调用。
+  ///
+  /// M9：超 5MB 直接抛 StoreException；通过后经压缩（如可行）以 .jpg 落盘，
+  /// 压缩不可行时回退原字节 + 原始扩展名。
   Future<String?> attachImage(File source, String entryId) async {
     final s = _store;
     if (s == null) return null;
-    return s.copyImage(source, entryId);
+    final bytes = await source.readAsBytes();
+    const maxBytes = 5 * 1024 * 1024;
+    if (bytes.length > maxBytes) {
+      throw StoreException('图片超过 5 MB，请先压缩后重试');
+    }
+    final ext = p.extension(source.path).isEmpty ? '.jpg' : p.extension(source.path);
+    final name = '$entryId$ext';
+    final compressed = await const ImageCompressService().compressImage(bytes);
+    if (compressed != null) {
+      // 压缩有效：用 jpg 覆盖原扩展名，文件大小更可控
+      await s.putImageBytes('$entryId.jpg', compressed);
+      return '$entryId.jpg';
+    }
+    // 压缩失败 / 不划算（webp/gif）→ 原字节原子写
+    await s.putImageBytes(name, bytes);
+    return name;
   }
 
   /// 解析本地图相对名 → 展示用 File；无 store / 非法路径返回 null（渲染层兜底占位）。
@@ -163,6 +188,10 @@ class LibraryProvider extends ChangeNotifier {
   ///
   /// [prefix] 区分类型（book_cover / movie_poster），保证图片展示时优先读本地；
   /// 缓存的图片随备份 images/ 目录一起打包（见 BackupService）。
+  ///
+  /// M9：落盘前检查单图大小（Content-Length > 5MB → null 回退），
+  ///     通过后经 ImageCompressService 压缩（长边≤1600、品质85），
+  ///     体积更大 / 无法压缩则回退原图字节。
   Future<String?> cacheRemoteImage(String? url, String prefix) async {
     final s = _store;
     final uri = Uri.tryParse(url ?? '');
@@ -173,20 +202,28 @@ class LibraryProvider extends ChangeNotifier {
     }
     final client = http.Client();
     try {
-      final resp = await client
-          .get(uri)
-          .timeout(const Duration(seconds: 12));
+      final resp = await client.get(uri).timeout(const Duration(seconds: 12));
       if (resp.statusCode != 200 || resp.bodyBytes.isEmpty) return null;
-      // 从 URL 解析扩展名，默认 .jpg
+      // M9：内容大小上限（5MB），超限直接回退原 URL，避免 OOM
+      const maxBytes = 5 * 1024 * 1024;
+      if (resp.bodyBytes.length > maxBytes) return null;
+      // 从 URL 解析扩展名，默认 .jpg（回退原图字节时沿用）
       var ext = '.jpg';
-      final p = uri.path.toLowerCase();
+      final path = uri.path.toLowerCase();
       for (final e in ['.png', '.webp', '.jpeg', '.gif']) {
-        if (p.endsWith(e)) {
+        if (path.endsWith(e)) {
           ext = e;
           break;
         }
       }
-      return await s.saveImageBytes(resp.bodyBytes, prefix, ext);
+      // 经压缩后落盘为 jpg；无法/不划算压缩时回退原字节
+      final compressed = await const ImageCompressService().compressImage(
+        resp.bodyBytes,
+      );
+      if (compressed == null) {
+        return await s.saveImageBytes(resp.bodyBytes, prefix, ext);
+      }
+      return await s.saveImageBytes(compressed, prefix, '.jpg');
     } catch (e) {
       debugPrint('[LibraryProvider] 缓存网络图片失败：$e');
       return null;
@@ -201,7 +238,9 @@ class LibraryProvider extends ChangeNotifier {
     final oldFile = old?.localFile;
     if (s == null || oldFile == null) return;
     if (oldFile == updated?.localFile) return; // 封面未变
-    unawaited(s.deleteImage(oldFile));
+    unawaited(s.deleteImage(oldFile).catchError((Object e, StackTrace st) {
+      debugPrint('[LibraryProvider] 回收图片失败：$e');
+    }));
   }
 
   // ==================== 写后持久化（合并写，fire-and-forget） ====================
@@ -212,7 +251,7 @@ class LibraryProvider extends ChangeNotifier {
     unawaited(s.saveBooks(_books).catchError((Object e, StackTrace st) {
       debugPrint('[Persist] books 写盘失败：$e');
       _lastPersistError = '图书保存失败：$e';
-      notifyListeners();
+      _notifyIfAlive();
     }));
   }
 
@@ -222,7 +261,7 @@ class LibraryProvider extends ChangeNotifier {
     unawaited(s.saveMovies(_movieList).catchError((Object e, StackTrace st) {
       debugPrint('[Persist] movies 写盘失败：$e');
       _lastPersistError = '电影保存失败：$e';
-      notifyListeners();
+      _notifyIfAlive();
     }));
   }
 
@@ -232,7 +271,7 @@ class LibraryProvider extends ChangeNotifier {
     unawaited(s.saveActors(_actors).catchError((Object e, StackTrace st) {
       debugPrint('[Persist] actors 写盘失败：$e');
       _lastPersistError = '演员保存失败：$e';
-      notifyListeners();
+      _notifyIfAlive();
     }));
   }
 
@@ -255,11 +294,8 @@ class LibraryProvider extends ChangeNotifier {
   }
 
   /// 当前在读书籍（仪表盘横向任务卡，最多 2 本）
-  List<Book> get currentlyReadingBooks =>
-      _currentlyReadingCache ??= _books
-          .where((b) => b.status == BookStatus.reading)
-          .take(2)
-          .toList();
+  List<Book> get currentlyReadingBooks => _currentlyReadingCache ??=
+      _books.where((b) => b.status == BookStatus.reading).take(2).toList();
 
   /// 在读书籍
   List<Book> get activeBooks =>
@@ -345,7 +381,7 @@ class LibraryProvider extends ChangeNotifier {
   void addBook(Book book) {
     _books.insert(0, book.copyWith(updatedAt: DateTime.now()));
     _invalidateCache();
-    notifyListeners();
+    _notifyIfAlive();
     _persistBooks();
   }
 
@@ -359,7 +395,7 @@ class LibraryProvider extends ChangeNotifier {
     if (old.cover != null) _recycleImage(old.cover, withStamp.cover);
     _books[i] = withStamp;
     _invalidateCache();
-    notifyListeners();
+    _notifyIfAlive();
     _persistBooks();
   }
 
@@ -371,7 +407,7 @@ class LibraryProvider extends ChangeNotifier {
     _books.removeAt(i);
     if (old.cover != null) _recycleImage(old.cover, null);
     _invalidateCache();
-    notifyListeners();
+    _notifyIfAlive();
     _persistBooks();
   }
 
@@ -386,11 +422,12 @@ class LibraryProvider extends ChangeNotifier {
       _movieList.where((m) => m.rating != null).toList();
 
   /// 全部电影（仪表盘网格/电影库）
-  List<Movie> get movieList => _movieListCache ??= List.unmodifiable(_movieList);
+  List<Movie> get movieList =>
+      _movieListCache ??= List.unmodifiable(_movieList);
 
   /// 想看电影（仪表盘横向任务卡）—— 来自电影库真实 watchlist，前 2 部
-  List<Movie> get upcomingMovies => _upcomingMoviesCache ??=
-      List.unmodifiable(_movieList
+  List<Movie> get upcomingMovies =>
+      _upcomingMoviesCache ??= List.unmodifiable(_movieList
           .where((m) => m.status == MovieStatus.watchlist)
           .take(2)
           .toList());
@@ -407,9 +444,8 @@ class LibraryProvider extends ChangeNotifier {
         : rated.map((m) => m.rating!).reduce((a, b) => a + b) / rated.length;
     return _movieStatsCache = MovieStats(
       total: _movieList.length,
-      watchlist: _movieList
-          .where((m) => m.status == MovieStatus.watchlist)
-          .length,
+      watchlist:
+          _movieList.where((m) => m.status == MovieStatus.watchlist).length,
       rated: rated.length,
       averageRating: avg,
     );
@@ -447,8 +483,8 @@ class LibraryProvider extends ChangeNotifier {
           (m.director ?? '').toLowerCase().contains(q));
     }
     if (genre != null && genre.isNotEmpty) {
-      result = result.where(
-          (m) => m.genres != null && m.genres!.contains(genre));
+      result =
+          result.where((m) => m.genres != null && m.genres!.contains(genre));
     }
     final list = result.toList();
     // 排序（切换下拉框时界面借助 setState/notifyListeners 实时更新）
@@ -482,12 +518,11 @@ class LibraryProvider extends ChangeNotifier {
   }
 
   /// 所有已被电影使用的类型（供筛选下拉生成，去重）
-  List<String> get usedMovieGenres =>
-      _movieList
-          .map((m) => m.genres ?? const <String>[])
-          .expand((g) => g)
-          .toSet()
-          .toList();
+  List<String> get usedMovieGenres => _movieList
+      .map((m) => m.genres ?? const <String>[])
+      .expand((g) => g)
+      .toSet()
+      .toList();
 
   // ==================== 电影写操作 ====================
 
@@ -495,7 +530,7 @@ class LibraryProvider extends ChangeNotifier {
   void addMovie(Movie movie) {
     _movieList.add(movie.copyWith(updatedAt: DateTime.now()));
     _invalidateCache();
-    notifyListeners();
+    _notifyIfAlive();
     _persistMovies();
   }
 
@@ -509,7 +544,7 @@ class LibraryProvider extends ChangeNotifier {
     if (old.poster != null) _recycleImage(old.poster, withStamp.poster);
     _movieList[i] = withStamp;
     _invalidateCache();
-    notifyListeners();
+    _notifyIfAlive();
     _persistMovies();
   }
 
@@ -521,7 +556,7 @@ class LibraryProvider extends ChangeNotifier {
     _movieList.removeAt(i);
     if (old.poster != null) _recycleImage(old.poster, null);
     _invalidateCache();
-    notifyListeners();
+    _notifyIfAlive();
     _persistMovies();
   }
 
@@ -537,7 +572,7 @@ class LibraryProvider extends ChangeNotifier {
   void addActor(Actor actor) {
     _actors.add(actor.copyWith(updatedAt: DateTime.now()));
     _invalidateCache();
-    notifyListeners();
+    _notifyIfAlive();
     _persistActors();
   }
 
@@ -551,7 +586,7 @@ class LibraryProvider extends ChangeNotifier {
     if (old.avatar != null) _recycleImage(old.avatar, withStamp.avatar);
     _actors[i] = withStamp;
     _invalidateCache();
-    notifyListeners();
+    _notifyIfAlive();
     _persistActors();
   }
 
@@ -578,8 +613,14 @@ class LibraryProvider extends ChangeNotifier {
     _actors.removeAt(i);
     if (old.avatar != null) _recycleImage(old.avatar, null);
     _invalidateCache();
-    notifyListeners();
+    _notifyIfAlive();
     _persistActors();
     return true;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

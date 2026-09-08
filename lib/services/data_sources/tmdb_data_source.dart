@@ -99,6 +99,8 @@ class TmdbDataSource implements MovieDataSource {
       resp = await _client
           .get(uri, headers: headers)
           .timeout(_kTimeout, onTimeout: _onTimeout);
+    } on DataSourceException {
+      rethrow;
     } on Exception catch (_) {
       throw const DataSourceException('网络请求失败，请检查网络连接');
     }

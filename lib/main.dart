@@ -1,6 +1,8 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:ui';
 import 'package:provider/provider.dart';
 
 import 'config/app_palette.dart';
@@ -73,10 +75,16 @@ class _MoYingAppState extends State<MoYingApp> {
   late final LibraryProvider _library;
   late final SyncProvider _sync;
   late final DataSourceProvider _dataSource;
+  late final bool _ownsLibrary;
+  late final bool _ownsSync;
+  late final bool _ownsDataSource;
 
   @override
   void initState() {
     super.initState();
+    _ownsLibrary = widget.library == null;
+    _ownsSync = widget.sync == null;
+    _ownsDataSource = widget.dataSource == null;
     _library = widget.library ?? LibraryProvider();
     _sync = widget.sync ?? SyncProvider(store: null, library: _library);
     _dataSource = widget.dataSource ?? _buildFallbackDataSource();
@@ -86,7 +94,7 @@ class _MoYingAppState extends State<MoYingApp> {
         if (state == AppLifecycleState.paused ||
             state == AppLifecycleState.hidden ||
             state == AppLifecycleState.detached) {
-          _library.flush();
+          unawaited(_library.flush());
         }
       },
     );
@@ -104,6 +112,9 @@ class _MoYingAppState extends State<MoYingApp> {
   @override
   void dispose() {
     _lifecycleListener.dispose();
+    if (_ownsDataSource) _dataSource.dispose();
+    if (_ownsSync) _sync.dispose();
+    if (_ownsLibrary) _library.dispose();
     super.dispose();
   }
 
@@ -132,16 +143,16 @@ class _AppShell extends StatefulWidget {
 
 class _AppShellState extends State<_AppShell> {
   bool _autoSyncFired = false;
+  String? _lastScheduledThemeMode;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // ponytail: SystemChrome 副作用从 didChangeDependencies 下沉到 postFrame
+    // 自动同步只在首帧触发一次，系统栏同步由 build 按主题变化调度。
     if (!_autoSyncFired) {
       _autoSyncFired = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _syncSystemChrome(context.read<LibraryProvider>().themeMode);
           context.read<SyncProvider>().tryAutoSyncOnResume();
         }
       });
@@ -170,11 +181,15 @@ class _AppShellState extends State<_AppShell> {
   @override
   Widget build(BuildContext context) {
     // M6：select 只订阅主题模式，书库/档案变化不再触发整棵 MaterialApp 重建
-    final rawTheme = context.select<LibraryProvider, String>((p) => p.themeMode);
+    final rawTheme =
+        context.select<LibraryProvider, String>((p) => p.themeMode);
     final themeMode = resolveThemeMode(rawTheme);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _syncSystemChrome(rawTheme);
-    });
+    if (_lastScheduledThemeMode != rawTheme) {
+      _lastScheduledThemeMode = rawTheme;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _syncSystemChrome(rawTheme);
+      });
+    }
     return MaterialApp(
       title: '墨影',
       debugShowCheckedModeBanner: false,

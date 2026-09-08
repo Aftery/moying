@@ -78,7 +78,7 @@ class MediaTile extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style:  TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: context.colors.textPrimary,
@@ -89,7 +89,7 @@ class MediaTile extends StatelessWidget {
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style:  TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     color: context.colors.textMuted,
                   ),
@@ -104,7 +104,7 @@ class MediaTile extends StatelessWidget {
                           value: progress,
                           minHeight: 5,
                           backgroundColor: context.colors.outline,
-                          valueColor:  AlwaysStoppedAnimation<Color>(
+                          valueColor: AlwaysStoppedAnimation<Color>(
                             context.colors.readingStart,
                           ),
                         ),
@@ -115,7 +115,7 @@ class MediaTile extends StatelessWidget {
                           width: double.infinity,
                           child: Text(
                             pageText!,
-                            style:  TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
                               color: context.colors.textMuted,
                             ),
@@ -123,10 +123,10 @@ class MediaTile extends StatelessWidget {
                         ),
                     ],
                   ),
-                if (isBook && rating != null)
+                if (!isBook && rating != null)
                   Row(
                     children: [
-                       Icon(
+                      Icon(
                         Icons.star_rounded,
                         size: 13,
                         color: context.colors.star,
@@ -134,7 +134,7 @@ class MediaTile extends StatelessWidget {
                       const SizedBox(width: 2),
                       Text(
                         rating!.toStringAsFixed(1),
-                        style:  TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: context.colors.textSecondary,

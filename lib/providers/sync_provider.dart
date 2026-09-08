@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -55,11 +56,29 @@ class SyncProvider extends ChangeNotifier {
   final WebDavClient Function(SyncSettings, String) _clientFactory;
   final Future<bool> Function(String, Uint8List) _saveFile;
   final Connectivity? _connectivity;
+  bool _disposed = false;
+
+  void _notifyIfAlive() {
+    if (!_disposed) notifyListeners();
+  }
 
   SyncSettings _settings = const SyncSettings();
   bool _isSyncing = false;
   String? _lastError;
   MergeResult? _lastMerge;
+  Future<void> _operationTail = Future.value();
+
+  Future<T> _runExclusive<T>(Future<T> Function() action) async {
+    final previous = _operationTail;
+    final gate = Completer<void>();
+    _operationTail = gate.future;
+    await previous;
+    try {
+      return await action();
+    } finally {
+      gate.complete();
+    }
+  }
 
   SyncSettings get settings => _settings;
   bool get isSyncing => _isSyncing;
@@ -73,13 +92,13 @@ class SyncProvider extends ChangeNotifier {
     final store = _store;
     if (store == null) return;
     _settings = await store.loadSettings();
-    notifyListeners();
+    _notifyIfAlive();
   }
 
   /// 保存配置（settings.json；密码单独走安全存储见 [savePassword]）
   Future<void> saveSettings(SyncSettings next) async {
     _settings = next;
-    notifyListeners();
+    _notifyIfAlive();
     await _store?.saveSettings(next);
   }
 
@@ -104,7 +123,7 @@ class SyncProvider extends ChangeNotifier {
       rethrow;
     } finally {
       client.close();
-      notifyListeners();
+      _notifyIfAlive();
     }
   }
 
@@ -114,13 +133,16 @@ class SyncProvider extends ChangeNotifier {
   /// （id 并集 + updatedAt 新者胜），合并结果落盘后随包上传——
   /// 保证双端各自的修改都不会被整包覆盖。云端无备份 / 包损坏时
   /// 退化为原全量上传行为。
-  Future<void> uploadNow() async {
+  Future<void> uploadNow() =>
+      _runExclusive<void>(_uploadNowInner);
+
+  Future<void> _uploadNowInner() async {
     final store = _store;
     if (store == null) throw WebDavException(null, '当前平台不支持备份');
     final client = await _requireClient();
     _isSyncing = true;
     _lastError = null;
-    notifyListeners();
+    _notifyIfAlive();
     try {
       await store.flush();
       // 1) 合并前本地快照（失败只记日志，不阻断同步）
@@ -173,18 +195,21 @@ class SyncProvider extends ChangeNotifier {
     } finally {
       client.close();
       _isSyncing = false;
-      notifyListeners();
+      _notifyIfAlive();
     }
   }
 
   /// 拉取云端最新备份（不落盘），供确认弹窗展示
-  Future<PendingRestore> fetchLatestBackup() async {
+  Future<PendingRestore> fetchLatestBackup() =>
+      _runExclusive<PendingRestore>(_fetchLatestBackupInner);
+
+  Future<PendingRestore> _fetchLatestBackupInner() async {
     final store = _store;
     if (store == null) throw WebDavException(null, '当前平台不支持恢复');
     final client = await _requireClient();
     _isSyncing = true;
     _lastError = null;
-    notifyListeners();
+    _notifyIfAlive();
     try {
       final names = await client.listBackups();
       if (names.isEmpty) {
@@ -204,17 +229,21 @@ class SyncProvider extends ChangeNotifier {
     } finally {
       client.close();
       _isSyncing = false;
-      notifyListeners();
+      _notifyIfAlive();
     }
   }
 
   /// 确认恢复：覆盖本地数据并重新加载（UI 二次确认后调用）
-  Future<void> confirmRestore(PendingRestore pending) async {
+  Future<void> confirmRestore(PendingRestore pending) =>
+      _runExclusive<void>(() => _confirmRestoreInner(pending));
+
+  Future<void> _confirmRestoreInner(PendingRestore pending) async {
     final store = _store;
     if (store == null) throw WebDavException(null, '当前平台不支持恢复');
     _isSyncing = true;
-    notifyListeners();
+    _notifyIfAlive();
     try {
+      await _library.flush();
       await BackupService(store: store).restoreBackup(pending.bytes);
       await _library.reloadFromStore();
       _settings = _settings.copyWith(lastSyncAt: DateTime.now());
@@ -225,7 +254,7 @@ class SyncProvider extends ChangeNotifier {
       rethrow;
     } finally {
       _isSyncing = false;
-      notifyListeners();
+      _notifyIfAlive();
     }
   }
 
@@ -233,7 +262,9 @@ class SyncProvider extends ChangeNotifier {
 
   /// 导出备份到本地：按「备份包含本地图片」设置打包（JSON 单文件 / 含图 ZIP），
   /// FilePicker 选保存位置，用户取消返回 false，写入成功返回 true
-  Future<bool> exportLocal() async {
+  Future<bool> exportLocal() => _runExclusive<bool>(_exportLocalInner);
+
+  Future<bool> _exportLocalInner() async {
     final store = _store;
     if (store == null) throw WebDavException(null, '当前平台不支持导出');
     await store.flush();
@@ -298,6 +329,12 @@ class SyncProvider extends ChangeNotifier {
     return _clientFactory(_settings, password);
   }
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   static WebDavClient _defaultClient(SyncSettings settings, String password) {
     return WebDavClientHttp(
       remoteDirUrl: settings.remoteDirUrl,
@@ -314,10 +351,22 @@ class SyncProvider extends ChangeNotifier {
       '${Directory.systemTemp.path}${Platform.pathSeparator}$fileName',
     );
     await tmp.writeAsBytes(bytes);
-    await Share.shareXFiles(
-      [XFile(tmp.path)],
-      subject: '墨影数据备份',
-    );
-    return true;
+    try {
+      await Share.shareXFiles(
+        [XFile(tmp.path)],
+        subject: '墨影数据备份',
+      );
+      return true;
+    } finally {
+      // M5：分享面板异步持有文件，iOS/Android 上短暂缓存后再清；
+      // 若分享抛出也兜底删除，避免临时目录长期堆积用户数据。
+      if (await tmp.exists()) {
+        try {
+          await tmp.delete();
+        } on Object catch (e) {
+          debugPrint('[Sync] 清理临时导出文件失败: $e');
+        }
+      }
+    }
   }
 }

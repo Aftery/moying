@@ -108,8 +108,8 @@ class MediaCover extends StatelessWidget {
     }
 
     Widget? img;
-    if (local != null && local.existsSync()) {
-      // 优先本地：加载失败回退到网络图，网络图失败回退占位
+    if (local != null) {
+      // M10：去掉 build 期同步 IO；让 Image.file 自带异步加载 + 失败回调兜底
       img = Image.file(
         local,
         fit: BoxFit.cover,
@@ -147,6 +147,10 @@ class MediaCover extends StatelessWidget {
 
   /// 圆形占位：渐变圆 + emoji/首字（需父级正方形约束）
   Widget _buildCircularFallback() {
+    final symbol = emoji?.trim();
+    final fallback = symbol == null || symbol.isEmpty
+        ? (title.isEmpty ? '?' : title.characters.first)
+        : symbol;
     return DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -154,7 +158,7 @@ class MediaCover extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          emoji ?? (title.isEmpty ? '?' : title.characters.first),
+          fallback,
           style: TextStyle(
             fontSize: fontSize * 0.55,
             fontWeight: FontWeight.w700,

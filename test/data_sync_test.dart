@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -64,6 +65,61 @@ void main() {
       expect(snap.movies.length, kMovieList.length);
       expect(snap.movies.first.title, kMovieList.first.title);
       expect(profile.nickname, isNotEmpty);
+    });
+
+    test('JSON 备份（不含图）恢复时保留本地现有图片', () async {
+      final src = await _makeStore(tmpDir, 'src');
+      final bytes =
+          await BackupService(store: src).buildBackup(includeImages: false);
+
+      final dst = await _makeStore(tmpDir, 'dst');
+      await dst.imagesDir.create(recursive: true);
+      await dst.imageFileByName('keep.jpg').writeAsBytes([9, 8, 7]);
+
+      await BackupService(store: dst).restoreBackup(bytes);
+
+      expect(
+        await dst.imageFileByName('keep.jpg').readAsBytes(),
+        Uint8List.fromList([9, 8, 7]),
+      );
+    });
+
+    test('ZIP 恢复拒绝图片目录穿越路径', () async {
+      final src = await _makeStore(tmpDir, 'src');
+      final manifest = utf8.encode(jsonEncode({
+        'schemaVersion': BackupService.backupSchemaVersion,
+        'exportedAt': DateTime.now().toIso8601String(),
+        'includeImages': true,
+        'counts': {},
+        'imageCount': 1,
+      }));
+      final archive = Archive()
+        ..addFile(ArchiveFile('manifest.json', manifest.length, manifest));
+      for (final name in [
+        'books.json',
+        'movies.json',
+        'actors.json',
+        'profile.json'
+      ]) {
+        final data = await src.fileInDataDir(name).readAsBytes();
+        archive.addFile(ArchiveFile(name, data.length, data));
+      }
+      final malicious = Uint8List.fromList([1, 2, 3]);
+      archive.addFile(
+        ArchiveFile('images/../escape.jpg', malicious.length, malicious),
+      );
+      final bytes = Uint8List.fromList(ZipEncoder().encode(archive)!);
+      final dst = await _makeStore(tmpDir, 'dst');
+
+      await expectLater(
+        BackupService(store: dst).restoreBackup(bytes),
+        throwsA(isA<BackupException>()),
+      );
+      expect(
+        File('${dst.dataDir.path}${Platform.pathSeparator}escape.jpg')
+            .existsSync(),
+        isFalse,
+      );
     });
 
     test('ZIP 备份（含图）往返：图片随包还原，manifest 记录张数', () async {

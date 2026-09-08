@@ -46,6 +46,8 @@ class GoogleBooksDataSource implements BookDataSource {
       resp = await _client
           .get(uri)
           .timeout(_kTimeout, onTimeout: _onTimeout);
+    } on DataSourceException {
+      rethrow;
     } on Exception catch (_) {
       throw const DataSourceException('网络请求失败，请检查网络连接');
     }

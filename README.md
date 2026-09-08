@@ -9,7 +9,7 @@
 - **个人**：昵称 / 签名 / 头像编辑、深浅主题三选（深色 / 浅色 / 跟随系统）、数据统计、数据源管理
 
 v0.9.0 起首启为**空库**，由用户自行录入；此后增删改全部持久化到本地。
-（演示种子数据仅保留在测试与 Web 内存预览中）
+（演示种子数据仅保留在测试中）
 
 ## 运行
 
@@ -30,8 +30,13 @@ flutter run            # 选择目标设备（Android / iOS / macOS / Chrome）
 ```bash
 flutter analyze       # 静态分析（CI 以 --fatal-infos 运行，期望 0 issue）
 flutter test          # 单元与 widget 测试
-flutter build web     # 编译验证（无需移动端 SDK）
 ```
+
+> 平台支持声明（H3）：本项目**仅支持移动端和桌面端**。
+> 库代码直接依赖 `dart:io`（`File`/`Directory`），Web 目标
+> 无法编译——**不要运行 `flutter build web`**，CI 也不做 Web 构建。
+> `lib/data/persistence_stub` 等是历史遗留的内存回退桩，
+> 不代表 Web 可运行；后续版本将逐步清理。
 
 打包 Android 安装包：
 

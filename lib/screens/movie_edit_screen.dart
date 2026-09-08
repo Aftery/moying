@@ -637,13 +637,13 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
   }
 
   /// 搜索词变化（controller listener）：
-  /// - 每次变更 setState 刷新清除按钮显隐（原 onChanged 同款开销）；
+  /// - M8：清除按钮显隐改由 QuickSearchPanel 内 ValueListenableBuilder 承担，
+  ///   不再因输入触发整页 setState / rebuild；
   /// - IME 拼音组合输入中（composing 有效）不发起搜索，避免输入
   ///   片名拼音的过程打出多次半成品查询；
   /// - 组合结束/普通输入 → 取消旧 timer，800ms debounce 后搜索。
   void _onSearchCtrlChanged() {
     final value = _searchCtrl.value;
-    setState(() {});
     if (value.composing.isValid) return;
     _searchDebounce?.cancel();
     final q = value.text.trim();

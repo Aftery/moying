@@ -96,8 +96,7 @@ void main() {
           reason: 'publisher 详情缺失时必须保留搜索结果');
       expect(merged.isbn, '9780684801223',
           reason: 'isbn 详情缺失时必须保留搜索结果（这就是用户看到的「ISBN 没写入」bug 的根因）');
-      expect(merged.pageCount, 127,
-          reason: 'pageCount 详情缺失时必须保留搜索结果');
+      expect(merged.pageCount, 127, reason: 'pageCount 详情缺失时必须保留搜索结果');
       expect(merged.coverUrl, 'https://covers.example/1.jpg',
           reason: 'coverUrl 详情缺失时必须保留搜索结果');
     });
@@ -175,7 +174,28 @@ void main() {
       expect(result.categories, ['Fiction', 'Classic Literature']);
       expect(result.title, 'The Old Man and the Sea');
       expect(result.year, 1952);
-      expect(result.coverUrl, 'https://covers.openlibrary.org/b/id/12345-M.jpg');
+      expect(
+          result.coverUrl, 'https://covers.openlibrary.org/b/id/12345-M.jpg');
+    });
+
+    test('description 对象格式能取 value，不因类型转换崩溃', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(r'''
+        {
+          "title": "Test Book",
+          "description": {"type": "/type/text", "value": "object description"}
+        }
+        ''', 200);
+      });
+
+      final ds = OpenLibraryDataSource(client: mockClient);
+      final result = await ds.getBookDetail(
+        '/works/OLTestW',
+        config: const {},
+        credentials: const {},
+      );
+
+      expect(result.description, 'object description');
     });
 
     test('多作者都能正确取 name', () async {

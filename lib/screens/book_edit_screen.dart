@@ -123,8 +123,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
     _titleCtrl = TextEditingController(text: _book?.title ?? '');
     _authorCtrl = TextEditingController(text: _book?.author ?? '');
     _isbnCtrl = TextEditingController(text: _book?.isbn ?? '');
-    _pagesCtrl =
-        TextEditingController(text: _book == null ? '300' : '${_book!.totalPages}');
+    _pagesCtrl = TextEditingController(
+        text: _book == null ? '300' : '${_book!.totalPages}');
     _currentPagesCtrl =
         TextEditingController(text: '${_book?.currentPage ?? 0}');
     _publisherCtrl = TextEditingController(text: _book?.publisher ?? '');
@@ -272,12 +272,12 @@ class _BookEditScreenState extends State<BookEditScreen> {
     final year = int.tryParse(_yearCtrl.text.trim());
     final description =
         _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim();
-    final notes = _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim();
+    final notes =
+        _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim();
 
     // 新增/编辑统一先在保存时刻确定 id（新增 = 微秒时间戳），供封面复制落盘
-    final id = _isAddMode
-        ? 'b_${DateTime.now().microsecondsSinceEpoch}'
-        : _book!.id;
+    final id =
+        _isAddMode ? 'b_${DateTime.now().microsecondsSinceEpoch}' : _book!.id;
     final cover = await _resolveDraftCover(provider, id);
 
     if (_isAddMode) {
@@ -347,14 +347,15 @@ class _BookEditScreenState extends State<BookEditScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('取消',
-                style: TextStyle(color: context.colors.textMuted)),
+            child:
+                Text('取消', style: TextStyle(color: context.colors.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text('确认回退',
                 style: TextStyle(
-                    color: context.colors.warning, fontWeight: FontWeight.w700)),
+                    color: context.colors.warning,
+                    fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -393,7 +394,9 @@ class _BookEditScreenState extends State<BookEditScreen> {
 
   /// 弹出日期选择器并回写（完成时间选择 = 读完 → 已读页数拉满）
   Future<void> _pickDate({required bool isFinished}) async {
-    final initial = isFinished ? (_finishedAt ?? DateTime.now()) : (_startedAt ?? _createdAt);
+    final initial = isFinished
+        ? (_finishedAt ?? DateTime.now())
+        : (_startedAt ?? _createdAt);
     final picked = await showDatePicker(
       context: context,
       initialDate: _dateOnly(initial),
@@ -888,7 +891,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
               _numBox(_currentPagesCtrl, '0'),
               const SizedBox(width: 10),
               Text('/',
-                  style: TextStyle(color: context.colors.textMuted, fontSize: 13)),
+                  style:
+                      TextStyle(color: context.colors.textMuted, fontSize: 13)),
               const SizedBox(width: 10),
               Text(
                 '总页数：',
@@ -978,9 +982,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
 
   /// 阅读时间区块（想读且无任何记录时返回空，整块隐藏）
   List<Widget> _readingTimeBlocks() {
-    final inReading = _effectiveCurrentPages > 0 ||
-        _startedAt != null ||
-        _finishedAt != null;
+    final inReading =
+        _effectiveCurrentPages > 0 || _startedAt != null || _finishedAt != null;
     if (!inReading) return const [];
 
     final blocks = <Widget>[
@@ -994,8 +997,9 @@ class _BookEditScreenState extends State<BookEditScreen> {
               date: _startedAt,
               hint: '默认添加时间，点击选择',
               onTap: () => _pickDate(isFinished: false),
-              onClear:
-                  _startedAt == null ? null : () => setState(() => _startedAt = null),
+              onClear: _startedAt == null
+                  ? null
+                  : () => setState(() => _startedAt = null),
             ),
             if (_progressAtLeastFull || _finishedAt != null) ...[
               const SizedBox(height: 10),
@@ -1062,7 +1066,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
                             ? context.colors.textPrimary
                             : context.colors.textMuted,
                         fontSize: 14,
-                        fontWeight: hasValue ? FontWeight.w600 : FontWeight.w400,
+                        fontWeight:
+                            hasValue ? FontWeight.w600 : FontWeight.w400,
                       ),
                     ),
                   ],
@@ -1215,8 +1220,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
           cursorColor: context.colors.accent,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle:
-                TextStyle(color: context.colors.textMuted, fontSize: 13),
+            hintStyle: TextStyle(color: context.colors.textMuted, fontSize: 13),
             filled: true,
             fillColor: context.colors.surface,
             border: OutlineInputBorder(
@@ -1230,7 +1234,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('取消', style: TextStyle(color: context.colors.textMuted)),
+            child:
+                Text('取消', style: TextStyle(color: context.colors.textMuted)),
           ),
           if (allowClear && initial.trim().isNotEmpty)
             TextButton(
@@ -1486,6 +1491,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
               ? searchResult
               : searchResult.mergeWith(detailResult);
 
+          // 页面可能在详情请求期间被关闭；此时不能再触碰 State 或页面上下文。
+          if (!mounted) return;
           // 详情拉完后清空列表（保留搜索框文本），再回填
           ds.clearResults();
           _applyBookResult(resultToApply, ds);
@@ -1510,13 +1517,13 @@ class _BookEditScreenState extends State<BookEditScreen> {
   }
 
   /// 搜索词变化（controller listener）：
-  /// - 每次变更 setState 刷新清除按钮显隐（原 onChanged 同款开销）；
+  /// - M8：清除按钮显隐改用 QuickSearchPanel 内 ValueListenableBuilder，
+  ///   不再因输入触发整页 setState / rebuild；
   /// - IME 拼音组合输入中（composing 有效）不发起搜索，避免输入
   ///   「三体」的拼音过程打出多次半成品查询；
   /// - 组合结束/普通输入 → 取消旧 timer，800ms debounce 后搜索。
   void _onSearchCtrlChanged() {
     final value = _searchCtrl.value;
-    setState(() {});
     if (value.composing.isValid) return;
     _searchDebounce?.cancel();
     final q = value.text.trim();
@@ -1559,7 +1566,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
         _coverUrlCtrl.text = r.coverUrl!;
       }
       _filledResult = r;
-      _sourceTag = source == null ? null : '${source.type.name}:${r.externalId}';
+      _sourceTag =
+          source == null ? null : '${source.type.name}:${r.externalId}';
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

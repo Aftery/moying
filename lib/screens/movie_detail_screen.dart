@@ -828,12 +828,16 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
   /// 上次测量的可用宽度（M23：文本或宽度变化才重测，避免每次 rebuild 重复排版）
   double _lastWidth = -1;
 
+  /// M11：postFrame 调度去重，避免首帧前多次 rebuild 重复入队测量任务
+  bool _measureScheduled = false;
+
   /// 测量简介是否超过 [_foldLines] 行，结果按（文本, 宽度）缓存。
   ///
   /// 排版是同步重活，不在 build 阶段执行——由 postFrame 调度本方法，
   /// 避免长简介下每次 rebuild 都触发一次 TextPainter.layout()。
   void _measure(double maxWidth) {
     _measured = true;
+    _measureScheduled = false;
     _lastWidth = maxWidth;
     final painter = TextPainter(
       text: TextSpan(
@@ -859,6 +863,7 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
     // 内容变化（如编辑后返回）时重新测量折叠状态
     if (oldWidget.text != widget.text) {
       _measured = false;
+      _measureScheduled = false;
       _lastWidth = -1;
       _overflow = false;
       _expanded = false;
@@ -879,10 +884,13 @@ class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
         builder: (context, constraints) {
           // M23：排版不在 build 阶段同步执行，交给 postFrame（_measure 内缓存结果）
           if (!_measured || constraints.maxWidth != _lastWidth) {
-            final width = constraints.maxWidth;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _measure(width);
-            });
+            if (!_measureScheduled) {
+              _measureScheduled = true;
+              final width = constraints.maxWidth;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _measure(width);
+              });
+            }
           }
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,

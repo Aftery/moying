@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -104,6 +105,8 @@ class _DataSyncScreenState extends State<DataSyncScreen> {
       _toast('连接成功');
     } on WebDavException catch (e) {
       _toast(e.message, error: true);
+    } on Object catch (e) {
+      _toast('测试连接失败：$e', error: true);
     }
   }
 
@@ -117,6 +120,8 @@ class _DataSyncScreenState extends State<DataSyncScreen> {
       _toast(e.message, error: true);
     } on BackupException catch (e) {
       _toast(e.message, error: true);
+    } on Object catch (e) {
+      _toast('上传备份失败：$e', error: true);
     }
   }
 
@@ -136,6 +141,8 @@ class _DataSyncScreenState extends State<DataSyncScreen> {
       _toast(e.message, error: true);
     } on BackupException catch (e) {
       _toast(e.message, error: true);
+    } on Object catch (e) {
+      _toast('云端恢复失败：$e', error: true);
     }
   }
 
@@ -148,24 +155,38 @@ class _DataSyncScreenState extends State<DataSyncScreen> {
         _toast('备份已保存');
       }
       // 用户取消选位置：不提示
-    } on Exception catch (e) {
+    } on Object catch (e) {
       _toast('导出失败：$e', error: true);
     }
   }
 
   Future<void> _onImportLocal() async {
     final sync = context.read<SyncProvider>();
+    // M9：不一次性 bytes 全加载；改为 withData:false 取 path +
+    // 磁盘流式读，避免 50MB+ 大文件被全量复制到内存
     final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['json', 'zip'],
-      withData: true,
+      withData: false,
     );
-    final data = picked?.files.singleOrNull?.bytes;
-    if (data == null) return; // 用户取消
+    final file = picked?.files.singleOrNull;
+    if (file?.path == null) return; // 用户取消
+    final path = file!.path!;
+    const maxBytes = 50 * 1024 * 1024;
+    final size = await File(path).length();
+    if (size > maxBytes) {
+      _toast('备份文件超过 50 MB，无法导入', error: true);
+      return;
+    }
+    final Uint8List bytes;
     try {
-      final pending = await sync.parseLocalBackup(
-        Uint8List.fromList(data),
-      );
+      bytes = await File(path).readAsBytes();
+    } on Object catch (e) {
+      _toast('读取备份文件失败：$e', error: true);
+      return;
+    }
+    try {
+      final pending = await sync.parseLocalBackup(bytes);
       if (!mounted) return;
       final confirmed =
           await _confirmRestore(pending.manifest, source: pending.fileName);
@@ -175,6 +196,8 @@ class _DataSyncScreenState extends State<DataSyncScreen> {
       await _afterRestoreReload();
     } on BackupException catch (e) {
       _toast(e.message, error: true);
+    } on Object catch (e) {
+      _toast('本地恢复失败：$e', error: true);
     }
   }
 
@@ -384,8 +407,7 @@ class _SyncCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(mergeSummary!,
                 style: TextStyle(
-                    fontSize: 12,
-                    color: c.textSecondary.withOpacity(0.8))),
+                    fontSize: 12, color: c.textSecondary.withOpacity(0.8))),
           ],
           const SizedBox(height: 16),
           Row(

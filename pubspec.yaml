@@ -19,6 +19,7 @@ dependencies:
   share_plus: ^10.0.0             # 导出 JSON 到本地
   file_picker: ^8.0.0             # 从本地文件导入恢复
   connectivity_plus: ^6.0.5       # 自动同步 Wi-Fi 探测
+  image: ^4.2.0                   # 图片压缩/解码（M9：单图压缩/上限）
 
 dev_dependencies:
   flutter_test:

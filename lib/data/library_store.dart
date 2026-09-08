@@ -207,15 +207,28 @@ class LibraryStore {
         throw const FormatException('顶层必须是对象');
       }
       return SyncSettings.fromJson(root);
-    } on FormatException {
+    } on Object catch (e) {
+      debugPrint('[Store] settings.json 损坏：$e');
+      await _quarantine(file);
       const defaults = SyncSettings();
       await _writeSettings(defaults);
       return defaults;
     }
   }
 
-  /// 保存同步配置（原子写；返回后已落盘）
-  Future<void> saveSettings(SyncSettings settings) => _writeSettings(settings);
+  Future<void> _settingsTail = Future.value();
+
+  /// 串行队列：避免固定 .tmp 文件并发 rename 冲突（H3-M4）
+  Future<void> _enqueueSettings(Future<void> Function() write) {
+    final previous = _settingsTail;
+    final next = previous.then((_) => write());
+    _settingsTail = next.then((_) {}, onError: (_) {});
+    return next;
+  }
+
+  /// 保存同步配置（串行队列 + 原子写）
+  Future<void> saveSettings(SyncSettings settings) =>
+      _enqueueSettings(() => _writeSettings(settings));
 
   // ==================== 数据源配置（data_sources.json，单对象） ====================
 
@@ -240,13 +253,18 @@ class LibraryStore {
           .whereType<Map<String, dynamic>>()
           .map(DataSourceConfig.fromJson)
           .toList();
-    } on FormatException {
+    } on Object catch (e) {
+      debugPrint('[Store] data_sources.json 损坏：$e');
+      await _quarantine(file);
       return null;
     }
   }
 
-  /// 保存数据源配置（原子写；敏感凭据不在配置内，存安全存储）
-  Future<void> saveDataSourceConfigs(List<DataSourceConfig> configs) async {
+  /// 保存数据源配置（串行队列 + 原子写；敏感凭据不在配置内，存安全存储）
+  Future<void> saveDataSourceConfigs(List<DataSourceConfig> configs) =>
+      _enqueueSettings(() => _writeDataSourceConfigs(configs));
+
+  Future<void> _writeDataSourceConfigs(List<DataSourceConfig> configs) async {
     await dataDir.create(recursive: true);
     final tmp = File(_join('$_dataSourcesFile.tmp'));
     const encoder = JsonEncoder.withIndent('  ');
@@ -256,7 +274,6 @@ class LibraryStore {
     }));
     await tmp.rename(_join(_dataSourcesFile));
   }
-
 
   /// settings 原子写（单对象形态，schemaVersion 校验与集合文件共用常量）
   Future<void> _writeSettings(SyncSettings settings) async {
@@ -296,11 +313,19 @@ class LibraryStore {
   Future<void> _flushPending() async {
     if (!_dirty) return;
     _dirty = false;
-    final batch =
-        Map<String, List<Map<String, dynamic>>>.from(_pendingWrites);
+    final batch = Map<String, List<Map<String, dynamic>>>.from(_pendingWrites);
     _pendingWrites.clear();
-    for (final entry in batch.entries) {
-      await _writeFile(entry.key, entry.value);
+    try {
+      for (final entry in batch.entries) {
+        await _writeFile(entry.key, entry.value);
+      }
+    } catch (_) {
+      // 写入失败时保留未成功落盘的批次；新提交的同文件数据优先保留。
+      for (final entry in batch.entries) {
+        _pendingWrites.putIfAbsent(entry.key, () => entry.value);
+      }
+      _dirty = true;
+      rethrow;
     }
   }
 
@@ -352,6 +377,16 @@ class LibraryStore {
     await tmp.writeAsBytes(bytes);
     await tmp.rename(dest.path);
     return name;
+  }
+
+  /// 指定文件名原子写图片字节（entryId 命名覆盖语义，M9 attachImage 用）
+  Future<void> putImageBytes(String name, Uint8List bytes) async {
+    _ensureSafeRelativePath(name);
+    final dest = File(_join('images', name));
+    final tmp = File(_join('images', '$name.tmp'));
+    await imagesDir.create(recursive: true);
+    await tmp.writeAsBytes(bytes);
+    await tmp.rename(dest.path);
   }
 
   /// 解析 images/ 目录下的文件（展示层 `Image.file` 用）。

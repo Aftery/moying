@@ -105,40 +105,43 @@ class QuickSearchPanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          TextField(
-            controller: controller,
-            textInputAction: TextInputAction.search,
-            style: TextStyle(color: c.textPrimary, fontSize: 14),
-            cursorColor: c.accent,
-            decoration: InputDecoration(
-              prefixIcon:
-                  Icon(Icons.search_rounded, size: 20, color: c.textMuted),
-              suffixIcon: controller.text.isEmpty
-                  ? null
-                  : GestureDetector(
-                      onTap: onClear,
-                      behavior: HitTestBehavior.opaque,
-                      child: Icon(Icons.close_rounded,
-                          size: 18, color: c.textMuted),
-                    ),
-              hintText: hint,
-              hintStyle: TextStyle(color: c.textMuted, fontSize: 13),
-              isDense: true,
-              filled: true,
-              fillColor: c.surface,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: c.outline, width: 0.8),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: c.outline, width: 0.8),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: c.accent, width: 1.3),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) => TextField(
+              controller: controller,
+              textInputAction: TextInputAction.search,
+              style: TextStyle(color: c.textPrimary, fontSize: 14),
+              cursorColor: c.accent,
+              decoration: InputDecoration(
+                prefixIcon:
+                    Icon(Icons.search_rounded, size: 20, color: c.textMuted),
+                suffixIcon: value.text.isEmpty
+                    ? null
+                    : GestureDetector(
+                        onTap: onClear,
+                        behavior: HitTestBehavior.opaque,
+                        child: Icon(Icons.close_rounded,
+                            size: 18, color: c.textMuted),
+                      ),
+                hintText: hint,
+                hintStyle: TextStyle(color: c.textMuted, fontSize: 13),
+                isDense: true,
+                filled: true,
+                fillColor: c.surface,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: c.outline, width: 0.8),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: c.outline, width: 0.8),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: c.accent, width: 1.3),
+                ),
               ),
             ),
           ),

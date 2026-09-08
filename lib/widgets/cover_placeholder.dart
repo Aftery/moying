@@ -41,6 +41,10 @@ class CoverPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final symbol = emoji?.trim();
+    final fallback = symbol == null || symbol.isEmpty
+        ? (title.isEmpty ? '?' : title.characters.first)
+        : symbol;
     return AspectRatio(
       aspectRatio: aspectRatio,
       child: ClipRRect(
@@ -65,7 +69,7 @@ class CoverPlaceholder extends StatelessWidget {
               ),
               Center(
                 child: Text(
-                  emoji ?? (title.isEmpty ? '?' : title.characters.first),
+                  fallback,
                   style: TextStyle(fontSize: fontSize),
                 ),
               ),
