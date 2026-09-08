@@ -175,6 +175,7 @@ class DataSourceScreen extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: context.colors.surfaceHigh,
+      elevation: 3,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -303,6 +304,7 @@ class _SourceTile extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: context.colors.surfaceHigh,
+      elevation: 3,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

@@ -116,7 +116,7 @@ class ProfileScreen extends StatelessWidget {
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
