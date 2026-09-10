@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/data_source.dart';
+import '../services/book_result_merger.dart';
 import '../services/data_source_interface.dart';
 import '../services/data_source_manager.dart';
 
@@ -110,6 +111,18 @@ class DataSourceProvider extends ChangeNotifier {
   String _lastQuery = '';
   String get lastQuery => _lastQuery;
 
+  /// 单次书籍检索的结果上限（多源聚合按此截断）
+  static const int _bookResultLimit = 10;
+
+  /// 最近一次书籍搜索**实际取到结果**的源名（聚合时可能多个；空 = 未搜索）。
+  /// 检索区标题据此如实标注来源，不让用户以为结果只来自默认源。
+  List<String> _bookSearchSourceNames = const [];
+  List<String> get bookSearchSourceNames => _bookSearchSourceNames;
+
+  /// 聚合适配：结果与源名在同一次 execute 里产出，但源名要等 `_search`
+  /// 校验过请求序号（丢弃过期响应）后才能真正落库，故经此中转。
+  List<String> _pendingBookSourceNames = const [];
+
   /// 每个类别独立的请求序号，避免书籍与影视搜索互相丢弃结果。
   final Map<DataSourceCategory, int> _searchRequestIds = {};
   final Set<DataSourceCategory> _activeSearches = {};
@@ -188,18 +201,77 @@ class DataSourceProvider extends ChangeNotifier {
     }
   }
 
-  /// 按关键词搜索书籍（用当前书籍默认源）
+  /// 按关键词搜索书籍（多源聚合：默认源优先，结果不足时补备用源）
   Future<void> searchBooks(String query) => _search<BookSearchResult>(
         query: query,
         category: DataSourceCategory.book,
         execute: (source, q) async {
-          final credentials = await _manager.credentialsOf(source);
-          final impl = _manager.bookImplOf(source.type)!;
-          return impl.searchBooks(q,
-              config: source.config, credentials: credentials);
+          final outcome = await _searchBooksAggregated(source, q);
+          _pendingBookSourceNames = outcome.sourceNames;
+          return outcome.results;
         },
-        setResults: (r) => _bookResults = r,
+        // setResults 只在请求序号未过期时被调用，源名跟着结果一起落库
+        setResults: (r) {
+          _bookResults = r;
+          if (r != null) _bookSearchSourceNames = _pendingBookSourceNames;
+        },
       );
+
+  /// 多源聚合搜索：默认源优先，累计结果不足 [_bookResultLimit] 时按优先级
+  /// 补备用源，合并后按 ISBN / 书名+作者去重，再截断到上限。
+  ///
+  /// 为什么是「不足才补」而不是「每次并发所有源」：国内访问 OpenLibrary /
+  /// Google Books 都不快，无脑双打会让每次检索耗时翻倍；而中文书恰恰是
+  /// 单源命中少的场景——按需补量既拿到覆盖率，又不动绝大多数查询的耗时。
+  ///
+  /// 单源失败不打断整体（只记首个异常，全无结果才抛）：一个坏源不该把
+  /// 整条检索拖垮。
+  Future<({List<BookSearchResult> results, List<String> sourceNames})>
+      _searchBooksAggregated(DataSourceConfig primary, String q) async {
+    final batches = <List<BookSearchResult>>[];
+    final sourceNames = <String>[];
+    var merged = const <BookSearchResult>[];
+    DataSourceException? failure;
+
+    for (final source in _manager.bookSourcesPrimaryFirst(primary)) {
+      final impl = _manager.bookImplOf(source.type);
+      if (impl == null) continue;
+      // 同类型源 3s 节流：被节流则跳过该源（备用源缺席好过整条检索失败）。
+      // 主源的节流门在 _search 里已拦过，此处对主源必然放行。
+      final last = _lastRequestTime[source.type];
+      if (last != null &&
+          DateTime.now().difference(last) < _minRequestInterval) {
+        continue;
+      }
+      try {
+        final credentials = await _manager.credentialsOf(source);
+        // 必填配置没填全的源直接跳过（省一次注定失败的往返）
+        if (!impl.configFields
+            .isConfigured(config: source.config, credentials: credentials)) {
+          continue;
+        }
+        final results = await impl.searchBooks(
+          q,
+          config: source.config,
+          credentials: credentials,
+        );
+        _lastRequestTime[source.type] = DateTime.now();
+        if (results.isEmpty) continue;
+        batches.add(results);
+        sourceNames.add(source.name);
+        merged = BookResultMerger.mergeAll(batches);
+        if (merged.length >= _bookResultLimit) break;
+      } on DataSourceException catch (e) {
+        failure ??= e;
+      }
+    }
+
+    if (merged.isEmpty && failure != null) throw failure;
+    return (
+      results: merged.take(_bookResultLimit).toList(),
+      sourceNames: sourceNames,
+    );
+  }
 
   /// 按关键词搜索电影（用当前影视默认源）
   Future<void> searchMovies(String query) => _search<MovieSearchResult>(
@@ -270,6 +342,7 @@ class DataSourceProvider extends ChangeNotifier {
     _lastQuery = '';
     _bookResults = null;
     _movieResults = null;
+    _bookSearchSourceNames = const [];
     _searchError = null;
     _isSearching = false;
     _notifyIfAlive();

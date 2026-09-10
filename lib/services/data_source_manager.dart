@@ -64,6 +64,17 @@ class DataSourceManager {
     return null;
   }
 
+  /// 书籍候选源（多源聚合用）：默认源优先，其余按配置顺序殿后。
+  ///
+  /// 列表顺序即聚合优先级——第一个永远是当前默认源，用户换默认源就换主源；
+  /// 「主源结果不足才补备用源」的判定由调用方负责（见 DataSourceProvider）。
+  List<DataSourceConfig> bookSourcesPrimaryFirst(DataSourceConfig primary) => [
+        primary,
+        ..._configs.where(
+          (c) => c.category == DataSourceCategory.book && c.id != primary.id,
+        ),
+      ];
+
   MovieDataSource? movieImplOf(DataSourceType type) => _movieImpls[type];
 
   BookDataSource? bookImplOf(DataSourceType type) => _bookImpls[type];

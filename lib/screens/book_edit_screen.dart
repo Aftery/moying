@@ -1446,11 +1446,17 @@ class _BookEditScreenState extends State<BookEditScreen> {
     final DataSourceProvider? ds = _tryReadDataSource(context);
     final source = ds?.defaultBookSource;
     if (ds == null || source == null) return const [];
+    // 聚合检索时结果可能来自多个源（默认源 + 备用源），如实标注来源，
+    // 不让用户以为手上这条一定出自默认源。
+    final usedSources = ds.bookSearchSourceNames;
+    final sourceLabel = usedSources.length > 1
+        ? '${usedSources.first} 等 ${usedSources.length} 个源'
+        : (usedSources.isNotEmpty ? usedSources.first : source.name);
     return [
       QuickSearchPanel(
         controller: _searchCtrl,
         hint: '输入书名 / 作者，联网搜索并回填',
-        sourceName: source.name,
+        sourceName: sourceLabel,
         isSearching: ds.isSearching,
         error: ds.searchError,
         results: ds.bookResults

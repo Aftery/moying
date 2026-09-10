@@ -180,14 +180,13 @@ class OpenLibraryDataSource implements BookDataSource {
 
   /// 搜索结果条目解析（OpenLibrary docs 结构）
   BookSearchResult _parseDoc(Map<String, dynamic> doc) {
-    final title = (doc['title'] ?? '') as String;
-    final authors = (doc['author_name'] as List? ?? const [])
-        .whereType<String>()
-        .map(_cleanAuthor)
-        .where((a) => a.isNotEmpty)
-        .toList();
-    final publisher =
-        (doc['publisher'] as List? ?? const []).whereType<String>().firstOrNull;
+    final title = _cleanTitle((doc['title'] ?? '') as String);
+    final authors = _expandAuthors(
+      (doc['author_name'] as List? ?? const []).whereType<String>(),
+    );
+    final publisher = _pickPublisher(
+      (doc['publisher'] as List? ?? const []).whereType<String>(),
+    );
     final year = (doc['first_publish_year'] as int?) ??
         (doc['publish_year'] as List? ?? const []).cast<int>().firstOrNull;
     final isbns =
@@ -199,8 +198,9 @@ class OpenLibraryDataSource implements BookDataSource {
     final coverId = doc['cover_i'] as int?;
     final coverUrl = coverId != null ? '$_coverBase/$coverId-M.jpg' : null;
     // 主题词（作品级）：搜索接口直接返回，无需等详情即可回填分类
-    final subjects =
-        (doc['subject'] as List? ?? const []).whereType<String>().toList();
+    final subjects = _cleanSubjects(
+      (doc['subject'] as List? ?? const []).whereType<String>(),
+    );
 
     return BookSearchResult(
       externalId: (doc['key'] ?? doc['work_key'] ?? '') as String,
@@ -242,18 +242,18 @@ class OpenLibraryDataSource implements BookDataSource {
 
   /// 解析作品详情（`works/{id}.json`）
   BookSearchResult _parseWork(Map<String, dynamic> json, String externalId) {
-    final title = (json['title'] ?? '') as String;
+    final title = _cleanTitle((json['title'] ?? '') as String);
     // OpenLibrary work 详情 authors 结构：{"author": {"key": "/authors/OL...W", "name": "..."}}
     // 取 name（不是 key！）—— 否则会回填出 "OL12111758A" 这种 id
-    final authors = (json['authors'] as List? ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .map((a) => (a['author']?['name'] as String?))
-        .whereType<String>()
-        .map(_cleanAuthor)
-        .where((a) => a.isNotEmpty)
-        .toList();
-    final subjects =
-        (json['subjects'] as List? ?? const []).whereType<String>().toList();
+    final authors = _expandAuthors(
+      (json['authors'] as List? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map((a) => a['author']?['name'] as String?)
+          .whereType<String>(),
+    );
+    final subjects = _cleanSubjects(
+      (json['subjects'] as List? ?? const []).whereType<String>(),
+    );
     final yearStr = (json['first_publish_date'] as String?);
     final coverId = json['covers'] as List<dynamic>?;
 
@@ -325,7 +325,7 @@ class OpenLibraryDataSource implements BookDataSource {
     required String fallbackTitle,
   }) {
     final publishers =
-        (e['publishers'] as List? ?? const []).whereType<String>().toList();
+        (e['publishers'] as List? ?? const []).whereType<String>();
     final isbn13 =
         (e['isbn_13'] as List? ?? const []).whereType<String>().toList();
     final isbn10 =
@@ -334,7 +334,7 @@ class OpenLibraryDataSource implements BookDataSource {
       externalId: '', // mergeWith 取 base 的 externalId，此处不消费
       title: fallbackTitle,
       authors: const [],
-      publisher: _nonEmpty(publishers.isEmpty ? null : publishers.first),
+      publisher: _pickPublisher(publishers),
       isbn: isbn13.isNotEmpty
           ? isbn13.first
           : (isbn10.isNotEmpty ? isbn10.first : null),
@@ -365,14 +365,46 @@ class OpenLibraryDataSource implements BookDataSource {
     return trimmed.isEmpty ? null : trimmed;
   }
 
-  /// 作者名清洗：去掉「著 / 编著 / 译」等后缀，并剥掉开头的店铺名。
+  // ---------- 字段清洗（P2 数据质量）----------
+
+  /// 书名清洗：剥掉尾部「（精）/ (平装)」这类装帧后缀。
   ///
-  /// 中文条目常见两种脏数据：
+  /// 电商与版权页常把装帧写进书名（`百年孤独(精)`）。留着既冗余，又会破坏
+  /// 多源聚合的书名去重键——`百年孤独` 与 `百年孤独(精)` 会被当成两本。
+  static String _cleanTitle(String raw) {
+    var s = raw.trim();
+    // 最多剥 3 层，兼容 `百年孤独(精)[精装]` 这类叠加写法
+    for (var i = 0; i < 3; i++) {
+      final stripped = s.replaceFirst(_titleSuffixRe, '').trim();
+      if (stripped == s) break;
+      s = stripped;
+    }
+    return s;
+  }
+
+  /// 作者字段展开 + 清洗：一个字段里可能塞了多个作者或机构。
+  ///
+  /// 中文条目常见三类脏数据：
   /// - `加西亚·马尔克斯 著` → 去掉后缀词；
   /// - `新华书店北美网 加西亚·马尔克斯 著` → 再剥掉以「网 / 书店 / 出版社」
-  ///   结尾的前导片段（电商抓取把店铺名一起塞进了作者字段）。
+  ///   结尾的**前导片段**（电商抓取把店铺名一起塞进了作者字段）；
+  /// - `刘慈欣、某某工作室出品` → 按「，、；」拆成多段，整段是机构的丢弃。
   ///
-  /// 英文作者名不含这类店铺片段，不会被误伤：只有命中店铺后缀才剥离。
+  /// 只按中文标点切分：英文作者是 `Last, First`，按半角逗号切会把名字切碎。
+  static List<String> _expandAuthors(Iterable<String> raw) {
+    final out = <String>[];
+    for (final value in raw) {
+      for (final segment in value.split(_authorSeparatorRe)) {
+        final cleaned = _cleanAuthor(segment);
+        if (cleaned.isEmpty) continue;
+        if (_orgSuffixRe.hasMatch(cleaned)) continue; // 出品 / 公司 / 书店 = 机构
+        out.add(cleaned);
+      }
+    }
+    return out;
+  }
+
+  /// 单个作者片段清洗：去后缀词 + 剥前导店铺名
   static String _cleanAuthor(String raw) {
     var s = raw.trim();
     s = s.replaceAll(_authorSuffixRe, '').trim();
@@ -383,10 +415,83 @@ class OpenLibraryDataSource implements BookDataSource {
     return parts.join(' ').trim();
   }
 
+  /// 主题词清洗：过滤 subject 里的非分类噪音并去重。
+  ///
+  /// 实测噪音形态：控制号 `(OCoLC)123456`、层级词 `Fiction: general`、
+  /// 数字化平台占位词 `Protected DAISY` / `Large type books`。这些直接回填
+  /// 会把「分类」字段冲成一行读不懂的串，也让中文分类映射更容易被带偏。
+  static List<String> _cleanSubjects(Iterable<String> raw) {
+    final out = <String>[];
+    final seen = <String>{};
+    for (final value in raw) {
+      final s = value.trim();
+      if (!_isUsefulSubject(s)) continue;
+      if (!seen.add(s.toLowerCase())) continue;
+      out.add(s);
+    }
+    return out;
+  }
+
+  static bool _isUsefulSubject(String s) {
+    if (s.length < 2) return false;
+    if (_subjectNoiseRe.hasMatch(s)) return false;
+    return !_subjectStopWords.contains(s.toLowerCase());
+  }
+
+  /// 出版社挑选：优先含中日韩文字的条目。
+  ///
+  /// 同一本书的 `publisher(s)` 数组常中英混排（`南海出版公司` +
+  /// `Nanhai Publishing`）。中文书优先取中文条目，回填后可读性更好，
+  /// 也让「出版社」筛选收敛到同一套字符串上。
+  static String? _pickPublisher(Iterable<String> raw) {
+    final cleaned =
+        raw.map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
+    if (cleaned.isEmpty) return null;
+    for (final p in cleaned) {
+      if (_cjkRe.hasMatch(p)) return p;
+    }
+    return cleaned.first;
+  }
+
+  /// 装帧后缀：`(精)` / `（平装）` / `[精装]`（长词优先，避免 `平装` 被 `平` 抢）
+  static final RegExp _titleSuffixRe = RegExp(
+    r'\s*[（(\[][^）)\]]{0,6}(?:精装|平装|简装|软精装|精|平)[）)\]]\s*$',
+  );
+
   static final RegExp _authorSuffixRe =
       RegExp(r'\s*(?:著|编著|主编|编译|译|校注|校订|校)\s*$');
   static final RegExp _spaceRe = RegExp(r'\s+');
   static final RegExp _shopTokenRe = RegExp(r'(网|书店|出版社|图书|商城|专营店)$');
+
+  /// 作者分隔符：只认中文标点（半角逗号是英文 `Last, First` 的一部分）
+  static final RegExp _authorSeparatorRe = RegExp(r'[，、；;]');
+
+  /// 机构后缀：整段命中即丢弃（`XX出品` / `XX文化公司` / `XX书店`）
+  static final RegExp _orgSuffixRe =
+      RegExp(r'(出品|公司|书店|出版社|传媒|文化|影视|集团|工作室|网)$');
+
+  /// 主题词噪音：层级词（含 `:` `=`）、OCLC 控制号
+  static final RegExp _subjectNoiseRe =
+      RegExp(r'[:=]|\(OCoLC', caseSensitive: false);
+
+  /// 主题词泛词黑名单（低频信息、但在 subject 数组里高频出现）
+  static const Set<String> _subjectStopWords = {
+    'general',
+    'accessible book',
+    'protected daisy',
+    'in library',
+    'large type books',
+    'overdrive',
+    'internet archive',
+    'openlibrary',
+    'electronic books',
+    'juvenile literature',
+    'miscellanea',
+  };
+
+  /// 中日韩文字（判断出版社条目是否为中文本）
+  static final RegExp _cjkRe =
+      RegExp(r'[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]');
 
   /// 释放底层 HTTP 客户端连接池
   void close() => _client.close();

@@ -600,7 +600,8 @@ void main() {
       final results =
           await ds.searchBooks('百年孤独', config: const {}, credentials: const {});
 
-      expect(results.single.title, '百年孤独(精)',
+      // 夹具书名带「(精)」装帧后缀：中文没乱码 + 后缀被清洗，一次断言覆盖两件事
+      expect(results.single.title, '百年孤独',
           reason: '必须显式 utf8.decode(bodyBytes)，否则中文变乱码');
     });
   });
@@ -645,6 +646,76 @@ void main() {
           'message',
           allOf(contains('详情接口模板'), isNot(contains('detailUrlTemplate'))),
         )),
+      );
+    });
+  });
+
+  // P2 数据质量：把 OpenLibrary 返回的脏字段在「进入应用」前洗一遍。
+  // 这些脏数据直接回填会让用户看到「Nanhai Publishing House」「Protected DAISY」
+  // 之类的值，或让同一本书因书名带括号而无法在多源聚合时去重。
+  group('OpenLibrary 字段清洗（P2 数据质量）', () {
+    Future<List<BookSearchResult>> searchWith(
+      String docsJson, {
+      String query = '百年孤独',
+    }) async {
+      final mockClient = MockClient(
+        (request) async => http.Response('{"docs":$docsJson}', 200,
+            headers: _utf8Json),
+      );
+      final ds = OpenLibraryDataSource(client: mockClient);
+      return ds.searchBooks(query, config: const {}, credentials: const {});
+    }
+
+    test('出版社中英混排时优先取中文条目', () async {
+      final results = await searchWith(
+        '[{"key":"/works/OL1W","title":"三体",'
+        '"publisher":["Chongqing Publishing House","重庆出版社"]}]',
+      );
+      expect(results.single.publisher, '重庆出版社',
+          reason: '中文书回填英文出版社，用户在表单里对不上');
+    });
+
+    test('无中文条目时回退第一条非空出版社（不返回 null）', () async {
+      final results = await searchWith(
+        '[{"key":"/works/OL1W","title":"The Old Man and the Sea",'
+        '"publisher":["  ","Charles Scribner\'s Sons"]}]',
+      );
+      expect(results.single.publisher, 'Charles Scribner\'s Sons');
+    });
+
+    test('subject 过滤噪音并去重（控制号 / 层级词 / 平台占位词）', () async {
+      final results = await searchWith(
+        '[{"key":"/works/OL1W","title":"百年孤独","subject":['
+        '"Fiction","Fiction: general","(OCoLC)123456","=Series=",'
+        '"Protected DAISY","Fiction","Large type books","Magic realism"]}]',
+      );
+      expect(results.single.categories, ['Fiction', 'Magic realism'],
+          reason: '噪音会冲乱分类字段，重复项也会让映射结果不稳定');
+    });
+
+    test('作者按「，、；」拆分，机构片段整段丢弃', () async {
+      final results = await searchWith(
+        '[{"key":"/works/OL1W","title":"百年孤独","author_name":['
+        '"新华书店北美网 加西亚·马尔克斯 著、新经典文化",'
+        '"刘慈欣、三体工作室出品"]}]',
+      );
+      expect(results.single.authors, ['加西亚·马尔克斯', '刘慈欣'],
+          reason: '「新经典文化」「三体工作室出品」是机构，不是作者；'
+              '前导店铺名与「著」后缀同样要去掉');
+    });
+
+    test('书名剥离装帧后缀，叠加写法也能剥干净', () async {
+      final results = await searchWith(
+        '[{"key":"/works/OL1W","title":"百年孤独(精)"},'
+        '{"key":"/works/OL2W","title":"活着（平装）"},'
+        '{"key":"/works/OL3W","title":"百年孤独(精)[精装]"},'
+        '{"key":"/works/OL4W","title":"三体"},'
+        '{"key":"/works/OL5W","title":"微积分（上册）"}]',
+      );
+      expect(
+        results.map((r) => r.title).toList(),
+        ['百年孤独', '活着', '百年孤独', '三体', '微积分（上册）'],
+        reason: '装帧后缀要去掉，但「（上册）」这类真实副标题不能被误伤',
       );
     });
   });
