@@ -36,7 +36,11 @@ class SmartResponseParser {
     ],
     'author': ['author', 'authors', 'author_name', 'writer', 'creator', '作者'],
     'publisher': ['publisher', 'press', 'publish_house', '出版社'],
-    'year': ['year', 'publish_year', 'pub_year', 'date', '出版年份', '年份'],
+    // pubdate / publish_date 是豆瓣系接口（BookVo 的 @JsonProperty("pubdate")）用的键名
+    'year': [
+      'year', 'publish_year', 'pub_year', 'pubdate', 'publish_date', 'date',
+      '出版年份', '年份',
+    ],
     'isbn': ['isbn', 'isbn13', 'isbn10'],
     'pageCount': ['page_count', 'pages', 'number_of_pages', '页数'],
     'description': [
@@ -147,18 +151,71 @@ class SmartResponseParser {
     return null;
   }
 
+  /// 提取浮点。支持两种写法：
+  /// - 平铺：`"rating": 8.7` / `"rating": "8.7"`
+  /// - 嵌套：豆瓣系接口是 `"rating": {"average": "9.4"}`（simple-boot-douban-api
+  ///   的 BookVo 只塞了 average；搜索接口塞的是 value）
   static double? extractDouble(Map<String, dynamic> obj, List<String> aliases) {
     for (final key in aliases) {
       final v = obj[key];
       if (v is num) return v.toDouble();
-      if (v is String) return double.tryParse(v.trim());
+      if (v is String) {
+        final parsed = double.tryParse(v.trim());
+        if (parsed != null) return parsed;
+      }
+      if (v is Map) {
+        for (final inner in _nestedNumberKeys) {
+          final n = v[inner];
+          if (n is num) return n.toDouble();
+          if (n is String) {
+            final parsed = double.tryParse(n.trim());
+            if (parsed != null) return parsed;
+          }
+        }
+      }
     }
     return null;
   }
 
+  /// 嵌套对象里的数值键名（刻意不含 star_count —— 那是 5 分制星数，
+  /// 与 value/average 的 10 分制不同源，混用会把 9.4 压成 4.7）
+  static const List<String> _nestedNumberKeys = [
+    'average', 'value', 'score', 'rating', 'rate',
+  ];
+
+  /// 剥掉 HTML 标签与实体。
+  ///
+  /// 豆瓣系接口的 `summary` 取的是 innerHTML（`<p>…</p><p>…</p>`），
+  /// 直接回填会把标签写进简介。纯文本入参无损返回。
+  static String stripHtml(String raw) {
+    if (!raw.contains('<') && !raw.contains('&')) return raw;
+    var s = raw
+        .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+        .replaceAll(RegExp(r'</p\s*>', caseSensitive: false), '\n')
+        .replaceAll(RegExp('<[^>]+>'), '')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .replaceAll('&apos;', "'")
+        // &amp; 必须最后解码，否则 "&amp;lt;" 会被二次解码成 "<"
+        .replaceAll('&amp;', '&');
+    s = s.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    s = s.replaceAll(RegExp(r'[ \t]+\n'), '\n');
+    return s.trim();
+  }
+
+  /// 提取字符串并剥掉 HTML 标签（书名/简介这类长文本用：
+  /// 豆瓣搜索页的标题带 <em> 高亮，详情页的 summary 是整段 innerHTML）
+  static String? _extractText(Map<String, dynamic> obj, List<String> aliases) {
+    final s = extractString(obj, aliases);
+    return s == null ? null : stripHtml(s);
+  }
+
   /// 从单条对象解析书籍结果（title 无法识别 → null）
   static BookSearchResult? parseBookItem(Map<String, dynamic> obj) {
-    final title = extractString(obj, _aliases['title']!);
+    final title = _extractText(obj, _aliases['title']!);
     if (title == null || title.isEmpty) return null;
     return BookSearchResult(
       externalId: extractString(obj, _aliases['externalId']!) ??
@@ -171,7 +228,7 @@ class SmartResponseParser {
       pageCount: extractInt(obj, _aliases['pageCount']!),
       coverUrl: extractString(obj, _aliases['cover']!),
       rating: extractRating(obj),
-      description: extractString(obj, _aliases['description']!),
+      description: _extractText(obj, _aliases['description']!),
       // genres 别名表同时覆盖 category / categories / tags / 类型 / 标签；
       // 此前漏传 → 自定义源分类恒空（即使 API 返回了）
       categories: extractList(obj, _aliases['genres']!),
@@ -180,7 +237,7 @@ class SmartResponseParser {
 
   /// 从单条对象解析影视结果（title 无法识别 → null）
   static MovieSearchResult? parseMovieItem(Map<String, dynamic> obj) {
-    final title = extractString(obj, _aliases['title']!);
+    final title = _extractText(obj, _aliases['title']!);
     if (title == null || title.isEmpty) return null;
     return MovieSearchResult(
       externalId: extractString(obj, _aliases['externalId']!) ??
@@ -192,7 +249,7 @@ class SmartResponseParser {
       genres: extractList(obj, _aliases['genres']!),
       posterUrl: extractString(obj, _aliases['cover']!),
       rating: extractRating(obj),
-      overview: extractString(obj, _aliases['description']!),
+      overview: _extractText(obj, _aliases['description']!),
       runtimeMinutes: extractInt(obj, _aliases['runtime']!),
     );
   }

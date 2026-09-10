@@ -719,4 +719,110 @@ void main() {
       );
     });
   });
+
+  // 豆瓣系自建代理（simple-boot-douban-api 一类）的对接缺口：
+  // 年份键名是 pubdate、rating 是嵌套对象、summary 取的是 innerHTML。
+  group('自定义源 · 豆瓣系接口适配', () {
+    test('pubdate 识别为出版年份（豆瓣 BookVo 的键名）', () {
+      final r = SmartResponseParser.parseBookItem(
+        {'title': '政治的逻辑', 'pubdate': '2016-10'},
+      );
+      expect(r!.year, 2016,
+          reason: '豆瓣系接口用 pubdate，别名表缺它会让年份永远回填不上');
+    });
+
+    test('rating 支持嵌套对象取值（average / value），平铺写法不受影响', () {
+      expect(
+        SmartResponseParser.parseBookItem(
+          {'title': 'a', 'rating': {'average': '9.4'}},
+        )!.rating,
+        closeTo(4.7, 1e-9),
+        reason: '豆瓣是 10 分制，进入应用前要折算成 5 分制',
+      );
+      expect(
+        SmartResponseParser.parseBookItem(
+          {'title': 'b', 'rating': {'value': 8.3}},
+        )!.rating,
+        closeTo(4.15, 1e-9),
+      );
+      expect(
+        SmartResponseParser.parseBookItem({'title': 'c', 'rating': 4.2})!.rating,
+        4.2,
+      );
+    });
+
+    test('嵌套 rating 只有 star_count 时不猜（5 分制星数不能当 10 分制用）', () {
+      final r = SmartResponseParser.parseBookItem({
+        'title': 'd',
+        'rating': {'star_count': 5, 'count': 103088},
+      });
+      expect(r!.rating, isNull,
+          reason: 'star_count 是 5 分制星数，误当 value 会把 5 压成 2.5');
+    });
+
+    test('简介剥掉 HTML 标签，实体按正确顺序解码', () {
+      expect(
+        SmartResponseParser.parseBookItem({
+          'title': 'e',
+          'summary': '<p>第一段</p><p>第二段<br/>第三行</p>',
+        })!.description,
+        '第一段\n第二段\n第三行',
+      );
+      expect(
+        SmartResponseParser.stripHtml('<p>3 &lt; 5 &amp; 6 &gt; 4</p>'),
+        '3 < 5 & 6 > 4',
+      );
+      expect(SmartResponseParser.stripHtml('A &amp;lt; B'), 'A &lt; B',
+          reason: '&amp; 必须最后解码，否则二次解码会把 &amp;lt; 变成 <');
+      expect(SmartResponseParser.stripHtml('纯文本简介'), '纯文本简介',
+          reason: '不含标签/实体时原样返回，不能误伤正文');
+    });
+
+    test('书名带 <em> 高亮标记时剥掉标签', () {
+      final r = SmartResponseParser.parseBookItem(
+        {'title': '深<em>入</em>理解计算机系统'},
+      );
+      expect(r!.title, '深入理解计算机系统');
+    });
+
+    test('真实 BookVo 条目端到端回填（搜索接口返回的就是完整对象）', () {
+      final items = SmartResponseParser.findFirstList({
+        'success': true,
+        'message': null,
+        'books': [
+          {
+            'id': '26807576',
+            'title': '深入理解计算机系统（原书第3版）',
+            'author': ['兰德尔 E. 布莱恩特', '大卫 R. 奥哈拉伦'],
+            'publisher': '机械工业出版社',
+            'pubdate': '2016-11',
+            'isbn13': '9787111544937',
+            'pages': '737',
+            'summary': '<p>经典教材。</p>',
+            'image': 'http://192.168.1.5:8085/view/cover?cover=https%3A%2F%2Fa.jpg',
+            'tags': [
+              {'name': '计算机', 'title': '计算机'},
+              {'name': '操作系统'},
+            ],
+            'rating': {'average': '9.5'},
+          }
+        ],
+      });
+      expect(items, hasLength(1), reason: 'books 在列表容器白名单里，必须能定位到');
+
+      final r = SmartResponseParser.parseBookItem(items!.first)!;
+      expect(r.title, '深入理解计算机系统（原书第3版）');
+      expect(r.authors, ['兰德尔 E. 布莱恩特', '大卫 R. 奥哈拉伦']);
+      expect(r.publisher, '机械工业出版社');
+      expect(r.year, 2016);
+      expect(r.isbn, '9787111544937');
+      expect(r.pageCount, 737);
+      expect(r.description, '经典教材。');
+      expect(r.coverUrl, startsWith('http://192.168.1.5:8085/view/cover'));
+      expect(r.categories, ['计算机', '操作系统'],
+          reason: '豆瓣标签是中文，直接可用（不像 OpenLibrary 要再映射）');
+      expect(r.rating, closeTo(4.75, 1e-9));
+      expect(r.externalId, '26807576');
+    });
+  });
 }
