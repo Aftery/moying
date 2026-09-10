@@ -172,6 +172,9 @@ class SmartResponseParser {
       coverUrl: extractString(obj, _aliases['cover']!),
       rating: extractRating(obj),
       description: extractString(obj, _aliases['description']!),
+      // genres 别名表同时覆盖 category / categories / tags / 类型 / 标签；
+      // 此前漏传 → 自定义源分类恒空（即使 API 返回了）
+      categories: extractList(obj, _aliases['genres']!),
     );
   }
 
@@ -355,6 +358,11 @@ class CustomBookDataSource extends _CustomDataSourceBase
           hint: '选填，走 Bearer 头与 ?key= 参数',
           isSecret: true,
         ),
+        ConfigField(
+          key: 'detailUrlTemplate',
+          label: '详情接口模板',
+          hint: '选填，如 https://api.example.com/book/{id}；不填则跳过详情补全',
+        ),
       ];
 
   @override
@@ -406,7 +414,9 @@ class CustomBookDataSource extends _CustomDataSourceBase
   }) async {
     final template = (config['detailUrlTemplate'] as String? ?? '').trim();
     if (template.isEmpty) {
-      throw const DataSourceException('未配置详情接口模板（detailUrlTemplate）');
+      throw const DataSourceException(
+        '该数据源未配置「详情接口模板」，简介 / 页数等字段需由详情接口补全',
+      );
     }
     final url = template.replaceAll('{id}', Uri.encodeComponent(externalId));
     final json = await _getJson(url, credentials: credentials);

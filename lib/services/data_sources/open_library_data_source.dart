@@ -42,6 +42,10 @@ class OpenLibraryDataSource implements BookDataSource {
   /// 版本列表取前 N 条挑选（只解析最完整的那条，不逐条深挖）
   static const int _editionScanLimit = 10;
 
+  /// 搜索接口对 `q` 的最小长度要求（新版后端，实测 <3 直接 400）。
+  /// 中文两字书名（《三体》《活着》《围城》…）因此会被整条拒绝。
+  static const int _minQueryLength = 3;
+
   @override
   DataSourceType get type => DataSourceType.openLibrary;
 
@@ -63,10 +67,13 @@ class OpenLibraryDataSource implements BookDataSource {
       throw const DataSourceException('网络请求失败，请检查网络连接');
     }
     if (resp.statusCode != 200) {
-      throw DataSourceException('OpenLibrary 接口异常（HTTP ${resp.statusCode}）');
+      throw DataSourceException(_httpError(resp));
     }
     try {
-      final root = jsonDecode(resp.body);
+      // 显式按 UTF-8 解码：`resp.body` 在响应头缺 charset 时按 latin1 解，
+      // 会把中文书名解成乱码（latin1 对任意字节都有映射，不会抛异常）。
+      final root =
+          jsonDecode(utf8.decode(resp.bodyBytes, allowMalformed: true));
       if (root is! Map<String, dynamic>) {
         throw const DataSourceException('OpenLibrary 返回格式异常');
       }
@@ -74,6 +81,52 @@ class OpenLibraryDataSource implements BookDataSource {
     } on FormatException {
       throw const DataSourceException('OpenLibrary 返回内容解析失败');
     }
+  }
+
+  /// 非 200 响应的用户可见文案。
+  ///
+  /// OpenLibrary 新版后端用 FastAPI 风格报错
+  /// （`{"detail":[{"msg":"Query too short, …, must be at least 3 characters"}]}`），
+  /// 直接把「HTTP 400」抛给用户完全看不出原因，这里取出原文并做中文归一。
+  static String _httpError(http.Response resp) {
+    final msg = _detailMessage(resp.bodyBytes);
+    if (msg == null) return 'OpenLibrary 接口异常（HTTP ${resp.statusCode}）';
+    if (msg.toLowerCase().contains('too short')) {
+      return '搜索词太短：OpenLibrary 要求至少 $_minQueryLength 个字符，'
+          '请补充作者名或改用 ISBN 检索';
+    }
+    return 'OpenLibrary 接口异常：$msg';
+  }
+
+  /// 从错误响应体提取可读信息
+  /// （`detail[].msg` / `detail` 字符串 / `message` / `error`）；
+  /// 非 JSON 错误页（如网关 HTML）返回 null，调用方回退通用文案。
+  static String? _detailMessage(List<int> bodyBytes) {
+    Object? root;
+    try {
+      root = jsonDecode(utf8.decode(bodyBytes, allowMalformed: true));
+    } on FormatException {
+      return null;
+    }
+    if (root is! Map<String, dynamic>) return null;
+    final detail = root['detail'];
+    if (detail is List) {
+      for (final entry in detail) {
+        final msg = switch (entry) {
+          String s => s.trim(),
+          Map m when m['msg'] is String => (m['msg'] as String).trim(),
+          _ => '',
+        };
+        if (msg.isNotEmpty) return msg;
+      }
+    } else if (detail is String && detail.trim().isNotEmpty) {
+      return detail.trim();
+    }
+    for (final key in const ['message', 'error']) {
+      final value = root[key];
+      if (value is String && value.trim().isNotEmpty) return value.trim();
+    }
+    return null;
   }
 
   @override
@@ -92,12 +145,31 @@ class OpenLibraryDataSource implements BookDataSource {
     required Map<String, String> credentials,
     int limit = 10,
   }) async {
+    final q = query.trim();
+    if (q.isEmpty) return const [];
+
+    // 短查询兜底：新版搜索后端要求 `q` ≥ [_minQueryLength] 个字符，
+    // 两字中文书名 / 作者名会被整条拒绝（HTTP 400）。
+    // 改用字段查询绕过长度校验：先按书名（用户多数在搜书名），
+    // 书名无命中再按作者（莫言 / 余华 / 韩寒 这类两字作者名）。
+    if (q.length < _minQueryLength) {
+      final byTitle = await _query({'title': q}, limit: limit);
+      if (byTitle.isNotEmpty) return byTitle;
+      return _query({'author': q}, limit: limit);
+    }
+    return _query({'q': q}, limit: limit);
+  }
+
+  /// 单次搜索请求（统一补 `limit` 与 `fields`，解析 `docs`）
+  Future<List<BookSearchResult>> _query(
+    Map<String, String> params, {
+    required int limit,
+  }) async {
     final json = await _getJson(_searchUrl, {
-      'q': query,
+      ...params,
       'limit': '$limit',
       'fields': _searchFields,
     });
-
     final docs = json['docs'] as List? ?? const [];
     return docs
         .whereType<Map<String, dynamic>>()

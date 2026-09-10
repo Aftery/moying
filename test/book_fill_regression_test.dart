@@ -10,12 +10,15 @@
 // - BookSearchResult.mergeWith 合并语义
 // - onPick 调用方走 mergeWith 而非 ??
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:moying/models/book.dart';
 import 'package:moying/models/data_source.dart';
 import 'package:moying/services/book_category_mapper.dart';
+import 'package:moying/services/data_sources/custom_data_source.dart';
 import 'package:moying/services/data_sources/open_library_data_source.dart';
 
 /// 中文 mock 响应必须声明 UTF-8：`http.Response` 默认按 latin1 编码，
@@ -441,6 +444,208 @@ void main() {
         expect(kBookCategories, contains(BookCategoryMapper.map([s])),
             reason: '$s 映射结果必须是本地分类体系的成员');
       }
+    });
+  });
+
+  group('OpenLibrary 短查询兜底（新版后端 q ≥3 字符）', () {
+    test('两字中文书名改走 title= 参数（不再被 400 拒绝）', () async {
+      final requests = <Uri>[];
+      final mockClient = MockClient((request) async {
+        requests.add(request.url);
+        return http.Response(
+          '{"docs":[{"key":"/works/OL1W","title":"三体"}]}',
+          200,
+          headers: _utf8Json,
+        );
+      });
+
+      final ds = OpenLibraryDataSource(client: mockClient);
+      final results =
+          await ds.searchBooks('三体', config: const {}, credentials: const {});
+
+      final params = requests.single.queryParameters;
+      expect(params.containsKey('q'), isFalse,
+          reason: '短查询必须改用字段查询，否则服务端直接 400');
+      expect(params['title'], '三体');
+      expect(params['fields'], isNotNull, reason: 'fields 显式声明不能丢');
+      expect(results.single.title, '三体');
+    });
+
+    test('≥3 字符查询仍走 q=（不改变原有语义）', () async {
+      Uri? captured;
+      final mockClient = MockClient((request) async {
+        captured = request.url;
+        return http.Response('{"docs":[]}', 200, headers: _utf8Json);
+      });
+
+      final ds = OpenLibraryDataSource(client: mockClient);
+      await ds.searchBooks('百年孤独', config: const {}, credentials: const {});
+
+      final params = captured!.queryParameters;
+      expect(params['q'], '百年孤独');
+      expect(params.containsKey('title'), isFalse);
+    });
+
+    test('两字作者名：书名无命中时回退按 author 查（莫言 → 生死疲劳）', () async {
+      final requests = <Uri>[];
+      final mockClient = MockClient((request) async {
+        requests.add(request.url);
+        // 第一跳（title=莫言）无命中，第二跳（author=莫言）命中
+        if (request.url.queryParameters.containsKey('author')) {
+          return http.Response(
+            '{"docs":[{"key":"/works/OL5820617W","title":"生死疲劳",'
+            '"author_name":["莫言"],"first_publish_year":2006}]}',
+            200,
+            headers: _utf8Json,
+          );
+        }
+        return http.Response('{"docs":[]}', 200, headers: _utf8Json);
+      });
+
+      final ds = OpenLibraryDataSource(client: mockClient);
+      final results =
+          await ds.searchBooks('莫言', config: const {}, credentials: const {});
+
+      expect(requests, hasLength(2), reason: '书名未命中才发起作者查询');
+      expect(requests.first.queryParameters['title'], '莫言');
+      expect(requests.last.queryParameters['author'], '莫言');
+      expect(results.single.title, '生死疲劳');
+      expect(results.single.authors, ['莫言']);
+    });
+
+    test('短查询书名命中时不再补作者请求（省一次往返）', () async {
+      var count = 0;
+      final mockClient = MockClient((request) async {
+        count++;
+        return http.Response(
+          '{"docs":[{"key":"/works/OL1W","title":"三体","author_name":["刘慈欣"]}]}',
+          200,
+          headers: _utf8Json,
+        );
+      });
+
+      final ds = OpenLibraryDataSource(client: mockClient);
+      final results =
+          await ds.searchBooks('三体', config: const {}, credentials: const {});
+
+      expect(count, 1, reason: '命中就不该再打第二个请求（国内弱网下很关键）');
+      expect(results.single.title, '三体');
+    });
+
+    test('空白查询直接返回空，不发网络请求', () async {
+      var called = false;
+      final mockClient = MockClient((request) async {
+        called = true;
+        return http.Response('{"docs":[]}', 200, headers: _utf8Json);
+      });
+
+      final ds = OpenLibraryDataSource(client: mockClient);
+      final results =
+          await ds.searchBooks('   ', config: const {}, credentials: const {});
+
+      expect(results, isEmpty);
+      expect(called, isFalse, reason: '空查询不该产生请求');
+    });
+  });
+
+  group('OpenLibrary 错误文案化', () {
+    test('4xx 解析 detail[].msg 并中文化（不再裸露 HTTP 400）', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response.bytes(
+          utf8.encode('{"detail":[{"type":"value_error","loc":["query","q"],'
+              '"msg":"Value error, Query too short, must be at least 3 characters"}]}'),
+          400,
+          headers: _utf8Json,
+        );
+      });
+
+      final ds = OpenLibraryDataSource(client: mockClient);
+      await expectLater(
+        ds.searchBooks('百年孤独', config: const {}, credentials: const {}),
+        throwsA(isA<DataSourceException>().having(
+          (e) => e.message,
+          'message',
+          allOf(contains('至少 3 个字符'), isNot(contains('HTTP 400'))),
+        )),
+      );
+    });
+
+    test('非 JSON 错误页回退通用文案（保留状态码便于排查）', () async {
+      final mockClient = MockClient(
+        (request) async => http.Response('<html>502 Bad Gateway</html>', 502),
+      );
+
+      final ds = OpenLibraryDataSource(client: mockClient);
+      await expectLater(
+        ds.searchBooks('百年孤独', config: const {}, credentials: const {}),
+        throwsA(isA<DataSourceException>().having(
+          (e) => e.message,
+          'message',
+          contains('HTTP 502'),
+        )),
+      );
+    });
+
+    test('响应缺 charset 时仍按 UTF-8 解码（中文不乱码）', () async {
+      final mockClient = MockClient((request) async {
+        // 关键：content-type 不带 charset —— http 包的 body getter 会按 latin1 解
+        return http.Response.bytes(
+          utf8.encode('{"docs":[{"key":"/works/OL1W","title":"百年孤独(精)"}]}'),
+          200,
+          headers: const {'content-type': 'application/json'},
+        );
+      });
+
+      final ds = OpenLibraryDataSource(client: mockClient);
+      final results =
+          await ds.searchBooks('百年孤独', config: const {}, credentials: const {});
+
+      expect(results.single.title, '百年孤独(精)',
+          reason: '必须显式 utf8.decode(bodyBytes)，否则中文变乱码');
+    });
+  });
+
+  group('自定义源缺口修复', () {
+    test('parseBookItem 映射 categories（tags / category 别名）', () {
+      final byTags = SmartResponseParser.parseBookItem(
+        {'title': '三体', 'tags': ['科幻', '中国文学']},
+      );
+      expect(byTags!.categories, ['科幻', '中国文学']);
+
+      final byCategory = SmartResponseParser.parseBookItem(
+        {'title': '活着', 'category': '文学,当代'},
+      );
+      expect(byCategory!.categories, ['文学', '当代']);
+
+      final none = SmartResponseParser.parseBookItem({'title': '无分类'});
+      expect(none!.categories, isEmpty);
+    });
+
+    test('自定义书籍源声明 detailUrlTemplate 配置项（UI 可填）', () {
+      final ds = CustomBookDataSource();
+      final field = ds.configFields
+          .where((f) => f.key == 'detailUrlTemplate')
+          .toList(growable: false);
+      expect(field, hasLength(1),
+          reason: 'getBookDetail 会读取该配置，UI 必须有入口，否则详情永远拿不到');
+      expect(field.single.required, isFalse,
+          reason: '非必填：不填只跳过详情补全，不该阻止保存');
+    });
+
+    test('未配置详情模板时给出可读提示（而非变量名）', () async {
+      final ds = CustomBookDataSource();
+      await expectLater(
+        ds.getBookDetail(
+          '1',
+          config: const {'baseUrl': 'https://api.example.com'},
+          credentials: const {},
+        ),
+        throwsA(isA<DataSourceException>().having(
+          (e) => e.message,
+          'message',
+          allOf(contains('详情接口模板'), isNot(contains('detailUrlTemplate'))),
+        )),
+      );
     });
   });
 }
