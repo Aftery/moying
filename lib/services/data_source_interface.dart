@@ -70,7 +70,9 @@ abstract class BookDataSource {
   });
 
   /// 书籍详情（分类 / 简介 / 页数补全——搜索接口常缺失这些字段）；
-  /// 不支持详情的源抛 [DataSourceException]，调用方回退用搜索结果回填
+  /// 不支持详情的源抛 [DataSourceException]，调用方回退用搜索结果回填；
+  /// 「本就不支持 / 未配置」属能力缺失，须带 `silent: true`
+  /// （区分于网络失败——后者要提示用户，前者不该报错）
   Future<BookSearchResult> getBookDetail(
     String externalId, {
     required Map<String, dynamic> config,
@@ -98,7 +100,9 @@ abstract class MovieDataSource {
   });
 
   /// 电影详情（导演 / 主演 / 片长 / 类型补全——搜索接口常缺失这些字段）；
-  /// 不支持详情的源抛 [DataSourceException]，调用方回退用搜索结果回填
+  /// 不支持详情的源抛 [DataSourceException]，调用方回退用搜索结果回填；
+  /// 「本就不支持 / 未配置」属能力缺失，须带 `silent: true`
+  /// （区分于网络失败——后者要提示用户，前者不该报错）
   Future<MovieSearchResult> getMovieDetail(
     String externalId, {
     required Map<String, dynamic> config,

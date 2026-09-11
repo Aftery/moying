@@ -825,4 +825,58 @@ void main() {
       expect(r.externalId, '26807576');
     });
   });
+
+  // 详情补全的「能力缺失」与「真实失败」必须可区分：
+  // 源没配详情接口 / 本就不支持详情 → 搜索结果已经够用，弹「补全失败」是误报。
+  group('详情能力缺失标记（silent）', () {
+    test('自定义书籍源未配置详情模板 → silent 异常', () async {
+      final ds = CustomBookDataSource();
+      addTearDown(ds.close);
+
+      await expectLater(
+        ds.getBookDetail(
+          '1',
+          config: const <String, dynamic>{},
+          credentials: const <String, String>{},
+        ),
+        throwsA(isA<DataSourceException>()
+            .having((e) => e.silent, 'silent', isTrue)
+            .having((e) => e.message, 'message', contains('详情接口模板'))),
+      );
+    });
+
+    test('自定义影视源本就无详情 → silent 异常', () async {
+      final ds = CustomMovieDataSource();
+      addTearDown(ds.close);
+
+      await expectLater(
+        ds.getMovieDetail(
+          '1',
+          config: const <String, dynamic>{},
+          credentials: const <String, String>{},
+        ),
+        throwsA(isA<DataSourceException>()
+            .having((e) => e.silent, 'silent', isTrue)),
+      );
+    });
+
+    test('配了详情模板但请求失败 → 非 silent（这是真失败，必须提示）', () async {
+      final ds = CustomBookDataSource(
+        client: MockClient((_) async => http.Response('boom', 500)),
+      );
+      addTearDown(ds.close);
+
+      await expectLater(
+        ds.getBookDetail(
+          '1',
+          config: const <String, dynamic>{
+            'detailUrlTemplate': 'https://x.test/book/{id}',
+          },
+          credentials: const <String, String>{},
+        ),
+        throwsA(isA<DataSourceException>()
+            .having((e) => e.silent, 'silent', isFalse)),
+      );
+    });
+  });
 }

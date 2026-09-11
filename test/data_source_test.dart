@@ -60,6 +60,14 @@ class _FakeBookSource implements BookDataSource {
 
   final List<String> queries = [];
 
+  /// 详情抛出的异常（null = 正常返回）；用于验证 silent 与非 silent 两条路径
+  DataSourceException? detailError;
+
+  /// getBookDetail 实际被调用次数。
+  /// 断言它 > 0 才能证明用例真的走到了详情通道——否则一旦 Provider 侧
+  /// 加了「跳过冗余详情」这类闸门，用例会「静默地」不再覆盖目标分支。
+  int detailCalls = 0;
+
   @override
   Future<bool> testConnection({
     required Map<String, dynamic> config,
@@ -75,6 +83,12 @@ class _FakeBookSource implements BookDataSource {
     int limit = 10,
   }) async {
     queries.add(query);
+    // 形态刻意对齐真实搜索接口：只带列表页会展示的字段（书名/作者/出版社/年份/
+    // ISBN/封面），页数 / 简介 / 分类 / 评分留给详情补全。
+    //
+    // 「字段全满」会踩到 Provider 的「两跳压一跳」判定（见 bookDetailIsRedundant）
+    // ——那时详情请求会被整条跳过，下面验证 silent / 非 silent 的用例就跑不到
+    // getBookDetail 了；所以这里必须保留至少一项待补字段。
     return const [
       BookSearchResult(
         externalId: 'gb-1',
@@ -83,11 +97,7 @@ class _FakeBookSource implements BookDataSource {
         publisher: '重庆出版社',
         year: 2008,
         isbn: '9787536692930',
-        pageCount: 302,
         coverUrl: 'https://example.com/cover.jpg',
-        rating: 4.5,
-        description: '文化大革命期间……',
-        categories: ['科幻', '小说'],
       ),
     ];
   }
@@ -97,15 +107,19 @@ class _FakeBookSource implements BookDataSource {
     String externalId, {
     required Map<String, dynamic> config,
     required Map<String, String> credentials,
-  }) async =>
-      const BookSearchResult(
-        externalId: 'gb-1',
-        title: '三体',
-        authors: ['刘慈欣'],
-        pageCount: 302,
-        description: '文化大革命期间……',
-        categories: ['科幻', '小说'],
-      );
+  }) async {
+    detailCalls++;
+    final err = detailError;
+    if (err != null) throw err;
+    return const BookSearchResult(
+      externalId: 'gb-1',
+      title: '三体',
+      authors: ['刘慈欣'],
+      pageCount: 302,
+      description: '文化大革命期间……',
+      categories: ['科幻', '小说'],
+    );
+  }
 }
 
 class _FakeMovieSource implements MovieDataSource {
@@ -464,6 +478,46 @@ void main() {
       // 详情失败返回 null，调用方用搜索结果回填
       expect(detail, isNull);
       expect(provider.searchError, isNull);
+    });
+
+    test('详情仅能力缺失（silent）→ 不写 lastDetailError，不误报', () async {
+      final book = _FakeBookSource()
+        ..detailError = const DataSourceException(
+          '该数据源未配置「详情接口模板」',
+          silent: true,
+        );
+      final provider = DataSourceProvider(
+        manager: _managerWithFakes(book: book),
+      );
+      await provider.init();
+
+      await provider.searchBooks('三体');
+      final detail =
+          await provider.fetchBookDetail(provider.bookResults!.first);
+
+      expect(detail, isNull, reason: '仍然回退搜索结果');
+      expect(book.detailCalls, 1,
+          reason: '必须真的走到详情通道，否则这个用例什么也没验证');
+      expect(provider.lastDetailError, isNull,
+          reason: '能力缺失不是失败——详情拿不到也不该弹「补全失败」');
+    });
+
+    test('详情真实失败（非 silent）→ 写入 lastDetailError，必须提示', () async {
+      final book = _FakeBookSource()
+        ..detailError = const DataSourceException('详情接口超时，请稍后重试');
+      final provider = DataSourceProvider(
+        manager: _managerWithFakes(book: book),
+      );
+      await provider.init();
+
+      await provider.searchBooks('三体');
+      final detail =
+          await provider.fetchBookDetail(provider.bookResults!.first);
+
+      expect(detail, isNull);
+      expect(book.detailCalls, 1,
+          reason: '必须真的走到详情通道，否则这个用例什么也没验证');
+      expect(provider.lastDetailError, '详情接口超时，请稍后重试');
     });
 
     test('缺凭据检测：填了凭据后不再命中', () async {

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../config/app_palette.dart';
 import '../models/media_ref.dart';
 import '../providers/library_provider.dart';
+import '../services/cover_headers.dart';
 import 'cover_placeholder.dart';
 
 /// 媒体图三态展示组件（Book 封面 / Movie 海报 / Actor 头像共用）
@@ -103,6 +104,8 @@ class MediaCover extends StatelessWidget {
         network,
         fit: BoxFit.cover,
         cacheWidth: 300,
+        // 豆瓣图床有反盗链：不带 Referer 一律 418（详见 coverHeadersFor）
+        headers: coverHeadersFor(network),
         errorBuilder: (_, __, ___) => fallback,
       );
     }

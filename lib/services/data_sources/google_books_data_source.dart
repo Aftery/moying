@@ -1,27 +1,27 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
 import '../../models/data_source.dart';
 import '../data_source_interface.dart';
+import '../http_retry.dart';
 
 /// Google Books 书籍数据源（免 API Key，开箱即用）
 ///
 /// Books API v1 公开端点：搜索 `/volumes?q=`、详情 `/volumes/{id}`、
-/// 连通性 `/volumes?q=flutter&maxResults=1`。无必填配置；
-/// 可选 `country` 参数（部分网络环境缺失时接口返回 403）。
+/// 连通性 `/volumes?q=flutter&maxResults=1`。无必填配置。
+///
+/// 两个**选填**项：
+/// - `country`：部分网络环境缺失时接口返回 403，填 US / CN 可解；
+/// - `baseUrl`：国内直连 `googleapis.com` 常不可达，可填自建反代地址。
 class GoogleBooksDataSource implements BookDataSource {
   GoogleBooksDataSource({http.Client? client})
       : _client = client ?? http.Client();
 
   final http.Client _client;
 
-  static const String _baseUrl = 'https://www.googleapis.com/books/v1';
-
-  /// 请求超时（H3：弱网下不设超时会让 UI 永久转圈，无任何恢复路径）
-  static const Duration _kTimeout = Duration(seconds: 15);
-  static Never _onTimeout() =>
-      throw const DataSourceException('请求超时，请检查网络连接后重试');
+  static const String _defaultBaseUrl = 'https://www.googleapis.com/books/v1';
 
   @override
   DataSourceType get type => DataSourceType.googleBooks;
@@ -33,21 +33,36 @@ class GoogleBooksDataSource implements BookDataSource {
           label: '国家代码',
           hint: '接口 403 时填写，如 US / CN',
         ),
+        ConfigField(
+          key: 'baseUrl',
+          label: 'API 地址',
+          hint: '选填，默认 https://www.googleapis.com/books/v1（国内可填自建反代）',
+        ),
       ];
+
+  /// 接口前缀（去尾斜杠）。空 / 未配置 → 官方地址。
+  ///
+  /// 浏览器地址栏复制来的地址常带尾斜杠，不去掉会拼成 `/volumes//volumes`。
+  static String _baseUrlOf(Map<String, dynamic> config) {
+    final raw = config['baseUrl']?.toString().trim() ?? '';
+    if (raw.isEmpty) return _defaultBaseUrl;
+    return raw.endsWith('/') ? raw.substring(0, raw.length - 1) : raw;
+  }
 
   /// 拉取 JSON（网络失败 / 非 200 / 解析失败统一抛 [DataSourceException]）
   Future<Map<String, dynamic>> _getJson(
+    String base,
     String path,
     Map<String, String> query,
   ) async {
-    final uri = Uri.parse('$_baseUrl$path').replace(queryParameters: query);
+    final uri = Uri.parse('$base$path').replace(queryParameters: query);
     late final http.Response resp;
     try {
-      resp = await _client
-          .get(uri)
-          .timeout(_kTimeout, onTimeout: _onTimeout);
-    } on DataSourceException {
-      rethrow;
+      // 分层超时 + 一次重试（见 http_retry.dart）：首跳 6s，重试跳 9s，
+      // 最坏耗时与原来的单次 15s 基本持平
+      resp = await getWithRetry(_client, uri);
+    } on TimeoutException {
+      throw const DataSourceException('请求超时，请检查网络连接后重试');
     } on Exception catch (_) {
       throw const DataSourceException('网络请求失败，请检查网络连接');
     }
@@ -65,7 +80,7 @@ class GoogleBooksDataSource implements BookDataSource {
       throw DataSourceException('Google Books 接口异常（HTTP ${resp.statusCode}）');
     }
     try {
-      final root = jsonDecode(resp.body);
+      final root = jsonDecode(utf8.decode(resp.bodyBytes, allowMalformed: true));
       if (root is! Map<String, dynamic>) {
         throw const DataSourceException('Google Books 返回格式异常');
       }
@@ -80,7 +95,7 @@ class GoogleBooksDataSource implements BookDataSource {
     required Map<String, dynamic> config,
     required Map<String, String> credentials,
   }) async {
-    final json = await _getJson('/volumes', {
+    final json = await _getJson(_baseUrlOf(config), '/volumes', {
       'q': 'flutter',
       'maxResults': '1',
       ..._countryQuery(config),
@@ -95,7 +110,7 @@ class GoogleBooksDataSource implements BookDataSource {
     required Map<String, String> credentials,
     int limit = 10,
   }) async {
-    final json = await _getJson('/volumes', {
+    final json = await _getJson(_baseUrlOf(config), '/volumes', {
       'q': query,
       'maxResults': '$limit',
       'printType': 'books',
@@ -154,7 +169,7 @@ class GoogleBooksDataSource implements BookDataSource {
     required Map<String, dynamic> config,
     required Map<String, String> credentials,
   }) async {
-    final json = await _getJson('/volumes/$externalId', {
+    final json = await _getJson(_baseUrlOf(config), '/volumes/$externalId', {
       ..._countryQuery(config),
     });
     return _parseVolume(json);

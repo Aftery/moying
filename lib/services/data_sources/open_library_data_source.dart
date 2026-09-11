@@ -1,17 +1,18 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
 import '../../models/data_source.dart';
 import '../data_source_interface.dart';
+import '../http_retry.dart';
 
 /// OpenLibrary 书籍数据源（免 API Key，开箱即用，无 429 限制）
 ///
-/// - 搜索：`https://openlibrary.org/search.json?q={query}&limit={limit}`
-/// - 封面：`https://covers.openlibrary.org/b/id/{cover_id}-M.jpg`（支持 L/M/S）
-/// - 作品：`https://openlibrary.org/works/{olid}.json`（作者/主题/描述等）
-/// - 版本：`https://openlibrary.org/works/{olid}/editions.json`（出版社/ISBN/页数）
-/// - 无需 API Key，无严格速率限制，适合国内网络环境
+/// - 搜索：`{api}/search.json?q={query}&limit={limit}`
+/// - 封面：`{coverBase}/{cover_id}-M.jpg`（支持 L/M/S）
+/// - 作品：`{api}/works/{olid}.json`（作者/主题/描述等）
+/// - 版本：`{api}/works/{olid}/editions.json`（出版社/ISBN/页数）
 ///
 /// **两级数据的分工**（对应 OpenLibrary 的数据模型，也是本类串联两个接口的原因）：
 /// - *work（作品）*只有跨版本共享的信息：主题、简介、封面；
@@ -19,25 +20,15 @@ import '../data_source_interface.dart';
 ///
 /// 搜索接口返回作品级字段（含 `subject` 主题词），
 /// 所以 [getBookDetail] = 作品详情（主题 / 简介）+ 版本详情（出版社 / ISBN / 页数）。
+///
+/// **接口地址可替换**（`baseUrl` / `coverBaseUrl`，均选填）：国内直连
+/// openlibrary.org 常需数秒甚至超时，用户可自建反代（Cloudflare Worker /
+/// 轻量 VPS）后把地址填进来；不填即走官方地址，行为与加配置前完全一致。
 class OpenLibraryDataSource implements BookDataSource {
   OpenLibraryDataSource({http.Client? client})
       : _client = client ?? http.Client();
 
   final http.Client _client;
-
-  static const String _searchUrl = 'https://openlibrary.org/search.json';
-  static const String _coverBase = 'https://covers.openlibrary.org/b/id';
-  static const String _workBase = 'https://openlibrary.org/works';
-
-  /// 请求超时（H3：弱网下不设超时会让 UI 永久转圈，无任何恢复路径）
-  static const Duration _kTimeout = Duration(seconds: 15);
-  static Never _onTimeout() =>
-      throw const DataSourceException('请求超时，请检查网络连接后重试');
-
-  /// 搜索接口显式声明返回字段：避免 `subject` 等大字段被默认响应省略
-  static const String _searchFields =
-      'key,title,author_name,publisher,first_publish_year,publish_year,'
-      'isbn,number_of_pages_median,cover_i,subject';
 
   /// 版本列表取前 N 条挑选（只解析最完整的那条，不逐条深挖）
   static const int _editionScanLimit = 10;
@@ -46,11 +37,29 @@ class OpenLibraryDataSource implements BookDataSource {
   /// 中文两字书名（《三体》《活着》《围城》…）因此会被整条拒绝。
   static const int _minQueryLength = 3;
 
+  /// 搜索接口显式声明返回字段：避免 `subject` 等大字段被默认响应省略
+  static const String _searchFields =
+      'key,title,author_name,publisher,first_publish_year,publish_year,'
+      'isbn,number_of_pages_median,cover_i,subject';
+
   @override
   DataSourceType get type => DataSourceType.openLibrary;
 
+  /// 全部选填——不填即官方地址，所以 OpenLibrary 仍是「开箱即用」的源
+  /// （`isConfigured` 只校验 required 项，这里没有任何 required）。
   @override
-  List<ConfigField> get configFields => const [];
+  List<ConfigField> get configFields => const [
+        ConfigField(
+          key: 'baseUrl',
+          label: 'API 地址',
+          hint: '选填，默认 https://openlibrary.org；国内可填自建反代',
+        ),
+        ConfigField(
+          key: 'coverBaseUrl',
+          label: '封面地址',
+          hint: '选填，默认 https://covers.openlibrary.org/b/id',
+        ),
+      ];
 
   /// 拉取 JSON（网络失败 / 非 200 / 解析失败统一抛 [DataSourceException]）
   Future<Map<String, dynamic>> _getJson(
@@ -60,9 +69,11 @@ class OpenLibraryDataSource implements BookDataSource {
     final uri = Uri.parse(url).replace(queryParameters: query);
     late final http.Response resp;
     try {
-      resp = await _client.get(uri).timeout(_kTimeout, onTimeout: _onTimeout);
-    } on DataSourceException {
-      rethrow;
+      // 分层超时 + 一次重试：冷连接首跳 6s 快速失败，重试跳 9s 命中复用连接
+      // （见 http_retry.dart）。最坏耗时与原来的单次 15s 基本持平。
+      resp = await getWithRetry(_client, uri);
+    } on TimeoutException {
+      throw const DataSourceException('请求超时，请检查网络连接后重试');
     } on Exception catch (_) {
       throw const DataSourceException('网络请求失败，请检查网络连接');
     }
@@ -134,7 +145,10 @@ class OpenLibraryDataSource implements BookDataSource {
     required Map<String, dynamic> config,
     required Map<String, String> credentials,
   }) async {
-    final json = await _getJson(_searchUrl, {'q': 'flutter', 'limit': '1'});
+    final json = await _getJson(
+      _Endpoints.of(config).searchUrl,
+      {'q': 'flutter', 'limit': '1'},
+    );
     return json.containsKey('docs');
   }
 
@@ -147,25 +161,27 @@ class OpenLibraryDataSource implements BookDataSource {
   }) async {
     final q = query.trim();
     if (q.isEmpty) return const [];
+    final ep = _Endpoints.of(config);
 
     // 短查询兜底：新版搜索后端要求 `q` ≥ [_minQueryLength] 个字符，
     // 两字中文书名 / 作者名会被整条拒绝（HTTP 400）。
     // 改用字段查询绕过长度校验：先按书名（用户多数在搜书名），
     // 书名无命中再按作者（莫言 / 余华 / 韩寒 这类两字作者名）。
     if (q.length < _minQueryLength) {
-      final byTitle = await _query({'title': q}, limit: limit);
+      final byTitle = await _query(ep, {'title': q}, limit: limit);
       if (byTitle.isNotEmpty) return byTitle;
-      return _query({'author': q}, limit: limit);
+      return _query(ep, {'author': q}, limit: limit);
     }
-    return _query({'q': q}, limit: limit);
+    return _query(ep, {'q': q}, limit: limit);
   }
 
   /// 单次搜索请求（统一补 `limit` 与 `fields`，解析 `docs`）
   Future<List<BookSearchResult>> _query(
+    _Endpoints ep,
     Map<String, String> params, {
     required int limit,
   }) async {
-    final json = await _getJson(_searchUrl, {
+    final json = await _getJson(ep.searchUrl, {
       ...params,
       'limit': '$limit',
       'fields': _searchFields,
@@ -174,12 +190,12 @@ class OpenLibraryDataSource implements BookDataSource {
     return docs
         .whereType<Map<String, dynamic>>()
         .take(limit)
-        .map(_parseDoc)
+        .map((doc) => _parseDoc(doc, ep))
         .toList();
   }
 
   /// 搜索结果条目解析（OpenLibrary docs 结构）
-  BookSearchResult _parseDoc(Map<String, dynamic> doc) {
+  BookSearchResult _parseDoc(Map<String, dynamic> doc, _Endpoints ep) {
     final title = _cleanTitle((doc['title'] ?? '') as String);
     final authors = _expandAuthors(
       (doc['author_name'] as List? ?? const []).whereType<String>(),
@@ -196,7 +212,7 @@ class OpenLibraryDataSource implements BookDataSource {
       orElse: () => isbns.isNotEmpty ? isbns.first : '',
     );
     final coverId = doc['cover_i'] as int?;
-    final coverUrl = coverId != null ? '$_coverBase/$coverId-M.jpg' : null;
+    final coverUrl = coverId != null ? ep.coverUrl(coverId) : null;
     // 主题词（作品级）：搜索接口直接返回，无需等详情即可回填分类
     final subjects = _cleanSubjects(
       (doc['subject'] as List? ?? const []).whereType<String>(),
@@ -231,17 +247,23 @@ class OpenLibraryDataSource implements BookDataSource {
     if (!workKey.startsWith('OL') || !workKey.endsWith('W')) {
       throw const DataSourceException('OpenLibrary 仅支持 OL…W 格式作品 ID 查询详情');
     }
-    final json = await _getJson('$_workBase/$workKey.json', {});
-    final work = _parseWork(json, externalId);
+    final ep = _Endpoints.of(config);
+    final json = await _getJson(ep.workUrl(workKey), {});
+    final work = _parseWork(json, externalId, ep);
 
     // 版本级补全：work 详情不含出版社 / ISBN / 页数，只有 edition 才有。
     // 失败不影响作品级字段（主题 / 简介）→ 静默降级。
-    final edition = await _fetchBestEdition(workKey, fallbackTitle: work.title);
+    final edition =
+        await _fetchBestEdition(ep, workKey, fallbackTitle: work.title);
     return edition == null ? work : work.mergeWith(edition);
   }
 
   /// 解析作品详情（`works/{id}.json`）
-  BookSearchResult _parseWork(Map<String, dynamic> json, String externalId) {
+  BookSearchResult _parseWork(
+    Map<String, dynamic> json,
+    String externalId,
+    _Endpoints ep,
+  ) {
     final title = _cleanTitle((json['title'] ?? '') as String);
     // OpenLibrary work 详情 authors 结构：{"author": {"key": "/authors/OL...W", "name": "..."}}
     // 取 name（不是 key！）—— 否则会回填出 "OL12111758A" 这种 id
@@ -266,7 +288,7 @@ class OpenLibraryDataSource implements BookDataSource {
       isbn: null,
       pageCount: null,
       coverUrl: coverId != null && coverId.isNotEmpty
-          ? '$_coverBase/${coverId.first}-M.jpg'
+          ? ep.coverUrl((coverId.first as num).toInt())
           : null,
       rating: null,
       description: _description(json['description']),
@@ -279,12 +301,13 @@ class OpenLibraryDataSource implements BookDataSource {
   /// （有页数 + 有 ISBN + 有出版社）计分挑最高的一条。
   /// 列表请求失败返回 null——作品级字段不该被版本接口拖累。
   Future<BookSearchResult?> _fetchBestEdition(
+    _Endpoints ep,
     String workKey, {
     required String fallbackTitle,
   }) async {
     final Map<String, dynamic> json;
     try {
-      json = await _getJson('$_workBase/$workKey/editions.json', {
+      json = await _getJson(ep.editionsUrl(workKey), {
         'limit': '$_editionScanLimit',
       });
     } on DataSourceException {
@@ -495,4 +518,43 @@ class OpenLibraryDataSource implements BookDataSource {
 
   /// 释放底层 HTTP 客户端连接池
   void close() => _client.close();
+}
+
+/// OpenLibrary 接口地址解析（官方地址 / 用户自建镜像）
+///
+/// 每次请求前从 `config` 现算而不是缓存进字段——数据源实现有
+/// 「不持有可变状态」的契约，同一个实例会被不同配置的数据源复用
+/// （测试里尤其明显），字段缓存会把 A 源的镜像地址泄漏给 B 源。
+class _Endpoints {
+  const _Endpoints({required this.apiBase, required this.coverBase});
+
+  static const String defaultApiBase = 'https://openlibrary.org';
+  static const String defaultCoverBase = 'https://covers.openlibrary.org/b/id';
+
+  /// 去尾斜杠后的 API 前缀
+  final String apiBase;
+
+  /// 去尾斜杠后的封面前缀
+  final String coverBase;
+
+  factory _Endpoints.of(Map<String, dynamic> config) => _Endpoints(
+        apiBase: _resolve(config['baseUrl'], defaultApiBase),
+        coverBase: _resolve(config['coverBaseUrl'], defaultCoverBase),
+      );
+
+  /// 空 / 全空白 → 回落默认地址；否则去尾斜杠
+  /// （用户从浏览器复制地址时常带尾斜杠，拼出来会变成 `//search.json`）
+  static String _resolve(Object? raw, String fallback) {
+    final value = raw?.toString().trim() ?? '';
+    if (value.isEmpty) return fallback;
+    return value.endsWith('/') ? value.substring(0, value.length - 1) : value;
+  }
+
+  String get searchUrl => '$apiBase/search.json';
+
+  String workUrl(String workKey) => '$apiBase/works/$workKey.json';
+
+  String editionsUrl(String workKey) => '$apiBase/works/$workKey/editions.json';
+
+  String coverUrl(int coverId) => '$coverBase/$coverId-M.jpg';
 }

@@ -428,9 +428,17 @@ class MovieSearchResult {
 
 /// 数据源操作异常（网络失败 / 凭据无效 / 响应解析失败等，message 面向用户展示）
 class DataSourceException implements Exception {
-  const DataSourceException(this.message);
+  const DataSourceException(this.message, {this.silent = false});
 
+  /// 面向用户的错误描述（中文）
   final String message;
+
+  /// 「能力缺失」标记：true = 该源本就不具备此能力，不是失败。
+  ///
+  /// 目前用于详情补全通道——源未配置详情接口 / 本就不支持详情时抛出。
+  /// 此时搜索结果已经够用，调用方应静默回退，**不要**提示「补全失败」；
+  /// 网络异常、响应格式错误等真实失败保持 false，必须让用户看见。
+  final bool silent;
 
   @override
   String toString() => 'DataSourceException: $message';

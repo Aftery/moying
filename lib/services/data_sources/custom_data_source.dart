@@ -19,6 +19,7 @@ import 'package:http/http.dart' as http;
 
 import '../../models/data_source.dart';
 import '../data_source_interface.dart';
+import '../http_retry.dart';
 
 /// 智能响应解析器（书籍/影视共用）
 class SmartResponseParser {
@@ -285,10 +286,6 @@ abstract class _CustomDataSourceBase {
 
   final http.Client _client;
 
-  static const Duration _kTimeout = Duration(seconds: 15);
-  static Never _onTimeout() =>
-      throw const DataSourceException('请求超时，请检查网络或自定义 API 地址');
-
   /// 搜索路径模板（'' = 直接拼在 base 后；其余以 / 开头）。
   /// 实际请求按顺序尝试，`?q={query}&limit={limit}` 由基类统一拼接。
   List<String> get searchPathTemplates;
@@ -336,11 +333,13 @@ abstract class _CustomDataSourceBase {
     final uri = _buildUri(url, apiKey);
     late final http.Response resp;
     try {
-      resp = await _client
-          .get(uri, headers: _headersOf(credentials))
-          .timeout(_kTimeout, onTimeout: _onTimeout);
-    } on DataSourceException {
-      rethrow;
+      // 分层超时 + 一次重试（见 http_retry.dart）：自建代理常有冷启动
+      // （如 Render 免费实例闲置休眠后首次请求要 50s 才回），
+      // 首跳 6s 失败后重试那一跳往往已经把它唤醒。
+      resp = await getWithRetry(_client, uri,
+          headers: _headersOf(credentials));
+    } on TimeoutException {
+      throw const DataSourceException('请求超时，请检查网络或自定义 API 地址');
     } on Exception catch (_) {
       throw const DataSourceException('网络请求失败，请检查网络与自定义 API 地址');
     }
@@ -471,8 +470,11 @@ class CustomBookDataSource extends _CustomDataSourceBase
   }) async {
     final template = (config['detailUrlTemplate'] as String? ?? '').trim();
     if (template.isEmpty) {
+      // 能力缺失而非失败：源只是没配详情接口，搜索结果该有的字段一个不少。
+      // silent 标记让 Provider 静默回退，不弹「简介/分类补全失败」误报。
       throw const DataSourceException(
         '该数据源未配置「详情接口模板」，简介 / 页数等字段需由详情接口补全',
+        silent: true,
       );
     }
     final url = template.replaceAll('{id}', Uri.encodeComponent(externalId));
@@ -555,12 +557,18 @@ class CustomMovieDataSource extends _CustomDataSourceBase
   }
 
   /// 自定义源暂不支持详情接口（搜索结果已含启发式提取的全部字段）
+  ///
+  /// 必须 async：与 [CustomBookDataSource.getBookDetail] 对称——同步抛异常
+  /// 会让 `impl.getMovieDetail(...).catchError(...)` 这类调用直接崩溃，
+  /// 异步抛则统一变成「被拒绝的 Future」，调用方的 try/catch 与 catchError 都成立。
   @override
   Future<MovieSearchResult> getMovieDetail(
     String externalId, {
     required Map<String, dynamic> config,
     required Map<String, String> credentials,
-  }) {
-    throw const DataSourceException('自定义 API 暂不支持详情查询');
+  }) async {
+    // 能力缺失而非失败：连详情模板都没得配（影视侧无此配置项），
+    // silent 标记让 Provider 静默回退，不误报「详情补全失败」。
+    throw const DataSourceException('自定义 API 暂不支持详情查询', silent: true);
   }
 }
