@@ -653,6 +653,25 @@ void main() {
         'user_tmdb2',
       );
     });
+
+    testWidgets('❓ 入口打开自建部署指南弹层', (tester) async {
+      final provider = DataSourceProvider(manager: _managerWithFakes());
+      await provider.init();
+
+      await tester.pumpWidget(MultiProvider(
+        providers: [ChangeNotifierProvider.value(value: provider)],
+        child: const MaterialApp(home: DataSourceScreen()),
+      ));
+      await tester.pumpAndSettle();
+
+      // AppBar 右上角帮助按钮
+      expect(find.byTooltip('如何配置数据源'), findsOneWidget);
+      await tester.tap(find.byTooltip('如何配置数据源'));
+      await tester.pumpAndSettle();
+
+      // 弹层标题出现即证明入口接线成功
+      expect(find.text('数据源配置教程'), findsOneWidget);
+    });
   });
 
   group('书籍编辑页快速检索', () {

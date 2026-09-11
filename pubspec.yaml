@@ -20,6 +20,8 @@ dependencies:
   file_picker: ^8.0.0             # 从本地文件导入恢复
   connectivity_plus: ^6.0.5       # 自动同步 Wi-Fi 探测
   image: ^4.2.0                   # 图片压缩/解码（M9：单图压缩/上限）
+  flutter_markdown: ^0.7.7        # 数据源自建部署指南（Markdown 渲染）
+  url_launcher: ^6.3.0            # 指南内链接（GitHub / Render）跳浏览器
 
 dev_dependencies:
   flutter_test:

@@ -5,6 +5,7 @@ import '../config/app_palette.dart';
 import '../models/data_source.dart';
 import '../providers/data_source_provider.dart';
 import '../services/data_source_interface.dart';
+import '../widgets/data_source_guide_sheet.dart';
 
 /// 数据源管理 —— 影视 / 书籍两类源的增删改、默认源选择与连接测试
 ///
@@ -19,7 +20,17 @@ class DataSourceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.watch<DataSourceProvider>();
     return Scaffold(
-      appBar: AppBar(title: const Text('数据源管理')),
+      appBar: AppBar(
+        title: const Text('数据源管理'),
+        actions: [
+          // ❓ 帮助：弹出「自建部署指南」（GitHub + Render 免费托管豆瓣代理）
+          IconButton(
+            icon: const Icon(Icons.help_outline_rounded),
+            tooltip: '如何配置数据源',
+            onPressed: () => showDataSourceGuideSheet(context),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
