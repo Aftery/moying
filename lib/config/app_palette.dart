@@ -78,6 +78,43 @@ class AppPalette extends ThemeExtension<AppPalette> {
         colors: [movieStart, movieEnd],
       );
 
+  // ---- 图表分类色板 ----
+
+  /// 图表分类色板（环图 / 柱图的多分类着色）
+  ///
+  /// **刻意固定、不随深浅主题切换**：两组主题下对比度都够，且分类色一旦
+  /// 随主题变化，同一份数据在两种主题下会得到不同配色，反而更难辨认。
+  /// 顺序即默认分配顺序；超出长度时由使用方取模循环。
+  /// 取值目前与语义色一致（下方注释标出对应关系），便于统一微调。
+  static const List<Color> chartSeries = <Color>[
+    Color(0xFF7C8CF8), // = accent
+    Color(0xFF764BA2), // = readingEnd
+    Color(0xFF11998E), // = movieStart
+    Color(0xFFFFC94D), // = star
+    Color(0xFFFFB020), // = warning
+    Color(0xFF38EF7D), // = movieEnd
+    Color(0xFF667EEA), // = readingStart
+    Color(0xFFFF6B6B), // = danger
+  ];
+
+  // ---- 中性灰占位（无图回退）----
+
+  /// 占位渐变（头像 / 剧照等无图时的回退底）：深色下深灰、浅色下浅灰
+  ///
+  /// 刻意用中性灰而非品牌色：占位图的语义是「这里暂时没有内容」，
+  /// 着品牌色容易被误读成一张有内容的图。
+  static LinearGradient placeholderGradient(bool isDark) => LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: isDark
+            ? const [Color(0xFF565664), Color(0xFF33333F)]
+            : const [Color(0xFFD4D4DE), Color(0xFFAEAEBB)],
+      );
+
+  /// 占位图上的首字 / 图标色（与 [placeholderGradient] 配对使用）
+  static Color placeholderGlyph(bool isDark) =>
+      isDark ? const Color(0xFFD8D8E2) : const Color(0xFF5A5A6A);
+
   /// 暗色板（原始设计，默认外观）
   static const AppPalette dark = AppPalette(
     background: Color(0xFF0F0F0F),

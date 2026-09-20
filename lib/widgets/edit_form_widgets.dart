@@ -136,3 +136,106 @@ Future<String?> showCoverActionSheet({
     ),
   );
 }
+
+/// 单行文本输入对话框（返回输入值；取消返回 null；[allowClear] 时多一个「清除」返回空串）
+///
+/// controller 由对话框**自身**持有并在 `dispose()` 中释放，而不是在
+/// `showDialog` 返回后释放：`showDialog` 的 future 在路由 pop 时即完成，
+/// 但对话框此时还在退场动画里、`TextField` 会重建并重新 `addListener`，
+/// 提前释放会抛 `A TextEditingController was used after being disposed.`
+/// （`media_pipeline_test` 已实测复现）。交给 State 持有才能保证释放时机
+/// 落在子树真正 unmount 之后。
+class TextPromptDialog extends StatefulWidget {
+  const TextPromptDialog({
+    super.key,
+    required this.title,
+    required this.initial,
+    this.keyboardType,
+    this.hint,
+    this.allowClear = false,
+  });
+
+  final String title;
+  final String initial;
+  final TextInputType? keyboardType;
+  final String? hint;
+  final bool allowClear;
+
+  @override
+  State<TextPromptDialog> createState() => _TextPromptDialogState();
+}
+
+class _TextPromptDialogState extends State<TextPromptDialog> {
+  late final TextEditingController _ctrl;
+  late String _value;
+
+  @override
+  void initState() {
+    super.initState();
+    _value = widget.initial;
+    _ctrl = TextEditingController(text: widget.initial)
+      ..selection = TextSelection.collapsed(offset: widget.initial.length);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: context.colors.surfaceHigh,
+      title: Text(
+        widget.title,
+        style: TextStyle(
+            color: context.colors.textPrimary,
+            fontSize: 17,
+            fontWeight: FontWeight.w700),
+      ),
+      content: TextField(
+        autofocus: true,
+        keyboardType: widget.keyboardType,
+        controller: _ctrl,
+        style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
+        cursorColor: context.colors.accent,
+        decoration: InputDecoration(
+          hintText: widget.hint,
+          hintStyle: TextStyle(color: context.colors.textMuted, fontSize: 13),
+          filled: true,
+          fillColor: context.colors.surface,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: context.colors.outline, width: 0.8),
+          ),
+        ),
+        onChanged: (s) => _value = s,
+        onSubmitted: (s) => Navigator.of(context).pop(s),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('取消', style: TextStyle(color: context.colors.textMuted)),
+        ),
+        if (widget.allowClear && widget.initial.trim().isNotEmpty)
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(''),
+            child: Text(
+              '清除',
+              style: TextStyle(
+                  color: context.colors.danger, fontWeight: FontWeight.w700),
+            ),
+          ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(_value),
+          child: Text(
+            '确定',
+            style: TextStyle(
+                color: context.colors.accent, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+    );
+  }
+}

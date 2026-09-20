@@ -267,16 +267,12 @@ class _PersonalStatsScreenState extends State<PersonalStatsScreen> {
     return result;
   }
 
-  Color _segColor(int i) {
-    const palette = [
-      Color(0xFF7C8CF8),
-      Color(0xFF764BA2),
-      Color(0xFF11998E),
-      Color(0xFFFFC94D),
-      Color(0xFFFFB020),
-    ];
-    return palette[i % palette.length];
-  }
+  /// 扇区配色：统一取自 [AppPalette.chartSeries]。
+  ///
+  /// 原为本地 5 色、与环图组件各存一份；收敛后分类多于 5 个时也能拿到
+  /// 不重复的颜色（此前第 6 个起会绕回重复用色）。
+  Color _segColor(int i) =>
+      AppPalette.chartSeries[i % AppPalette.chartSeries.length];
 
   void _showAllReading(BuildContext context, List<ReadingProgress> items) {
     showModalBottomSheet<void>(

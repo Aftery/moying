@@ -12,6 +12,8 @@ import 'log_sink.dart';
 /// - 追加写：每条一行，超 [maxBytes] 时丢弃最旧 1/3 后重写（滚动，不无限增长）。
 /// - **一切 io 异常都吞掉**：落盘是旁路能力，任何失败都不应影响主流程；
 ///   无插件环境（`flutter test`）拿不到目录时 `_file` 保持 null，退化为不落盘。
+/// - 读写清全部串行（见 [FileLogSink._tail]）：日志是并发写入的旁路能力，
+///   非串行会丢行、丢批、甚至把已清空的文件写回来。
 LogSink createLogSink() => FileLogSink();
 
 class FileLogSink implements LogSink {
@@ -45,15 +47,37 @@ class FileLogSink implements LogSink {
     }
   }
 
+  /// 写链：append / readAll / clear 依次排队，天然串行。
+  ///
+  /// 与 `LibraryStore._writeChain` 同一模式。**必须串行**，因为写入方是
+  /// `AppLogger` 里的 `unawaited(_persist(entry))`——每条日志都并发触发一次，
+  /// 而 [_appendNow] 内含「查大小 → 读全文 → 截断重写 → 追加」四步，并发时：
+  ///   1. A 读到全文、B 同时追加，A 随后截断重写 → **B 那行被抹掉**；
+  ///   2. 两条同时判定超限 → 各自读全文各自重写 → 后写者覆盖先写者，**丢一批**；
+  ///   3. [clear] 与在飞的 append 并发 → 文件删掉后又被写回来。
+  Future<void> _tail = Future.value();
+
+  /// 同上：读也排队，避免读到「已截断但尚未补齐」的中间态
+  Future<T> _enqueue<T>(Future<T> Function() task) {
+    final next = _tail.then((_) => task());
+    _tail = next.then((_) {}, onError: (_) {}); // 吞异常，避免一次失败断链
+    return next;
+  }
+
   @override
-  Future<void> append(String line) async {
+  Future<void> append(String line) => _enqueue(() => _appendNow(line));
+
+  Future<void> _appendNow(String line) async {
     final f = _file;
     if (f == null) return;
     try {
       if (await f.exists() && await f.length() > maxBytes) {
         // 滚动：读全文 → 丢最旧 1/3 → 重写（保留近端，报障关心的是刚刚发生的事）
         final content = await f.readAsString();
-        await f.writeAsString(content.substring(content.length ~/ 3));
+        // 切点右移到下一行行首再截断：按 UTF-16 码元硬切会切断代理对
+        // （emoji / 生僻字）与半行，重写后表现为孤立代理项与残缺记录。
+        final cut = _alignToLineStart(content, content.length ~/ 3);
+        await f.writeAsString(content.substring(cut), flush: true);
       }
       await f.writeAsString('$line\n', mode: FileMode.append, flush: false);
     } on Object catch (_) {
@@ -61,8 +85,19 @@ class FileLogSink implements LogSink {
     }
   }
 
+  /// 把截断点右移到下一个换行**之后**。
+  ///
+  /// 找不到换行（异常文件 / 单行即超上限）时返回 0：宁可这次不清理，
+  /// 也不产出一个以半条记录开头的日志文件。
+  static int _alignToLineStart(String content, int at) {
+    final nl = content.indexOf('\n', at);
+    return nl == -1 ? 0 : nl + 1;
+  }
+
   @override
-  Future<String> readAll() async {
+  Future<String> readAll() => _enqueue(_readAllNow);
+
+  Future<String> _readAllNow() async {
     final f = _file;
     if (f == null) return '';
     try {
@@ -74,7 +109,9 @@ class FileLogSink implements LogSink {
   }
 
   @override
-  Future<void> clear() async {
+  Future<void> clear() => _enqueue(_clearNow);
+
+  Future<void> _clearNow() async {
     final f = _file;
     if (f == null) return;
     try {

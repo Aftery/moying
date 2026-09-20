@@ -301,4 +301,50 @@ void main() {
       expect((root['items'] as List<dynamic>).length, kAllBooks.length);
     });
   });
+
+  group('原子写（writeFileAtomic）', () {
+    List<int> backupPayload(int count) => utf8.encode(jsonEncode({
+          'schemaVersion': LibraryStore.schemaVersion,
+          'items': kAllBooks.take(count).map((b) => b.toJson()).toList(),
+        }));
+
+    test('排在已入队的常规保存之后：后调用者最终生效', () async {
+      final store = makeStore(tmpDir);
+      await store.load();
+
+      // 恢复备份的典型时序：先有一次待落盘的保存，紧接着用备份内容覆盖
+      final save = store.saveBooks(kAllBooks.sublist(1));
+      final atomic = store.writeFileAtomic('books.json', backupPayload(2));
+      await Future.wait([save, atomic]);
+
+      final root = jsonDecode(
+              File('${tmpDir.path}/books.json').readAsStringSync())
+          as Map<String, dynamic>;
+      // 旧实现里 writeFileAtomic 不参与写链、立刻开写，会被随后的常规保存
+      // 覆盖掉 —— 也就是「刚恢复的备份又被本地编辑盖回去」。
+      expect((root['items'] as List<dynamic>).length, 2,
+          reason: '后调用的原子写必须最终生效');
+    });
+
+    test('与常规保存并发：文件仍是完整 JSON，且不留 tmp 残骸', () async {
+      final store = makeStore(tmpDir);
+      await store.load();
+
+      await Future.wait(<Future<void>>[
+        store.saveBooks(kAllBooks),
+        store.saveMovies(kMovieList),
+        store.writeFileAtomic('books.json', backupPayload(2)),
+      ]);
+
+      for (final name in ['books.json', 'movies.json']) {
+        final raw = File('${tmpDir.path}/$name').readAsStringSync();
+        // 并发写同一个固定名 tmp 会产生交错内容 → 这里解析不出来
+        expect(jsonDecode(raw), isA<Map<String, dynamic>>(),
+            reason: '$name 应是完整 JSON');
+      }
+      final leftovers =
+          tmpDir.listSync().where((e) => e.path.endsWith('.tmp')).toList();
+      expect(leftovers, isEmpty, reason: '临时文件应都已 rename 掉');
+    });
+  });
 }

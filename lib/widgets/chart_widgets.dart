@@ -86,17 +86,9 @@ class _RingPainter extends CustomPainter {
   final double strokeWidth;
   final Color trackColor;
 
-  // 固定色板（与深浅主题均协调）
-  static const _colors = [
-    Color(0xFF7C8CF8),
-    Color(0xFF764BA2),
-    Color(0xFF11998E),
-    Color(0xFFFFC94D),
-    Color(0xFFFFB020),
-    Color(0xFF38EF7D),
-    Color(0xFF667EEA),
-    Color(0xFFFF6B6B),
-  ];
+  /// 分类色板：统一取自 [AppPalette.chartSeries]。
+  /// 勿在本文件另抄一份字面量——此前与统计页各存一份，改主题色必漏改其一。
+  static const _colors = AppPalette.chartSeries;
 
   @override
   void paint(Canvas canvas, Size size) {

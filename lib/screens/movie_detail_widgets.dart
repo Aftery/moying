@@ -59,19 +59,13 @@ class _CastAvatarFallback extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isDark
-              ? const [Color(0xFF565664), Color(0xFF33333F)]
-              : const [Color(0xFFD4D4DE), Color(0xFFAEAEBB)],
-        ),
+        gradient: AppPalette.placeholderGradient(isDark),
       ),
       child: Center(
         child: Text(
           initial,
           style: TextStyle(
-            color: isDark ? const Color(0xFFD8D8E2) : const Color(0xFF5A5A6A),
+            color: AppPalette.placeholderGlyph(isDark),
             fontSize: size * 0.38,
             fontWeight: FontWeight.w700,
           ),

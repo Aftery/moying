@@ -103,9 +103,21 @@ class LibraryStore {
   File imageFileByName(String name) => File(_join('images', name));
 
   /// 原子覆盖写数据目录下的 JSON 文件（tmp + rename，与集合写同契约）
-  Future<void> writeFileAtomic(String name, List<int> bytes) async {
+  ///
+  /// 与常规保存**共用 [_writeChain]**：`flush()` 只保证「此前已入队的写」落盘，
+  /// 而恢复备份期间用户仍可编辑（同步页的 `_isSyncing` 只驱动按钮态，没拦住
+  /// 编辑页的实时保存），两条路径并发写同一文件会出现混合版本
+  /// （例如 books 落的是备份、movies 落的是本地新数据）。
+  /// tmp 名带自增序号，杜绝同文件并发写 tmp 导致的临时文件内容交错。
+  Future<void> writeFileAtomic(String name, List<int> bytes) {
+    final done = _writeChain.then((_) => _writeFileAtomicNow(name, bytes));
+    _writeChain = done.then((_) {}, onError: (_) {});
+    return done;
+  }
+
+  Future<void> _writeFileAtomicNow(String name, List<int> bytes) async {
     await dataDir.create(recursive: true);
-    final tmp = File(_join('$name.tmp'));
+    final tmp = File(_join('$name.${_tmpSeq++}.tmp'));
     await tmp.writeAsBytes(bytes);
     await tmp.rename(_join(name));
   }
@@ -155,6 +167,9 @@ class LibraryStore {
 
   /// 写链：新请求排在上一次冲刷之后，天然串行不交错
   Future<void> _writeChain = Future.value();
+
+  /// 原子写的临时文件名序号：杜绝同一目标文件并发写 tmp 时内容交错
+  int _tmpSeq = 0;
 
   /// 保存书籍集合（合并写 + 原子写；返回后该次数据已落盘）
   Future<void> saveBooks(List<Book> books) =>

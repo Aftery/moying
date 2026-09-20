@@ -218,5 +218,62 @@ void main() {
         reason: '滚动后文件被限制在「上限 + 单行」量级，不再无限增长',
       );
     });
+
+    test('并发 append 不丢行、不撕裂（写链串行化）', () async {
+      final file = File('${dir.path}${Platform.pathSeparator}moying.log');
+      // 小阈值让写入过程反复触发滚动 —— 滚动是「读全文 → 截断重写」，
+      // 非串行时正是丢行 / 丢批最严重的地方
+      final sink = FileLogSink.forFile(file, maxBytes: 200);
+
+      final lines = List.generate(
+        40,
+        (i) => 'L${i.toString().padLeft(3, '0')}'.padRight(40, '-'),
+      );
+      // 不 await：模拟 AppLogger 里 unawaited(_persist(...)) 的并发写入
+      await Future.wait(lines.map(sink.append));
+
+      final content = await sink.readAll();
+      final rows = content.split('\n').where((l) => l.isNotEmpty).toList();
+      for (final row in rows) {
+        // 撕裂（两条交错拼接）/ 半行 / 被抹掉的整行都会落在这条断言上
+        expect(lines, contains(row), reason: '出现撕裂或错拼的行：$row');
+      }
+      expect(content, endsWith('${lines.last}\n'), reason: '最新一条必须保留');
+      expect(rows.length, greaterThanOrEqualTo(3),
+          reason: '滚动只该丢弃最旧部分，近端多条应保留');
+    });
+
+    test('滚动截断点对齐换行：不切断代理对，也不留半行', () async {
+      // 逐个阈值试：切点落在哪儿取决于当时的文件长度，单个阈值可能碰巧安全
+      for (final maxBytes in [60, 80, 100, 120, 140, 160, 180, 200]) {
+        final file = File('${dir.path}${Platform.pathSeparator}m$maxBytes.log');
+        final sink = FileLogSink.forFile(file, maxBytes: maxBytes);
+        for (var i = 0; i < 20; i++) {
+          await sink.append('批次$i 🚀 拾遗𠮷'); // 含代理对：🚀 / 𠮷
+        }
+
+        final content = await sink.readAll();
+        expect(content.contains('\uFFFD'), isFalse,
+            reason: 'maxBytes=$maxBytes：出现孤立代理项（替换字符）');
+        for (final row in content.split('\n').where((l) => l.isNotEmpty)) {
+          expect(row.startsWith('批次'), isTrue,
+              reason: 'maxBytes=$maxBytes：出现半行「$row」');
+        }
+        expect(content, endsWith('批次19 🚀 拾遗𠮷\n'));
+      }
+    });
+
+    test('清空排在在飞写入之后：清空后文件不会被写回来', () async {
+      final file = File('${dir.path}${Platform.pathSeparator}moying.log');
+      final sink = FileLogSink.forFile(file);
+
+      // 不 await：让这几条写处于「在飞」状态时立刻清空。
+      // 非串行时删除与写入交错，删除后仍会有一条落盘把文件建回来。
+      final inflight = List.generate(5, (i) => sink.append('in-flight-$i'));
+      await sink.clear();
+      await Future.wait(inflight);
+
+      expect(await sink.readAll(), '');
+    });
   });
 }

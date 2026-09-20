@@ -13,7 +13,7 @@ import '../models/media_ref.dart';
 import '../providers/data_source_provider.dart';
 import '../providers/library_provider.dart';
 import '../services/book_category_mapper.dart';
-import '../widgets/edit_form_widgets.dart' show showCoverActionSheet;
+import '../widgets/edit_form_widgets.dart' show TextPromptDialog, showCoverActionSheet;
 import '../widgets/media_cover.dart';
 import '../widgets/quick_search_panel.dart';
 import '../widgets/star_rating_picker.dart';
@@ -1192,6 +1192,11 @@ class _BookEditScreenState extends State<BookEditScreen> {
   }
 
   /// 通用单行文本编辑弹窗。返回 null = 取消；'' = 清除；其他 = 新值。
+  /// 单行文本输入对话框（出版社 / 年份 / ISBN / 封面链接共用）
+  ///
+  /// controller 的生命周期交给 [TextPromptDialog] 自己管理——不能在这里
+  /// 「showDialog 返回后 dispose」：对话框退场动画期间 TextField 会重建并
+  /// 重新 addListener，提前释放会抛 used after being disposed。
   Future<String?> _promptTextDialog({
     required String title,
     required String initial,
@@ -1199,63 +1204,14 @@ class _BookEditScreenState extends State<BookEditScreen> {
     String? hint,
     bool allowClear = false,
   }) {
-    var value = initial;
-    final ctrl = TextEditingController(text: initial)
-      ..selection = TextSelection.collapsed(offset: initial.length);
     return showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.colors.surfaceHigh,
-        title: Text(
-          title,
-          style: TextStyle(
-              color: context.colors.textPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.w700),
-        ),
-        content: TextField(
-          autofocus: true,
-          keyboardType: keyboardType,
-          controller: ctrl,
-          style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
-          cursorColor: context.colors.accent,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: context.colors.textMuted, fontSize: 13),
-            filled: true,
-            fillColor: context.colors.surface,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: context.colors.outline, width: 0.8),
-            ),
-          ),
-          onChanged: (s) => value = s,
-          onSubmitted: (s) => Navigator.of(ctx).pop(s),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child:
-                Text('取消', style: TextStyle(color: context.colors.textMuted)),
-          ),
-          if (allowClear && initial.trim().isNotEmpty)
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(''),
-              child: Text(
-                '清除',
-                style: TextStyle(
-                    color: context.colors.danger, fontWeight: FontWeight.w700),
-              ),
-            ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(value),
-            child: Text(
-              '确定',
-              style: TextStyle(
-                  color: context.colors.accent, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
+      builder: (_) => TextPromptDialog(
+        title: title,
+        initial: initial,
+        keyboardType: keyboardType,
+        hint: hint,
+        allowClear: allowClear,
       ),
     );
   }
