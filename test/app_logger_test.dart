@@ -172,6 +172,95 @@ void main() {
       expect(AppLogger.instance.entries.single.message, '上次运行的错误');
       expect(AppLogger.instance.entries.single.level, LogLevel.warning);
     });
+
+    test('历史载入后统计计数同步重算（不只是 total）', () async {
+      final history = _MemorySink();
+      for (var i = 0; i < 3; i++) {
+        history.lines.add(LogEntry(
+          time: DateTime(2026, 1, 1, 8, 0),
+          level: LogLevel.warning,
+          tag: 'old',
+          message: 'w$i',
+        ).toLine());
+      }
+      history.lines.add(LogEntry(
+        time: DateTime(2026, 1, 1, 9, 0),
+        level: LogLevel.error,
+        tag: 'old',
+        message: 'e0',
+      ).toLine());
+
+      await AppLogger.instance.debugInitWith(history);
+
+      // 计数由 _recount 全量重算，而不是停留在增量初始值 0
+      expect(AppLogger.instance.warningCount, 3);
+      expect(AppLogger.instance.problemCount, 1);
+    });
+  });
+
+  group('AppLogger · 增量计数与订阅（M-9）', () {
+    test('缓冲逐出时计数同步递减，不越界', () async {
+      // 灌满到上限，全用 error 级：problemCount 应等于上限
+      for (var i = 0; i < AppLogger.maxBufferEntries; i++) {
+        AppLogger.instance.error('t', 'e$i');
+      }
+      expect(AppLogger.instance.problemCount, AppLogger.maxBufferEntries);
+
+      // 再写 10 条 info 会逐出 10 条 error：problemCount 应随之减 10
+      for (var i = 0; i < 10; i++) {
+        AppLogger.instance.info('t', 'i$i');
+      }
+      expect(AppLogger.instance.problemCount, AppLogger.maxBufferEntries - 10,
+          reason: '逐出最旧 error 时计数必须递减');
+      expect(AppLogger.instance.totalCount, AppLogger.maxBufferEntries);
+    });
+
+    test('警告逐出时 warningCount 递减', () async {
+      for (var i = 0; i < AppLogger.maxBufferEntries; i++) {
+        AppLogger.instance.warn('t', 'w$i');
+      }
+      expect(AppLogger.instance.warningCount, AppLogger.maxBufferEntries);
+      AppLogger.instance.info('t', 'push-out');
+      expect(AppLogger.instance.warningCount, AppLogger.maxBufferEntries - 1);
+    });
+
+    test('clear 归零全部统计', () async {
+      AppLogger.instance.warn('t', 'w');
+      AppLogger.instance.error('t', 'e');
+      await _pump();
+      expect(AppLogger.instance.warningCount, 1);
+      expect(AppLogger.instance.problemCount, 1);
+
+      await AppLogger.instance.clear();
+      expect(AppLogger.instance.warningCount, 0);
+      expect(AppLogger.instance.problemCount, 0);
+      expect(AppLogger.instance.totalCount, 0);
+    });
+
+    test('记录与清空都会通知订阅方（日志页据此自动刷新）', () async {
+      var notifyCount = 0;
+      void onLog() => notifyCount++;
+      AppLogger.instance.addListener(onLog);
+      addTearDown(() => AppLogger.instance.removeListener(onLog));
+
+      AppLogger.instance.error('t', 'boom');
+      await _pump();
+      expect(notifyCount, greaterThanOrEqualTo(1), reason: '新日志要触发刷新');
+
+      final before = notifyCount;
+      await AppLogger.instance.clear();
+      expect(notifyCount, greaterThan(before), reason: '清空也要触发刷新');
+    });
+
+    test('entries 是只读视图，外部改写会抛', () {
+      AppLogger.instance.info('t', 'x');
+      final view = AppLogger.instance.entries;
+      expect(
+        () => view.clear(),
+        throwsUnsupportedError,
+        reason: '不再复制整表，返回的是不可修改视图',
+      );
+    });
   });
 
   group('FileLogSink · 真实落盘', () {

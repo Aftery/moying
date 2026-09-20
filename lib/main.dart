@@ -28,8 +28,10 @@ Future<void> main() async {
 
   // 全局兜底：捕获所有未处理异常，保证 App 永不完全崩溃。
   // 除控制台外同步写入日志，用户可在导出后反馈给开发者。
+  // L-6: presentError 会打印更完整的 widget 树诊断信息（含 informationCollector），
+  // 并触发 debug 下红屏；只打 own line 的话，这些诊断信息就丢失了。
   FlutterError.onError = (details) {
-    debugPrint('[FlutterError] ${details.exception}');
+    FlutterError.presentError(details);  // 保留默认行为（完整诊断 + debug 红屏）
     AppLogger.instance.fatal(
       'flutter',
       'Flutter 框架错误',

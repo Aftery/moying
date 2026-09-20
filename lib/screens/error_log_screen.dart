@@ -19,12 +19,6 @@ class ErrorLogScreen extends StatefulWidget {
 }
 
 class _ErrorLogScreenState extends State<ErrorLogScreen> {
-  List<LogEntry> _entries = AppLogger.instance.entries;
-
-  void _refresh() {
-    setState(() => _entries = AppLogger.instance.entries);
-  }
-
   String _stamp() {
     final now = DateTime.now();
     String p2(int v) => v.toString().padLeft(2, '0');
@@ -55,6 +49,7 @@ class _ErrorLogScreenState extends State<ErrorLogScreen> {
     messenger.showSnackBar(const SnackBar(content: Text('日志已复制到剪贴板')));
   }
 
+  /// 清空内存缓冲与落盘历史
   Future<void> _clear() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -91,54 +86,60 @@ class _ErrorLogScreenState extends State<ErrorLogScreen> {
     );
     if (confirmed != true) return;
     await AppLogger.instance.clear();
-    if (!mounted) return;
-    _refresh();
+    // 不需要手动 refresh，订阅会自动更新
   }
 
   @override
   Widget build(BuildContext context) {
     final logger = AppLogger.instance;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('错误日志'),
-        actions: [
-          if (_entries.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.delete_outline_rounded),
-              tooltip: '清空日志',
-              onPressed: _clear,
-            ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _SummaryHeader(
-            total: logger.totalCount,
-            problems: logger.problemCount,
-            warnings: logger.warningCount,
-            environment: logger.environmentDescription,
+    // 整页订阅 logger：新日志落缓冲后自动刷新（清空按钮显隐 / 列表 / 统计头一并联动）
+    return ListenableBuilder(
+      listenable: logger,
+      builder: (_, __) {
+        final entries = logger.entries;
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('错误日志'),
+            actions: [
+              if (entries.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  tooltip: '清空日志',
+                  onPressed: _clear,
+                ),
+            ],
           ),
-          const _HintBar(),
-          Expanded(
-            child: _entries.isEmpty
-                ? const _EmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                    itemCount: _entries.length,
-                    itemBuilder: (_, i) {
-                      // 最新在最上
-                      final entry = _entries[_entries.length - 1 - i];
-                      return _LogTile(entry: entry);
-                    },
-                  ),
+          body: Column(
+            children: [
+              _SummaryHeader(
+                total: logger.totalCount,
+                problems: logger.problemCount,
+                warnings: logger.warningCount,
+                environment: logger.environmentDescription,
+              ),
+              const _HintBar(),
+              Expanded(
+                child: entries.isEmpty
+                    ? const _EmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                        itemCount: entries.length,
+                        itemBuilder: (_, i) {
+                          // 最新在最上
+                          final entry = entries[entries.length - 1 - i];
+                          return _LogTile(entry: entry);
+                        },
+                      ),
+              ),
+              _ActionBar(
+                enabled: entries.isNotEmpty,
+                onExport: _export,
+                onCopy: _copyAll,
+              ),
+            ],
           ),
-          _ActionBar(
-            enabled: _entries.isNotEmpty,
-            onExport: _export,
-            onCopy: _copyAll,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

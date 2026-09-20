@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -160,7 +161,9 @@ String _unescape(String s) {
 /// - 内存环形缓冲（[maxBufferEntries]，供 UI 即时展示与导出）；
 /// - 落盘（[LogSink]，默认按平台选文件 / no-op），启动时把历史读回缓冲，
 ///   这样「上次启动就崩溃」这类问题在下一次启动后仍能看到。
-class AppLogger {
+///
+/// **可订阅**：继承 [ChangeNotifier]，UI 可用 [context.watch] 订阅自动刷新。
+class AppLogger extends ChangeNotifier {
   AppLogger._();
 
   /// 全局单例
@@ -176,23 +179,37 @@ class AppLogger {
 
   bool _initialized = false;
 
+  // ---------- 增量维护的统计量（O(1) 查询 + notifyListeners）----------
+  int _problemCount = 0;
+  int _warningCount = 0;
+
   /// 全部条目（按时间正序，不可变视图）
-  List<LogEntry> get entries => List<LogEntry>.unmodifiable(_buffer);
+  List<LogEntry> get entries => UnmodifiableListView(_buffer);
 
   /// 总条数
   int get totalCount => _buffer.length;
 
-  /// 错误 / 崩溃条数
-  int get problemCount =>
-      _buffer.where((e) => e.level.isProblem).length;
+  /// 错误 / 崩溃条数（增量维护，O(1)）
+  int get problemCount => _problemCount;
 
-  /// 警告条数
-  int get warningCount =>
-      _buffer.where((e) => e.level == LogLevel.warning).length;
+  /// 警告条数（增量维护，O(1)）
+  int get warningCount => _warningCount;
 
   /// 运行环境描述（导出文本抬头；跨平台，不依赖 dart:io）
   String get environmentDescription {
-    final platform = kIsWeb ? 'Web' : defaultTargetPlatform.name;
+    // 显式映射为可读名：defaultTargetPlatform.name 会输出 `android`/`fuchsia`
+    // 这类对报障无意义的字符串。Web 下 defaultTargetPlatform 返回的是「宿主」
+    // 平台，也不能如实反映运行环境，故一并走 kIsWeb 判定。
+    final platform = kIsWeb
+        ? 'Web'
+        : switch (defaultTargetPlatform) {
+            TargetPlatform.android => 'Android',
+            TargetPlatform.iOS => 'iOS',
+            TargetPlatform.macOS => 'macOS',
+            TargetPlatform.windows => 'Windows',
+            TargetPlatform.linux => 'Linux',
+            TargetPlatform.fuchsia => 'Fuchsia',
+          };
     const mode =
         kReleaseMode ? 'release' : (kProfileMode ? 'profile' : 'debug');
     return '$platform · $mode';
@@ -221,8 +238,20 @@ class AppLogger {
       _buffer
         ..clear()
         ..addAll(tail);
+      // 历史载入后必须重算计数——_append 的增量维护只覆盖运行期新增
+      _recount();
     } on Object catch (e) {
       debugPrint('[AppLogger] 初始化失败，退化为内存模式: $e');
+    }
+  }
+
+  /// 全量重算统计量（仅在批量载入历史 / 测试注入后调用；常规路径走 [_append] 增量）
+  void _recount() {
+    _problemCount = 0;
+    _warningCount = 0;
+    for (final e in _buffer) {
+      if (e.level.isProblem) _problemCount++;
+      if (e.level == LogLevel.warning) _warningCount++;
     }
   }
 
@@ -267,13 +296,33 @@ class AppLogger {
       message: message,
       meta: meta ?? const <String, String>{},
     );
-    _buffer.add(entry);
-    if (_buffer.length > maxBufferEntries) {
-      _buffer.removeRange(0, _buffer.length - maxBufferEntries);
+    _append(entry);
+    // debugPrint 在 release 下**并非 no-op**（SDK 里它是顶层变量
+    // debugPrintThrottled，无 kReleaseMode 守卫，仅 flutter_test 会替换）。
+    // 生产环境每条日志都打一次控制台既无意义也刷屏，还带上节流丢弃逻辑，
+    // 故显式按 kDebugMode 收口：开发看控制台，生产只落盘。
+    if (kDebugMode) {
+      debugPrint('[${level.label}][$tag] $message');
     }
-    // 开发期仍在控制台可见；生产 release 下 debugPrint 是 no-op
-    debugPrint('[${level.label}][$tag] $message');
     unawaited(_persist(entry));
+  }
+
+  /// 入缓冲 + 维护统计量 + 通知订阅方。
+  ///
+  /// 计数走增量而非每次 `where().length` 全遍历：[maxBufferEntries] 上限下
+  /// 全遍历只是微秒级，但统计 getter 位于 build 路径，增量化后是 O(1)，
+  /// 也顺带保证「计数与缓冲内容」不会因不同 getter 的调用时机而不一致。
+  void _append(LogEntry entry) {
+    _buffer.add(entry);
+    if (entry.level.isProblem) _problemCount++;
+    if (entry.level == LogLevel.warning) _warningCount++;
+    if (_buffer.length > maxBufferEntries) {
+      // 环形逐出：只可能逐出最旧的一条（每次至多新增一条）
+      final dropped = _buffer.removeAt(0);
+      if (dropped.level.isProblem) _problemCount--;
+      if (dropped.level == LogLevel.warning) _warningCount--;
+    }
+    notifyListeners();
   }
 
   Future<void> _persist(LogEntry entry) async {
@@ -316,6 +365,9 @@ class AppLogger {
   /// 清空内存缓冲与落盘历史
   Future<void> clear() async {
     _buffer.clear();
+    _problemCount = 0;
+    _warningCount = 0;
+    notifyListeners();
     try {
       await _sink.clear();
     } on Object catch (_) {
@@ -329,6 +381,8 @@ class AppLogger {
   Future<void> debugInitWith(LogSink sink) async {
     _sink = sink;
     _buffer.clear();
+    _problemCount = 0;
+    _warningCount = 0;
     _initialized = false;
     await init();
   }
@@ -337,6 +391,8 @@ class AppLogger {
   void debugReset() {
     _sink = createLogSink();
     _buffer.clear();
+    _problemCount = 0;
+    _warningCount = 0;
     _initialized = false;
   }
 }
