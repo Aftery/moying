@@ -1,7 +1,15 @@
-part of 'actor_detail_page.dart';
+import 'dart:io';
 
-class _ActorEditResult {
-  const _ActorEditResult({
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../config/app_palette.dart';
+import '../models/media_ref.dart';
+import '../providers/library_provider.dart';
+import '../widgets/media_cover.dart';
+
+class ActorEditResult {
+  const ActorEditResult({
     required this.name,
     required this.bio,
     this.avatarFile,
@@ -24,8 +32,8 @@ class _ActorEditResult {
 
 /// 演员资料编辑弹层：输入控制器由自身 State 持有，
 /// 随弹层 route 销毁统一释放，避免过早 dispose。
-class _ActorEditDialog extends StatefulWidget {
-  const _ActorEditDialog({
+class ActorEditDialog extends StatefulWidget {
+  const ActorEditDialog({super.key,
     required this.name,
     required this.bio,
     this.avatar,
@@ -42,10 +50,10 @@ class _ActorEditDialog extends StatefulWidget {
   final double hue;
 
   @override
-  State<_ActorEditDialog> createState() => _ActorEditDialogState();
+  State<ActorEditDialog> createState() => _ActorEditDialogState();
 }
 
-class _ActorEditDialogState extends State<_ActorEditDialog> {
+class _ActorEditDialogState extends State<ActorEditDialog> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _bioCtrl;
   late final TextEditingController _avatarUrlCtrl;
@@ -250,7 +258,7 @@ class _ActorEditDialogState extends State<_ActorEditDialog> {
                Text('取消', style: TextStyle(color: context.colors.textMuted)),
         ),
         TextButton(
-          onPressed: () => Navigator.of(context).pop(_ActorEditResult(
+          onPressed: () => Navigator.of(context).pop(ActorEditResult(
             name: _nameCtrl.text,
             bio: _bioCtrl.text,
             avatarFile: _picked,

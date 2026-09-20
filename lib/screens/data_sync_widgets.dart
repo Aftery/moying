@@ -1,7 +1,11 @@
-part of 'data_sync_page.dart';
 
-class _SyncCard extends StatelessWidget {
-  const _SyncCard({
+import 'package:flutter/material.dart';
+
+import '../config/app_palette.dart';
+import '../models/sync_settings.dart';
+
+class SyncCard extends StatelessWidget {
+  const SyncCard({super.key,
     required this.lastSyncAt,
     required this.isSyncing,
     required this.configured,
@@ -112,8 +116,8 @@ class _SyncCard extends StatelessWidget {
 }
 
 /// 服务器设置卡（4 输入 + 测试连接）
-class _ServerCard extends StatelessWidget {
-  const _ServerCard({
+class ServerCard extends StatelessWidget {
+  const ServerCard({super.key,
     required this.urlCtrl,
     required this.userCtrl,
     required this.passwordCtrl,
@@ -251,8 +255,8 @@ class _ServerCard extends StatelessWidget {
 }
 
 /// 同步偏好卡（3 开关；仅 Wi-Fi 跟随自动同步灰显）
-class _PrefsCard extends StatelessWidget {
-  const _PrefsCard({
+class PrefsCard extends StatelessWidget {
+  const PrefsCard({super.key,
     required this.autoSync,
     required this.onlyOnWifi,
     required this.includeImages,
@@ -340,8 +344,8 @@ class _PrefsCard extends StatelessWidget {
 }
 
 /// 本地备份卡（导出 / 导入，保底备选）
-class _LocalCard extends StatelessWidget {
-  const _LocalCard({required this.onExport, required this.onImport});
+class LocalCard extends StatelessWidget {
+  const LocalCard({super.key, required this.onExport, required this.onImport});
 
   final VoidCallback onExport;
   final VoidCallback onImport;

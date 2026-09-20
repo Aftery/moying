@@ -6,8 +6,7 @@ import '../models/data_source.dart';
 import '../providers/data_source_provider.dart';
 import '../services/data_source_interface.dart';
 import '../widgets/data_source_guide_sheet.dart';
-
-part 'data_source_widgets.dart';
+import 'data_source_widgets.dart';
 
 /// 数据源管理 —— 影视 / 书籍两类源的增删改、默认源选择与连接测试
 ///
@@ -121,7 +120,7 @@ class DataSourcePage extends StatelessWidget {
             ),
           )
         else
-          ...sources.map((s) => _SourceTile(config: s)),
+          ...sources.map((s) => SourceTile(config: s)),
       ],
     );
   }
@@ -195,7 +194,7 @@ class DataSourcePage extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => _SourceEditSheet(
+      builder: (ctx) => SourceEditSheet(
         config: config,
         isNew: isNew,
         provider: ds,

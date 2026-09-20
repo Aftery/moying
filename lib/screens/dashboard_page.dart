@@ -1,21 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../config/app_palette.dart';
 import '../models/book.dart';
 import '../models/movie.dart';
 import '../models/stats.dart';
 import '../providers/library_provider.dart';
-import '../widgets/grid_item_card.dart';
-import '../widgets/media_tile.dart';
 import '../widgets/section_header.dart';
 import '../widgets/stats_card.dart';
-import 'book_detail_page.dart';
-import 'book_edit_page.dart';
-import 'movie_detail_page.dart';
-import 'movie_edit_page.dart';
-
-part 'dashboard_widgets.dart';
+import 'dashboard_widgets.dart';
 
 /// 仪表盘主页 —— 数据统计 + 当前任务 + 阅读/电影列表
 ///
@@ -53,7 +45,7 @@ class DashboardPage extends StatelessWidget {
         padding: const EdgeInsets.only(top: 8, bottom: 32),
         children: [
           // ---------- 顶部标题 ----------
-          const _Header(),
+          const Header(),
           const SizedBox(height: 20),
 
           // ---------- 统计双卡 ----------
@@ -87,37 +79,37 @@ class DashboardPage extends StatelessWidget {
           // ---------- 当前任务（横向滚动） ----------
           SectionHeader(
             title: '当前任务',
-            trailing: _HeaderLink(
+            trailing: HeaderLink(
               label: '下一部电影',
               onTap: onOpenMovies,
             ),
           ),
           const SizedBox(height: 12),
-          _CurrentTasks(books: currentlyReading, movies: upcoming),
+          CurrentTasks(books: currentlyReading, movies: upcoming),
           const SizedBox(height: 26),
 
           // ---------- 阅读列表 ----------
           SectionHeader(
             title: '阅读列表',
-            trailing: _HeaderLink(
+            trailing: HeaderLink(
               label: '查看全部',
               onTap: onOpenBooks,
             ),
           ),
           const SizedBox(height: 12),
-          _BookGrid(books: readingList.take(4).toList()),
+          BookGrid(books: readingList.take(4).toList()),
           const SizedBox(height: 26),
 
           // ---------- 电影列表 ----------
           SectionHeader(
             title: '我的电影',
-            trailing: _HeaderLink(
+            trailing: HeaderLink(
               label: '查看全部',
               onTap: onOpenMovies,
             ),
           ),
           const SizedBox(height: 12),
-          _MovieGrid(movies: movieList.take(4).toList()),
+          MovieGrid(movies: movieList.take(4).toList()),
         ],
       ),
     );

@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -10,8 +9,7 @@ import '../models/movie.dart';
 import '../providers/library_provider.dart';
 import '../widgets/media_cover.dart';
 import 'movie_detail_page.dart';
-
-part 'actor_detail_widgets.dart';
+import 'actor_detail_widgets.dart';
 
 /// 演员详情界面（P3 内链闭环）
 ///
@@ -39,9 +37,9 @@ class ActorDetailPage extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     // 编辑弹层自管输入控制器生命周期（随 route 销毁释放），
     // 规避「pop 退出动画未结束即 dispose controller」的 framework 断言。
-    final result = await showDialog<_ActorEditResult>(
+    final result = await showDialog<ActorEditResult>(
       context: context,
-      builder: (_) => _ActorEditDialog(
+      builder: (_) => ActorEditDialog(
         name: actor.name,
         bio: actor.bio ?? '',
         avatar: actor.avatar,

@@ -12,8 +12,7 @@ import '../providers/sync_provider.dart';
 import '../services/backup_service.dart';
 import '../services/merge_engine.dart';
 import '../services/webdav_client.dart';
-
-part 'data_sync_widgets.dart';
+import 'data_sync_widgets.dart';
 
 /// 数据同步页 —— WebDAV 云同步 + 本地导出/导入（P5）
 ///
@@ -271,7 +270,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          _SyncCard(
+          SyncCard(
             lastSyncAt: sync.settings.lastSyncAt,
             isSyncing: sync.isSyncing,
             configured: sync.settings.isConfigured,
@@ -281,7 +280,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
           ),
           const SizedBox(height: 24),
           _sectionTitle('WebDAV 服务器设置'),
-          _ServerCard(
+          ServerCard(
             urlCtrl: _urlCtrl,
             userCtrl: _userCtrl,
             passwordCtrl: _passwordCtrl,
@@ -294,7 +293,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
           ),
           const SizedBox(height: 24),
           _sectionTitle('同步偏好'),
-          _PrefsCard(
+          PrefsCard(
             autoSync: sync.settings.autoSync,
             onlyOnWifi: sync.settings.onlyOnWifi,
             includeImages: sync.settings.includeImages,
@@ -316,7 +315,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
           ),
           const SizedBox(height: 24),
           _sectionTitle('本地备份'),
-          _LocalCard(
+          LocalCard(
             onExport: _onExportLocal,
             onImport: _onImportLocal,
           ),

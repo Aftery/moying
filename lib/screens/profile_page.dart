@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -14,8 +13,7 @@ import 'data_source_page.dart';
 import 'data_sync_page.dart';
 import 'error_log_page.dart';
 import 'personal_stats_page.dart';
-
-part 'profile_widgets.dart';
+import 'profile_widgets.dart';
 
 /// 个人中心 —— 档案（昵称/签名/头像）、主题偏好、个人统计入口
 ///
@@ -44,52 +42,52 @@ class ProfilePage extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         children: [
           // 头像 + 昵称（点击只读展示，编辑走下方「编辑资料」入口）
-          _ProfileCard(
+          ProfileCard(
             profile: profile,
             onTap: () => _showProfileInfo(context, profile),
           ),
           const SizedBox(height: 20),
 
           // 年度统计摘要
-          _StatSummary(bookStats: bookStats, movieStats: movieStats),
+          StatSummary(bookStats: bookStats, movieStats: movieStats),
           const SizedBox(height: 24),
 
           // 设置入口
-          _SettingItem(
+          SettingItem(
             icon: Icons.edit_note_rounded,
             label: '编辑资料',
             onTap: () => _openProfileEditor(context, library),
           ),
-          _SettingItem(
+          SettingItem(
             icon: Icons.data_usage_rounded,
             label: '数据统计',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const PersonalStatsPage()),
             ),
           ),
-          _SettingItem(
+          SettingItem(
             icon: Icons.dark_mode_rounded,
             label: '深色模式',
-            trailing: _ThemeModeLabel(mode: themeMode),
+            trailing: ThemeModeLabel(mode: themeMode),
             onTap: () => _chooseThemeMode(context, library),
           ),
           // Web 平台无本地存储 / 真实网络栈受限 → 隐藏数据源与同步入口
           if (!kIsWeb) ...[
-            _SettingItem(
+            SettingItem(
               icon: Icons.cloud_download_outlined,
               label: '数据源管理',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const DataSourcePage()),
               ),
             ),
-            _SettingItem(
+            SettingItem(
               icon: Icons.sync_rounded,
               label: '数据同步',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const DataSyncPage()),
               ),
             ),
-            _SettingItem(
+            SettingItem(
               icon: Icons.bug_report_rounded,
               label: '错误日志',
               onTap: () => Navigator.of(context).push(
@@ -224,7 +222,7 @@ class ProfilePage extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     // 编辑弹层自管输入控制器生命周期（随 route 销毁释放），
     // 规避「pop 退出动画未结束即 dispose controller」的 framework 断言。
-    final result = await showModalBottomSheet<_ProfileEditResult>(
+    final result = await showModalBottomSheet<ProfileEditResult>(
       context: context,
       isScrollControlled: true,
       constraints: BoxConstraints(
@@ -235,7 +233,7 @@ class ProfilePage extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _ProfileEditSheet(profile: profile),
+      builder: (_) => ProfileEditSheet(profile: profile),
     );
     if (result == null || !context.mounted) return;
     final nickname = result.nickname.trim();

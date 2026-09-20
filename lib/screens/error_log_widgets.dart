@@ -1,7 +1,10 @@
-part of 'error_log_page.dart';
+import 'package:flutter/material.dart';
 
-class _SummaryHeader extends StatelessWidget {
-  const _SummaryHeader({
+import '../config/app_palette.dart';
+import '../services/app_logger.dart';
+
+class SummaryHeader extends StatelessWidget {
+  const SummaryHeader({super.key,
     required this.total,
     required this.problems,
     required this.warnings,
@@ -89,8 +92,8 @@ class _Metric extends StatelessWidget {
 }
 
 /// 隐私提示条
-class _HintBar extends StatelessWidget {
-  const _HintBar();
+class HintBar extends StatelessWidget {
+  const HintBar({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -121,8 +124,8 @@ class _HintBar extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+class EmptyState extends StatelessWidget {
+  const EmptyState({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -156,16 +159,16 @@ class _EmptyState extends StatelessWidget {
 }
 
 /// 单条日志（点击展开完整消息与结构化信息）
-class _LogTile extends StatefulWidget {
-  const _LogTile({required this.entry});
+class LogTile extends StatefulWidget {
+  const LogTile({super.key, required this.entry});
 
   final LogEntry entry;
 
   @override
-  State<_LogTile> createState() => _LogTileState();
+  State<LogTile> createState() => _LogTileState();
 }
 
-class _LogTileState extends State<_LogTile> {
+class _LogTileState extends State<LogTile> {
   bool _expanded = false;
 
   Color _levelColor(AppPalette c) => switch (widget.entry.level) {
@@ -294,8 +297,8 @@ class _LevelChip extends StatelessWidget {
 }
 
 /// 底部动作栏（导出 / 复制全部）
-class _ActionBar extends StatelessWidget {
-  const _ActionBar({
+class ActionBar extends StatelessWidget {
+  const ActionBar({super.key,
     required this.enabled,
     required this.onExport,
     required this.onCopy,

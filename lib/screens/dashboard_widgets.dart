@@ -1,7 +1,17 @@
-part of 'dashboard_page.dart';
+import 'package:flutter/material.dart';
 
-class _HeaderLink extends StatelessWidget {
-  const _HeaderLink({required this.label, this.onTap});
+import '../config/app_palette.dart';
+import '../models/book.dart';
+import '../models/movie.dart';
+import '../widgets/grid_item_card.dart';
+import '../widgets/media_tile.dart';
+import 'book_detail_page.dart';
+import 'book_edit_page.dart';
+import 'movie_detail_page.dart';
+import 'movie_edit_page.dart';
+
+class HeaderLink extends StatelessWidget {
+  const HeaderLink({super.key, required this.label, this.onTap});
 
   final String label;
   final VoidCallback? onTap;
@@ -43,8 +53,8 @@ class _HeaderLink extends StatelessWidget {
 }
 
 /// 顶部欢迎头
-class _Header extends StatelessWidget {
-  const _Header();
+class Header extends StatelessWidget {
+  const Header({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -112,8 +122,8 @@ class _Header extends StatelessWidget {
 }
 
 /// 当前任务横向滚动区（在读的书 + 想看的电影）
-class _CurrentTasks extends StatelessWidget {
-  const _CurrentTasks({required this.books, required this.movies});
+class CurrentTasks extends StatelessWidget {
+  const CurrentTasks({super.key, required this.books, required this.movies});
 
   final List<Book> books;
   final List<Movie> movies;
@@ -177,8 +187,8 @@ class _CurrentTasks extends StatelessWidget {
 }
 
 /// 书籍网格（2 列）
-class _BookGrid extends StatelessWidget {
-  const _BookGrid({required this.books});
+class BookGrid extends StatelessWidget {
+  const BookGrid({super.key, required this.books});
 
   final List<Book> books;
 
@@ -222,8 +232,8 @@ class _BookGrid extends StatelessWidget {
 }
 
 /// 电影网格（2 列）
-class _MovieGrid extends StatelessWidget {
-  const _MovieGrid({required this.movies});
+class MovieGrid extends StatelessWidget {
+  const MovieGrid({super.key, required this.movies});
 
   final List<Movie> movies;
 

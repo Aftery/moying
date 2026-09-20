@@ -15,8 +15,7 @@ import '../widgets/rating_stars.dart';
 import 'actor_detail_page.dart';
 import 'movie_edit_page.dart';
 import 'movie_stills_page.dart';
-
-part 'movie_detail_widgets.dart';
+import 'movie_detail_widgets.dart';
 
 /// 电影详情界面
 ///
@@ -319,7 +318,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
       child: Row(
         children: [
           Expanded(
-            child: _MetaCell(
+            child: MetaCell(
               icon: Icons.visibility_rounded,
               label: '看过日期',
               value: movie.watchDateText.isEmpty
@@ -329,7 +328,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: _MetaCell(
+            child: MetaCell(
               icon: Icons.calendar_month_rounded,
               label: '上映时间',
               value: movie.releaseDateText.isEmpty
@@ -339,7 +338,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: _MetaCell(
+            child: MetaCell(
               icon: Icons.timer_outlined,
               label: '片长',
               value: movie.durationText.isEmpty ? '—' : movie.durationText,
@@ -375,7 +374,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                     ),
             child: Column(
               children: [
-                _CastAvatar(name: item.name, photoUrl: item.photoUrl),
+                CastAvatar(name: item.name, photoUrl: item.photoUrl),
                 const SizedBox(height: 8),
                 SizedBox(
                   width: 84,
@@ -590,7 +589,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
           child: SizedBox(
             width: 166,
             height: 104,
-            child: _StillImage(ref: stills[i]),
+            child: StillImage(ref: stills[i]),
           ),
         ),
       ),

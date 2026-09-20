@@ -4,8 +4,7 @@ import 'package:flutter/services.dart';
 import '../config/app_palette.dart';
 import '../services/app_logger.dart';
 import '../services/log_exporter.dart';
-
-part 'error_log_widgets.dart';
+import 'error_log_widgets.dart';
 
 /// 错误日志页 —— 查看 / 导出本机记录的应用与请求错误
 ///
@@ -111,27 +110,27 @@ class _ErrorLogPageState extends State<ErrorLogPage> {
           ),
           body: Column(
             children: [
-              _SummaryHeader(
+              SummaryHeader(
                 total: logger.totalCount,
                 problems: logger.problemCount,
                 warnings: logger.warningCount,
                 environment: logger.environmentDescription,
               ),
-              const _HintBar(),
+              const HintBar(),
               Expanded(
                 child: entries.isEmpty
-                    ? const _EmptyState()
+                    ? const EmptyState()
                     : ListView.builder(
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                         itemCount: entries.length,
                         itemBuilder: (_, i) {
                           // 最新在最上
                           final entry = entries[entries.length - 1 - i];
-                          return _LogTile(entry: entry);
+                          return LogTile(entry: entry);
                         },
                       ),
               ),
-              _ActionBar(
+              ActionBar(
                 enabled: entries.isNotEmpty,
                 onExport: _export,
                 onCopy: _copyAll,

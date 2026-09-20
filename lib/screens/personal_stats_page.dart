@@ -9,9 +9,7 @@ import '../providers/library_provider.dart';
 import '../widgets/chart_widgets.dart';
 import '../widgets/cover_placeholder.dart';
 import '../widgets/heatmap_calendar.dart';
-import 'annual_report_page.dart';
-
-part 'personal_stats_widgets.dart';
+import 'personal_stats_widgets.dart';
 
 /// 个人统计页 —— 三段式仪表盘
 ///
@@ -52,11 +50,11 @@ class _PersonalStatsPageState extends State<PersonalStatsPage> {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
           // ==================== 第一段：年度概览 ====================
-          _MetricBar(annual: annual),
+          MetricBar(annual: annual),
           const SizedBox(height: 16),
-          _SectionCard(
+          SectionCard(
             title: '打卡记录',
-            trailing: _RangeSwitch(
+            trailing: RangeSwitch(
               value: _range,
               onChanged: (v) => setState(() => _range = v),
             ),
@@ -71,15 +69,15 @@ class _PersonalStatsPageState extends State<PersonalStatsPage> {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    _LegendDot(color: context.colors.surfaceHigh, label: '未打卡'),
+                    LegendDot(color: context.colors.surfaceHigh, label: '未打卡'),
                     const SizedBox(width: 10),
-                    _LegendDot(
+                    LegendDot(
                         color: HSLColor.fromAHSL(1, _range == HeatmapRange.month30 ? 160 : 260, 0.65, 0.5)
                             .toColor()
                             .withOpacity(0.35),
                         label: '1 次'),
                     const SizedBox(width: 10),
-                    _LegendDot(
+                    LegendDot(
                         color: HSLColor.fromAHSL(1, _range == HeatmapRange.month30 ? 160 : 260, 0.65, 0.5)
                             .toColor()
                             .withOpacity(0.95),
@@ -92,10 +90,10 @@ class _PersonalStatsPageState extends State<PersonalStatsPage> {
 
           // ==================== 第二段：偏好分析 ====================
           const SizedBox(height: 20),
-          _SectionCard(
+          SectionCard(
             title: '类型偏好',
             child: top5.isEmpty
-                ? const _EmptyHint(text: '读完的书标记分类后，这里会展示你的口味分布')
+                ? const EmptyHint(text: '读完的书标记分类后，这里会展示你的口味分布')
                 : Row(
                     children: [
                       DonutChart(
@@ -145,10 +143,10 @@ class _PersonalStatsPageState extends State<PersonalStatsPage> {
                   ),
           ),
           const SizedBox(height: 16),
-          _SectionCard(
+          SectionCard(
             title: '评分习惯',
             child: ratings.total == 0
-                ? const _EmptyHint(text: '评分后这里会展示 1~5 星的分布')
+                ? const EmptyHint(text: '评分后这里会展示 1~5 星的分布')
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -163,14 +161,14 @@ class _PersonalStatsPageState extends State<PersonalStatsPage> {
 
           // ==================== 第三段：进行中与里程碑 ====================
           const SizedBox(height: 20),
-          _SectionCard(
+          SectionCard(
             title: reading.isEmpty ? '进行中' : '进行中 · ${reading.length} 本在读',
             child: reading.isEmpty
-                ? const _EmptyHint(text: '书架里还没有在读的书，去添加一本吧')
+                ? const EmptyHint(text: '书架里还没有在读的书，去添加一本吧')
                 : Column(
                     children: [
                       for (final r in reading.take(3))
-                        _ReadingProgressBar(item: r),
+                        ReadingProgressBar(item: r),
                       if (reading.length > 3)
                         TextButton(
                           onPressed: () => _showAllReading(context, reading),
@@ -180,10 +178,10 @@ class _PersonalStatsPageState extends State<PersonalStatsPage> {
                   ),
           ),
           const SizedBox(height: 16),
-          _SectionCard(
+          SectionCard(
             title: fiveStar.isEmpty ? '本年度最高分' : '本年度最高分 · ${fiveStar.length} 部五星',
             child: fiveStar.isEmpty
-                ? const _EmptyHint(text: '今年标记 5 星的书影会出现在这里')
+                ? const EmptyHint(text: '今年标记 5 星的书影会出现在这里')
                 : SizedBox(
                     height: 120,
                     child: ListView.separated(
@@ -220,7 +218,7 @@ class _PersonalStatsPageState extends State<PersonalStatsPage> {
 
           // ==================== 年报入口 ====================
           const SizedBox(height: 24),
-          _AnnualReportEntry(year: now.year),
+          AnnualReportEntry(year: now.year),
         ],
       ),
     );
@@ -295,7 +293,7 @@ class _PersonalStatsPageState extends State<PersonalStatsPage> {
             for (final r in items)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: _ReadingProgressBar(item: r),
+                child: ReadingProgressBar(item: r),
               ),
           ],
         ),

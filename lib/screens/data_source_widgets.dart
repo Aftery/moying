@@ -1,7 +1,13 @@
-part of 'data_source_page.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class _SourceTile extends StatelessWidget {
-  const _SourceTile({required this.config});
+import '../config/app_palette.dart';
+import '../models/data_source.dart';
+import '../providers/data_source_provider.dart';
+import '../services/data_source_interface.dart';
+
+class SourceTile extends StatelessWidget {
+  const SourceTile({super.key, required this.config});
 
   final DataSourceConfig config;
 
@@ -122,7 +128,7 @@ class _SourceTile extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => _SourceEditSheet(
+      builder: (ctx) => SourceEditSheet(
         config: config,
         isNew: false,
         provider: ds,
@@ -164,8 +170,8 @@ class _StatusDot extends StatelessWidget {
 /// - 动态渲染数据源的 [ConfigField]：普通字段写 config，secret 字段走
 ///   Provider 凭据通道（安全存储）；
 /// - 保存返回配置实例；编辑态额外提供「测试连接」与「删除」。
-class _SourceEditSheet extends StatefulWidget {
-  const _SourceEditSheet({
+class SourceEditSheet extends StatefulWidget {
+  const SourceEditSheet({super.key,
     required this.config,
     required this.isNew,
     required DataSourceProvider provider,
@@ -176,10 +182,10 @@ class _SourceEditSheet extends StatefulWidget {
   final DataSourceProvider _provider;
 
   @override
-  State<_SourceEditSheet> createState() => _SourceEditSheetState();
+  State<SourceEditSheet> createState() => _SourceEditSheetState();
 }
 
-class _SourceEditSheetState extends State<_SourceEditSheet> {
+class _SourceEditSheetState extends State<SourceEditSheet> {
   late final DataSourceProvider _ds = widget._provider;
   late final DataSourceConfig _config = widget.config;
 

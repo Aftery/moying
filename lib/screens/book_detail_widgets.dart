@@ -1,7 +1,9 @@
-part of 'book_detail_page.dart';
+import 'package:flutter/material.dart';
 
-class _EditPill extends StatelessWidget {
-  const _EditPill({required this.onTap});
+import '../config/app_palette.dart';
+
+class EditPill extends StatelessWidget {
+  const EditPill({super.key, required this.onTap});
 
   final VoidCallback onTap;
 
@@ -38,8 +40,8 @@ class _EditPill extends StatelessWidget {
 }
 
 /// 信息小卡（2×2 网格单元）
-class _InfoCell extends StatelessWidget {
-  const _InfoCell({
+class InfoCell extends StatelessWidget {
+  const InfoCell({super.key,
     required this.context,
     required this.icon,
     required this.color,

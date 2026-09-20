@@ -1,7 +1,17 @@
-part of 'profile_page.dart';
+import 'dart:io';
 
-class _ThemeModeLabel extends StatelessWidget {
-  const _ThemeModeLabel({required this.mode});
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../config/app_palette.dart';
+import '../models/media_ref.dart';
+import '../models/stats.dart';
+import '../models/user_profile.dart';
+import '../providers/library_provider.dart';
+import '../widgets/media_cover.dart';
+
+class ThemeModeLabel extends StatelessWidget {
+  const ThemeModeLabel({super.key, required this.mode});
 
   final String mode;
 
@@ -20,8 +30,8 @@ class _ThemeModeLabel extends StatelessWidget {
 }
 
 /// 档案卡（头像 + 昵称 + 签名，点击只读展示；编辑走「编辑资料」设置行）
-class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.profile, required this.onTap});
+class ProfileCard extends StatelessWidget {
+  const ProfileCard({super.key, required this.profile, required this.onTap});
 
   final UserProfile profile;
   final VoidCallback onTap;
@@ -87,8 +97,8 @@ class _ProfileCard extends StatelessWidget {
   }
 }
 
-class _StatSummary extends StatelessWidget {
-  const _StatSummary({required this.bookStats, required this.movieStats});
+class StatSummary extends StatelessWidget {
+  const StatSummary({super.key, required this.bookStats, required this.movieStats});
 
   final BookStats bookStats;
   final MovieStats movieStats;
@@ -158,8 +168,8 @@ class _StatCell extends StatelessWidget {
   }
 }
 
-class _SettingItem extends StatelessWidget {
-  const _SettingItem({
+class SettingItem extends StatelessWidget {
+  const SettingItem({super.key,
     required this.icon,
     required this.label,
     this.trailing,
@@ -203,8 +213,8 @@ class _SettingItem extends StatelessWidget {
 // ==================== 编辑资料弹层 ====================
 
 /// 编辑结果（弹层 → 保存流程的数据载体）
-class _ProfileEditResult {
-  const _ProfileEditResult({
+class ProfileEditResult {
+  const ProfileEditResult({
     required this.nickname,
     required this.signature,
     this.avatarFile,
@@ -225,16 +235,16 @@ class _ProfileEditResult {
   final bool avatarTouched;
 }
 
-class _ProfileEditSheet extends StatefulWidget {
-  const _ProfileEditSheet({required this.profile});
+class ProfileEditSheet extends StatefulWidget {
+  const ProfileEditSheet({super.key, required this.profile});
 
   final UserProfile profile;
 
   @override
-  State<_ProfileEditSheet> createState() => _ProfileEditSheetState();
+  State<ProfileEditSheet> createState() => _ProfileEditSheetState();
 }
 
-class _ProfileEditSheetState extends State<_ProfileEditSheet> {
+class _ProfileEditSheetState extends State<ProfileEditSheet> {
   late final TextEditingController _nicknameCtrl;
   late final TextEditingController _signatureCtrl;
   late final TextEditingController _avatarUrlCtrl;
@@ -467,7 +477,7 @@ class _ProfileEditSheetState extends State<_ProfileEditSheet> {
                   Expanded(
                     child: TextButton(
                       onPressed: () => Navigator.of(context).pop(
-                          _ProfileEditResult(
+                          ProfileEditResult(
                         nickname: _nicknameCtrl.text,
                         signature: _signatureCtrl.text,
                         avatarFile: _picked,

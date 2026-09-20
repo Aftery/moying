@@ -10,8 +10,7 @@ import '../widgets/media_cover.dart';
 import '../widgets/rating_stars.dart';
 import 'book_edit_page.dart';
 import 'books_page.dart';
-
-part 'book_detail_widgets.dart';
+import 'book_detail_widgets.dart';
 
 /// 图书详情界面（v2 布局）
 ///
@@ -348,28 +347,28 @@ class BookDetailPage extends StatelessWidget {
       crossAxisSpacing: 12,
       childAspectRatio: 2.9,
       children: [
-        _InfoCell(
+        InfoCell(
           context: context,
           icon: Icons.bookmark_rounded,
           color: statusColor,
           label: '阅读状态',
           value: book.status.label,
         ),
-        _InfoCell(
+        InfoCell(
           context: context,
           icon: Icons.calendar_today_rounded,
           color: context.colors.accent,
           label: '出版年份',
           value: book.year == null ? '—' : '${book.year}',
         ),
-        _InfoCell(
+        InfoCell(
           context: context,
           icon: Icons.auto_stories_rounded,
           color: context.colors.textSecondary,
           label: '总页数',
           value: '${book.totalPages} 页',
         ),
-        _InfoCell(
+        InfoCell(
           context: context,
           icon: Icons.tag_rounded,
           color: context.colors.accent,
@@ -501,7 +500,7 @@ class BookDetailPage extends StatelessWidget {
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerRight,
-            child: _EditPill(onTap: () => _openEditor(context)),
+            child: EditPill(onTap: () => _openEditor(context)),
           ),
         ],
       ),

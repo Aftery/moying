@@ -1,7 +1,10 @@
-part of 'movie_detail_page.dart';
+import 'package:flutter/material.dart';
 
-class _CastAvatar extends StatelessWidget {
-  const _CastAvatar({
+import '../config/app_palette.dart';
+import '../models/media_ref.dart';
+
+class CastAvatar extends StatelessWidget {
+  const CastAvatar({super.key,
     required this.name,
     this.photoUrl,
   });
@@ -79,8 +82,8 @@ class _CastAvatarFallback extends StatelessWidget {
 ///
 /// 剧照目前只来自 TMDB images（网络引用）；本地图（用户上传）尚未接入，
 /// 命中 localFile 时同样走占位，避免相对路径未解析导致空白块。
-class _StillImage extends StatelessWidget {
-  const _StillImage({required this.ref});
+class StillImage extends StatelessWidget {
+  const StillImage({super.key, required this.ref});
 
   final MediaRef ref;
 
@@ -121,8 +124,8 @@ class _StillImage extends StatelessWidget {
 }
 
 /// 元数据小格（图标 + 标签 + 值）
-class _MetaCell extends StatelessWidget {
-  const _MetaCell({
+class MetaCell extends StatelessWidget {
+  const MetaCell({super.key,
     required this.icon,
     required this.label,
     required this.value,

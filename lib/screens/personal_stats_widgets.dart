@@ -1,7 +1,11 @@
-part of 'personal_stats_page.dart';
+import 'package:flutter/material.dart';
 
-class _MetricBar extends StatelessWidget {
-  const _MetricBar({required this.annual});
+import '../config/app_palette.dart';
+import '../data/statistics.dart';
+import 'annual_report_page.dart';
+
+class MetricBar extends StatelessWidget {
+  const MetricBar({super.key, required this.annual});
 
   final AnnualStats annual;
 
@@ -49,8 +53,8 @@ class _MetricBar extends StatelessWidget {
 }
 
 /// 区块卡片（标题 + 可选 trailing + 内容）
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({
+class SectionCard extends StatelessWidget {
+  const SectionCard({super.key,
     required this.title,
     required this.child,
     this.trailing,
@@ -92,8 +96,8 @@ class _SectionCard extends StatelessWidget {
 }
 
 /// 范围切换（30天 / 季度 / 年度）
-class _RangeSwitch extends StatelessWidget {
-  const _RangeSwitch({required this.value, required this.onChanged});
+class RangeSwitch extends StatelessWidget {
+  const RangeSwitch({super.key, required this.value, required this.onChanged});
 
   final HeatmapRange value;
   final ValueChanged<HeatmapRange> onChanged;
@@ -140,8 +144,8 @@ class _RangeSwitch extends StatelessWidget {
   }
 }
 
-class _LegendDot extends StatelessWidget {
-  const _LegendDot({required this.color, required this.label});
+class LegendDot extends StatelessWidget {
+  const LegendDot({super.key, required this.color, required this.label});
 
   final Color color;
   final String label;
@@ -167,8 +171,8 @@ class _LegendDot extends StatelessWidget {
   }
 }
 
-class _EmptyHint extends StatelessWidget {
-  const _EmptyHint({required this.text});
+class EmptyHint extends StatelessWidget {
+  const EmptyHint({super.key, required this.text});
 
   final String text;
 
@@ -185,8 +189,8 @@ class _EmptyHint extends StatelessWidget {
 }
 
 /// 在读进度条：《标题》 420/512 页 · 82%
-class _ReadingProgressBar extends StatelessWidget {
-  const _ReadingProgressBar({required this.item});
+class ReadingProgressBar extends StatelessWidget {
+  const ReadingProgressBar({super.key, required this.item});
 
   final ReadingProgress item;
 
@@ -231,8 +235,8 @@ class _ReadingProgressBar extends StatelessWidget {
 }
 
 /// 年报入口卡
-class _AnnualReportEntry extends StatelessWidget {
-  const _AnnualReportEntry({required this.year});
+class AnnualReportEntry extends StatelessWidget {
+  const AnnualReportEntry({super.key, required this.year});
 
   final int year;
 
