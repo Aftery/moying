@@ -1,4 +1,4 @@
-part of 'dashboard_screen.dart';
+part of 'dashboard_page.dart';
 
 class _HeaderLink extends StatelessWidget {
   const _HeaderLink({required this.label, this.onTap});
@@ -192,7 +192,7 @@ class _BookGrid extends StatelessWidget {
           title: '书库空空',
           subtitle: '点击这里直接添加你的第一本书',
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const BookEditScreen()),
+            MaterialPageRoute(builder: (_) => const BookEditPage()),
           ),
         ),
       );
@@ -210,10 +210,10 @@ class _BookGrid extends StatelessWidget {
             statusLabel: b.status.label,
             // 与书籍模块一致：单击进详情、长按进编辑
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => BookDetailScreen(bookId: b.id)),
+              MaterialPageRoute(builder: (_) => BookDetailPage(bookId: b.id)),
             ),
             onLongPress: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => BookEditScreen(bookId: b.id)),
+              MaterialPageRoute(builder: (_) => BookEditPage(bookId: b.id)),
             ),
           ),
       ],
@@ -237,7 +237,7 @@ class _MovieGrid extends StatelessWidget {
           title: '还没有电影记录',
           subtitle: '点击这里直接添加你的第一部电影',
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const MovieEditScreen()),
+            MaterialPageRoute(builder: (_) => const MovieEditPage()),
           ),
         ),
       );
@@ -256,10 +256,10 @@ class _MovieGrid extends StatelessWidget {
             // 与书籍模块一致：单击进详情、长按进编辑
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
-                  builder: (_) => MovieDetailScreen(movieId: m.id)),
+                  builder: (_) => MovieDetailPage(movieId: m.id)),
             ),
             onLongPress: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => MovieEditScreen(movieId: m.id)),
+              MaterialPageRoute(builder: (_) => MovieEditPage(movieId: m.id)),
             ),
           ),
       ],

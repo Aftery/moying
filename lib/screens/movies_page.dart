@@ -8,8 +8,8 @@ import '../providers/library_provider.dart';
 import '../widgets/filter_dropdown.dart';
 import '../widgets/grid_item_card.dart';
 import '../widgets/search_bar_widget.dart';
-import 'movie_detail_screen.dart';
-import 'movie_edit_screen.dart';
+import 'movie_detail_page.dart';
+import 'movie_edit_page.dart';
 
 /// 电影库主页面
 ///
@@ -19,14 +19,14 @@ import 'movie_edit_screen.dart';
 /// - 双列网格卡片（封面 + 状态徽标 + 片名 + 导演 + 星级评分）
 /// - 单击卡片 → 详情页
 /// - 右下角 FAB → 新增电影
-class MoviesScreen extends StatefulWidget {
-  const MoviesScreen({super.key});
+class MoviesPage extends StatefulWidget {
+  const MoviesPage({super.key});
 
   @override
-  State<MoviesScreen> createState() => _MoviesScreenState();
+  State<MoviesPage> createState() => _MoviesPageState();
 }
 
-class _MoviesScreenState extends State<MoviesScreen> {
+class _MoviesPageState extends State<MoviesPage> {
   final TextEditingController _searchCtrl = TextEditingController();
   String _query = '';
   String? _genreFilter;
@@ -178,7 +178,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
   void _openDetail(String movieId) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => MovieDetailScreen(movieId: movieId)),
+      MaterialPageRoute(builder: (_) => MovieDetailPage(movieId: movieId)),
     );
   }
 
@@ -186,7 +186,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
   Future<void> _openEditor(String movieId) async {
     final messenger = ScaffoldMessenger.of(context);
     final result = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => MovieEditScreen(movieId: movieId)),
+      MaterialPageRoute(builder: (_) => MovieEditPage(movieId: movieId)),
     );
     if (result == kEditResultDeleted && messenger.mounted) {
       messenger.showSnackBar(const SnackBar(content: Text('电影已删除')));
@@ -196,7 +196,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
   Future<void> _openCreate() async {
     final messenger = ScaffoldMessenger.of(context);
     final result = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const MovieEditScreen()),
+      MaterialPageRoute(builder: (_) => const MovieEditPage()),
     );
     if (result == kEditResultSaved && messenger.mounted) {
       messenger.showSnackBar(const SnackBar(content: Text('电影已添加')));

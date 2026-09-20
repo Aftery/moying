@@ -10,7 +10,7 @@ import 'package:moying/data/mock_data.dart';
 import 'package:moying/models/media_ref.dart';
 import 'package:moying/models/user_profile.dart';
 import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/profile_screen.dart';
+import 'package:moying/screens/profile_page.dart';
 import 'package:provider/provider.dart';
 
 /// 1×1 透明 PNG（极小合法图片，供 copyImage 复制验证）
@@ -156,7 +156,7 @@ void main() {
       await tester.pumpWidget(
         ChangeNotifierProvider<LibraryProvider>.value(
           value: p,
-          child: const MaterialApp(home: ProfileScreen()),
+          child: const MaterialApp(home: ProfilePage()),
         ),
       );
       await tester.pumpAndSettle();

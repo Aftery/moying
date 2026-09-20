@@ -1,4 +1,4 @@
-part of 'data_source_screen.dart';
+part of 'data_source_page.dart';
 
 class _SourceTile extends StatelessWidget {
   const _SourceTile({required this.config});

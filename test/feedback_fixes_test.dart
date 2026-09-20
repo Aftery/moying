@@ -13,10 +13,10 @@ import 'package:provider/provider.dart';
 import 'package:moying/data/library_store.dart';
 import 'package:moying/models/user_profile.dart';
 import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/book_edit_screen.dart';
-import 'package:moying/screens/dashboard_screen.dart';
-import 'package:moying/screens/movie_edit_screen.dart';
-import 'package:moying/screens/profile_screen.dart';
+import 'package:moying/screens/book_edit_page.dart';
+import 'package:moying/screens/dashboard_page.dart';
+import 'package:moying/screens/movie_edit_page.dart';
+import 'package:moying/screens/profile_page.dart';
 import 'package:moying/widgets/grid_item_card.dart';
 
 /// 单屏包裹：注入内存模式 provider，home 作为可 pop 的根路由
@@ -55,7 +55,7 @@ void main() {
   group('片长输入过滤（onChanged 净化）', () {
     testWidgets('输入纯数字正常进入', (tester) async {
       final p = LibraryProvider();
-      await tester.pumpWidget(_wrap(p, const MovieEditScreen()));
+      await tester.pumpWidget(_wrap(p, const MovieEditPage()));
       await tester.pumpAndSettle();
 
       await tester.enterText(_durationField(), '169');
@@ -68,7 +68,7 @@ void main() {
 
     testWidgets('混入字母/符号被过滤，只剩数字', (tester) async {
       final p = LibraryProvider();
-      await tester.pumpWidget(_wrap(p, const MovieEditScreen()));
+      await tester.pumpWidget(_wrap(p, const MovieEditPage()));
       await tester.pumpAndSettle();
 
       await tester.enterText(_durationField(), 'a1b6c9!');
@@ -81,7 +81,7 @@ void main() {
 
     testWidgets('超过 4 位被截断', (tester) async {
       final p = LibraryProvider();
-      await tester.pumpWidget(_wrap(p, const MovieEditScreen()));
+      await tester.pumpWidget(_wrap(p, const MovieEditPage()));
       await tester.pumpAndSettle();
 
       await tester.enterText(_durationField(), '123456');
@@ -96,7 +96,7 @@ void main() {
   group('导演自动挂演员第 0 位', () {
     testWidgets('导演失焦后自动槽插入演员区首位，保存兜底新建演员', (tester) async {
       final p = LibraryProvider();
-      await tester.pumpWidget(_wrap(p, const MovieEditScreen()));
+      await tester.pumpWidget(_wrap(p, const MovieEditPage()));
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField).first, '同步测试片');
@@ -120,7 +120,7 @@ void main() {
 
     testWidgets('清空导演后失焦，自动槽被移除', (tester) async {
       final p = LibraryProvider();
-      await tester.pumpWidget(_wrap(p, const MovieEditScreen()));
+      await tester.pumpWidget(_wrap(p, const MovieEditPage()));
       await tester.pumpAndSettle();
 
       await tester.enterText(_directorField(), '诺兰');
@@ -137,7 +137,7 @@ void main() {
 
     testWidgets('手动删除自动槽后，同导演不再弹回', (tester) async {
       final p = LibraryProvider();
-      await tester.pumpWidget(_wrap(p, const MovieEditScreen()));
+      await tester.pumpWidget(_wrap(p, const MovieEditPage()));
       await tester.pumpAndSettle();
 
       await tester.enterText(_directorField(), '诺兰');
@@ -163,7 +163,7 @@ void main() {
       final p = LibraryProvider();
       final base = p.movieList.firstWhere((m) => m.director != null);
       // 导演与现有演员无同名
-      await tester.pumpWidget(_wrap(p, MovieEditScreen(movieId: base.id)));
+      await tester.pumpWidget(_wrap(p, MovieEditPage(movieId: base.id)));
       await tester.pumpAndSettle();
 
       expect(
@@ -176,9 +176,9 @@ void main() {
   group('仪表盘卡片交互', () {
     testWidgets('长按阅读列表卡片进入图书编辑页', (tester) async {
       final p = LibraryProvider();
-      // 仪表盘依赖外层 Scaffold 的 Material（MainShell 提供），测试里补齐
+      // 仪表盘依赖外层 Scaffold 的 Material（RootPage 提供），测试里补齐
       await tester
-          .pumpWidget(_wrap(p, const Scaffold(body: DashboardScreen())));
+          .pumpWidget(_wrap(p, const Scaffold(body: DashboardPage())));
       await tester.pumpAndSettle();
 
       final book = p.readingList.first;
@@ -199,14 +199,14 @@ void main() {
       await tester.longPress(cardInGrid.first);
       await tester.pumpAndSettle();
 
-      expect(find.byType(BookEditScreen), findsOneWidget);
+      expect(find.byType(BookEditPage), findsOneWidget);
       expect(find.text('修改书籍记录'), findsOneWidget);
     });
 
     testWidgets('长按电影卡片进入电影编辑页', (tester) async {
       final p = LibraryProvider();
       await tester
-          .pumpWidget(_wrap(p, const Scaffold(body: DashboardScreen())));
+          .pumpWidget(_wrap(p, const Scaffold(body: DashboardPage())));
       await tester.pumpAndSettle();
 
       final movie = p.movieList.first;
@@ -225,7 +225,7 @@ void main() {
       await tester.longPress(cardInGrid.first);
       await tester.pumpAndSettle();
 
-      expect(find.byType(MovieEditScreen), findsOneWidget);
+      expect(find.byType(MovieEditPage), findsOneWidget);
       expect(find.text('修改电影'), findsOneWidget);
     });
   });
@@ -237,7 +237,7 @@ void main() {
         nickname: '书友',
         signature: '读万卷书·行万里路',
       ));
-      await tester.pumpWidget(_wrap(p, const ProfileScreen()));
+      await tester.pumpWidget(_wrap(p, const ProfilePage()));
       await tester.pumpAndSettle();
 
       // 点头像卡弹只读面板
@@ -301,7 +301,7 @@ void main() {
       addTearDown(() => tester.runAsync(() => dir.delete(recursive: true)));
       final p = await emptyLibrary(tester, dir);
       await tester
-          .pumpWidget(_wrap(p, const Scaffold(body: DashboardScreen())));
+          .pumpWidget(_wrap(p, const Scaffold(body: DashboardPage())));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -311,7 +311,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
-      expect(find.byType(BookEditScreen), findsOneWidget);
+      expect(find.byType(BookEditPage), findsOneWidget);
       // AppBar 标题 + 页内标题各渲染一份
       expect(find.text('添加图书'), findsWidgets);
     });
@@ -326,7 +326,7 @@ void main() {
       addTearDown(() => tester.runAsync(() => dir.delete(recursive: true)));
       final p = await emptyLibrary(tester, dir);
       await tester
-          .pumpWidget(_wrap(p, const Scaffold(body: DashboardScreen())));
+          .pumpWidget(_wrap(p, const Scaffold(body: DashboardPage())));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -336,7 +336,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
-      expect(find.byType(MovieEditScreen), findsOneWidget);
+      expect(find.byType(MovieEditPage), findsOneWidget);
       expect(find.text('添加电影'), findsOneWidget);
     });
   });

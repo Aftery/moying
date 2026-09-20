@@ -1,4 +1,4 @@
-part of 'data_sync_screen.dart';
+part of 'data_sync_page.dart';
 
 class _SyncCard extends StatelessWidget {
   const _SyncCard({

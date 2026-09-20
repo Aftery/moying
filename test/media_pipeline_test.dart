@@ -8,7 +8,7 @@ import 'package:moying/data/mock_data.dart';
 import 'package:moying/models/book.dart';
 import 'package:moying/models/media_ref.dart';
 import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/book_edit_screen.dart';
+import 'package:moying/screens/book_edit_page.dart';
 import 'package:moying/services/image_pick_service.dart';
 import 'package:provider/provider.dart';
 
@@ -195,7 +195,7 @@ void main() {
               body: Center(
                 child: TextButton(
                   onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const BookEditScreen()),
+                    MaterialPageRoute(builder: (_) => const BookEditPage()),
                   ),
                   child: const Text('打开编辑页'),
                 ),
@@ -263,7 +263,7 @@ void main() {
       await settle(tester);
 
       // 已返回宿主页且新书落库（addBook 插入头部 → books.first 即新书）
-      expect(find.byType(BookEditScreen), findsNothing);
+      expect(find.byType(BookEditPage), findsNothing);
       expect(p.books.first.title, '测试新书');
       expect(p.books.first.cover?.remoteUrl, 'https://example.com/cover.jpg');
     });

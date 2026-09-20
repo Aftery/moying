@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/movie_edit_screen.dart';
+import 'package:moying/screens/movie_edit_page.dart';
 
 /// 单屏包裹：注入内存模式 provider，home 作为可 pop 的根路由
 Widget _wrap(LibraryProvider provider, Widget home) {
@@ -41,7 +41,7 @@ void main() {
       addTearDown(tester.view.reset);
 
       final p = LibraryProvider();
-      await tester.pumpWidget(_wrap(p, const MovieEditScreen()));
+      await tester.pumpWidget(_wrap(p, const MovieEditPage()));
       await tester.pumpAndSettle();
 
       // 上滑把类型输入框抬离视口底边，给下方联想浮层留展开空间
@@ -79,7 +79,7 @@ void main() {
       addTearDown(tester.view.reset);
 
       final p = LibraryProvider();
-      await tester.pumpWidget(_wrap(p, const MovieEditScreen()));
+      await tester.pumpWidget(_wrap(p, const MovieEditPage()));
       await tester.pumpAndSettle();
 
       // 上滑给浮层留空间
@@ -114,7 +114,7 @@ void main() {
     testWidgets('编辑模式删除已选标签，保存后 genres 同步移除', (tester) async {
       final p = LibraryProvider();
       // m3 星际穿越：genres = [科幻, 冒险, 悬疑]
-      await tester.pumpWidget(_wrap(p, const MovieEditScreen(movieId: 'm3')));
+      await tester.pumpWidget(_wrap(p, const MovieEditPage(movieId: 'm3')));
       await tester.pumpAndSettle();
 
       expect(find.widgetWithText(InputChip, '科幻'), findsOneWidget);

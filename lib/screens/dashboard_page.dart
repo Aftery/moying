@@ -10,19 +10,19 @@ import '../widgets/grid_item_card.dart';
 import '../widgets/media_tile.dart';
 import '../widgets/section_header.dart';
 import '../widgets/stats_card.dart';
-import 'book_detail_screen.dart';
-import 'book_edit_screen.dart';
-import 'movie_detail_screen.dart';
-import 'movie_edit_screen.dart';
+import 'book_detail_page.dart';
+import 'book_edit_page.dart';
+import 'movie_detail_page.dart';
+import 'movie_edit_page.dart';
 
 part 'dashboard_widgets.dart';
 
 /// 仪表盘主页 —— 数据统计 + 当前任务 + 阅读/电影列表
 ///
 /// [onOpenBooks] / [onOpenMovies]：「查看全部」等入口跳转对应底部 Tab，
-/// 由 MainShell 注入（IndexedStack 切换，各 Tab 状态保留）；不传则无跳转。
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key, this.onOpenBooks, this.onOpenMovies});
+/// 由 RootPage 注入（IndexedStack 切换，各 Tab 状态保留）；不传则无跳转。
+class DashboardPage extends StatelessWidget {
+  const DashboardPage({super.key, this.onOpenBooks, this.onOpenMovies});
 
   final VoidCallback? onOpenBooks;
   final VoidCallback? onOpenMovies;

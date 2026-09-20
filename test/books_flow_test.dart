@@ -7,9 +7,9 @@ import 'package:moying/data/mock_data.dart';
 import 'package:moying/main.dart';
 import 'package:moying/models/book.dart';
 import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/book_detail_screen.dart';
-import 'package:moying/screens/book_edit_screen.dart';
-import 'package:moying/screens/books_screen.dart';
+import 'package:moying/screens/book_detail_page.dart';
+import 'package:moying/screens/book_edit_page.dart';
+import 'package:moying/screens/books_page.dart';
 import 'package:moying/widgets/book_list_card.dart';
 import 'package:moying/widgets/search_bar_widget.dart';
 
@@ -54,13 +54,13 @@ void main() {
       await tester.pumpAndSettle();
 
       // 详情页出现：大进度卡「阅读进度」+ 编辑入口
-      expect(find.byType(BookDetailScreen), findsOneWidget);
+      expect(find.byType(BookDetailPage), findsOneWidget);
       expect(find.text('阅读进度'), findsOneWidget);
 
       // 返回列表（详情页用系统默认 AppBar 返回箭头，与电影详情页一致）
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
-      expect(find.byType(BooksScreen), findsOneWidget);
+      expect(find.byType(BooksPage), findsOneWidget);
     });
 
     testWidgets('搜索可实时过滤列表', (tester) async {
@@ -95,7 +95,7 @@ void main() {
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) =>
-                            BookEditScreen(bookId: kAllBooks.first.id),
+                            BookEditPage(bookId: kAllBooks.first.id),
                       ),
                     ),
                     child: const Text('打开编辑页'),
@@ -108,7 +108,7 @@ void main() {
       );
       await tester.tap(find.text('打开编辑页'));
       await tester.pumpAndSettle();
-      expect(find.byType(BookEditScreen), findsOneWidget);
+      expect(find.byType(BookEditPage), findsOneWidget);
       return provider;
     }
 
@@ -122,7 +122,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // 已返回宿主页
-      expect(find.byType(BookEditScreen), findsNothing);
+      expect(find.byType(BookEditPage), findsNothing);
       expect(find.text('打开编辑页'), findsOneWidget);
       // Provider 中该书标题已更新
       final updated =
@@ -141,7 +141,7 @@ void main() {
 
       expect(find.text('书名与作者不能为空'), findsOneWidget);
       // 仍在编辑页，未保存
-      expect(find.byType(BookEditScreen), findsOneWidget);
+      expect(find.byType(BookEditPage), findsOneWidget);
       expect(provider.books.first.title, isNot(''));
     });
 
@@ -160,7 +160,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // 已删除并返回宿主
-      expect(find.byType(BookEditScreen), findsNothing);
+      expect(find.byType(BookEditPage), findsNothing);
       expect(provider.books.map((b) => b.id), isNot(contains(id)));
       expect(provider.books.length, 11);
     });
@@ -176,7 +176,7 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, '取消'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(BookEditScreen), findsOneWidget);
+      expect(find.byType(BookEditPage), findsOneWidget);
       expect(provider.books.length, 12);
     });
   });
@@ -195,7 +195,7 @@ void main() {
                   child: ElevatedButton(
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const BookEditScreen(),
+                        builder: (_) => const BookEditPage(),
                       ),
                     ),
                     child: const Text('打开新增页'),
@@ -208,7 +208,7 @@ void main() {
       );
       await tester.tap(find.text('打开新增页'));
       await tester.pumpAndSettle();
-      expect(find.byType(BookEditScreen), findsOneWidget);
+      expect(find.byType(BookEditPage), findsOneWidget);
       return provider;
     }
 
@@ -234,7 +234,7 @@ void main() {
       await tester.tap(find.text('添加图书'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(BookEditScreen), findsOneWidget);
+      expect(find.byType(BookEditPage), findsOneWidget);
       // 新增模式特征：无删除按钮
       expect(find.text('删除图书'), findsNothing);
     });
@@ -254,7 +254,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // 已返回宿主页
-      expect(find.byType(BookEditScreen), findsNothing);
+      expect(find.byType(BookEditPage), findsNothing);
       // 数量 +1，新书插入列表头部
       expect(provider.books.length, before + 1);
       final added = provider.books.first;
@@ -278,7 +278,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('书名与作者不能为空'), findsOneWidget);
-      expect(find.byType(BookEditScreen), findsOneWidget);
+      expect(find.byType(BookEditPage), findsOneWidget);
       expect(provider.books.length, before);
     });
 
@@ -314,7 +314,7 @@ void main() {
       await tester.tap(saveButton(), warnIfMissed: false);
       await tester.pumpAndSettle();
 
-      expect(find.byType(BookEditScreen), findsNothing);
+      expect(find.byType(BookEditPage), findsNothing);
       expect(provider.books.first.category, '奇幻');
     });
 
@@ -329,7 +329,7 @@ void main() {
       await tester.tap(saveButton(), warnIfMissed: false);
       await tester.pumpAndSettle();
 
-      expect(find.byType(BookEditScreen), findsNothing);
+      expect(find.byType(BookEditPage), findsNothing);
       expect(provider.books.first.category, '科幻硬核');
       // 自定义分类经 usedCategories 自动进入联想候选与筛选下拉
       expect(provider.usedCategories, contains('科幻硬核'));
@@ -350,7 +350,7 @@ void main() {
       await tester.longPress(firstCard);
       await tester.pumpAndSettle();
 
-      expect(find.byType(BookEditScreen), findsOneWidget);
+      expect(find.byType(BookEditPage), findsOneWidget);
       expect(find.text('修改书籍记录'), findsOneWidget);
     });
   });
@@ -372,7 +372,7 @@ void main() {
                   child: ElevatedButton(
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => BookEditScreen(bookId: bookId),
+                        builder: (_) => BookEditPage(bookId: bookId),
                       ),
                     ),
                     child: const Text('打开编辑页'),
@@ -385,7 +385,7 @@ void main() {
       );
       await tester.tap(find.text('打开编辑页'));
       await tester.pumpAndSettle();
-      expect(find.byType(BookEditScreen), findsOneWidget);
+      expect(find.byType(BookEditPage), findsOneWidget);
       return provider;
     }
 
@@ -401,7 +401,7 @@ void main() {
                 body: Center(
                   child: ElevatedButton(
                     onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const BookEditScreen()),
+                      MaterialPageRoute(builder: (_) => const BookEditPage()),
                     ),
                     child: const Text('打开新增页'),
                   ),
@@ -413,7 +413,7 @@ void main() {
       );
       await tester.tap(find.text('打开新增页'));
       await tester.pumpAndSettle();
-      expect(find.byType(BookEditScreen), findsOneWidget);
+      expect(find.byType(BookEditPage), findsOneWidget);
       return provider;
     }
 
@@ -508,7 +508,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // 仍在编辑页，完成记录保留
-      expect(find.byType(BookEditScreen), findsOneWidget);
+      expect(find.byType(BookEditPage), findsOneWidget);
       expect(find.text('阅读完成'), findsOneWidget);
       expect(find.text('2025-10-18'), findsOneWidget);
     });

@@ -12,8 +12,8 @@ import '../widgets/media_cover.dart';
 ///
 /// 未实现右上角「筛选」：当前剧照只存了 URL，没有语言 / 尺寸等可筛维度，
 /// 加了也是空壳——等后续接入元数据再补（Karpathy：不为对齐截图造无用控件）。
-class MovieStillsScreen extends StatefulWidget {
-  const MovieStillsScreen({
+class MovieStillsPage extends StatefulWidget {
+  const MovieStillsPage({
     super.key,
     required this.title,
     this.backdrops = const <MediaRef>[],
@@ -30,10 +30,10 @@ class MovieStillsScreen extends StatefulWidget {
   final List<MediaRef> posters;
 
   @override
-  State<MovieStillsScreen> createState() => _MovieStillsScreenState();
+  State<MovieStillsPage> createState() => _MovieStillsPageState();
 }
 
-class _MovieStillsScreenState extends State<MovieStillsScreen>
+class _MovieStillsPageState extends State<MovieStillsPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tab;
 

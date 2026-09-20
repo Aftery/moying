@@ -12,7 +12,7 @@ import 'package:moying/data/mock_data.dart';
 import 'package:moying/models/sync_settings.dart';
 import 'package:moying/providers/library_provider.dart';
 import 'package:moying/providers/sync_provider.dart';
-import 'package:moying/screens/data_sync_screen.dart';
+import 'package:moying/screens/data_sync_page.dart';
 import 'package:moying/services/backup_service.dart';
 import 'package:moying/services/secure_storage_service.dart';
 import 'package:moying/services/webdav_client.dart';
@@ -337,13 +337,13 @@ void main() {
     });
   });
 
-  group('DataSyncScreen 页面', () {
+  group('DataSyncPage 页面', () {
     Widget wrap(LibraryProvider lib, SyncProvider sync) => MultiProvider(
           providers: [
             ChangeNotifierProvider.value(value: lib),
             ChangeNotifierProvider.value(value: sync),
           ],
-          child: const MaterialApp(home: DataSyncScreen()),
+          child: const MaterialApp(home: DataSyncPage()),
         );
 
     Finder rowSwitch(String title) => find.descendant(

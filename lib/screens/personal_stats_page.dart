@@ -9,7 +9,7 @@ import '../providers/library_provider.dart';
 import '../widgets/chart_widgets.dart';
 import '../widgets/cover_placeholder.dart';
 import '../widgets/heatmap_calendar.dart';
-import 'annual_report_screen.dart';
+import 'annual_report_page.dart';
 
 part 'personal_stats_widgets.dart';
 
@@ -20,14 +20,14 @@ part 'personal_stats_widgets.dart';
 /// 3. 底部：在读进度条（3 本 + 查看全部）+ 年度五星封面墙 + 年报入口
 ///
 /// 全部数字来自 provider 计算属性，与仪表盘同源实时联动。
-class PersonalStatsScreen extends StatefulWidget {
-  const PersonalStatsScreen({super.key});
+class PersonalStatsPage extends StatefulWidget {
+  const PersonalStatsPage({super.key});
 
   @override
-  State<PersonalStatsScreen> createState() => _PersonalStatsScreenState();
+  State<PersonalStatsPage> createState() => _PersonalStatsPageState();
 }
 
-class _PersonalStatsScreenState extends State<PersonalStatsScreen> {
+class _PersonalStatsPageState extends State<PersonalStatsPage> {
   HeatmapRange _range = HeatmapRange.month30;
 
   @override

@@ -3,31 +3,31 @@ import 'package:provider/provider.dart';
 
 import '../config/app_palette.dart';
 import '../providers/library_provider.dart';
-import 'books_screen.dart';
-import 'dashboard_screen.dart';
-import 'library_screens.dart';
-import 'profile_screen.dart';
+import 'books_page.dart';
+import 'dashboard_page.dart';
+import 'movies_page.dart';
+import 'profile_page.dart';
 
 /// 主框架：底部导航（仪表盘 / 书籍 / 电影 / 个人）
-class MainShell extends StatefulWidget {
-  const MainShell({super.key});
+class RootPage extends StatefulWidget {
+  const RootPage({super.key});
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  State<RootPage> createState() => _RootPageState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _RootPageState extends State<RootPage> {
   int _index = 0;
 
   // 仪表盘「查看全部」等入口跳 Tab 的回调（非 const，其余三页保持 const）
   late final _pages = <Widget>[
-    DashboardScreen(
+    DashboardPage(
       onOpenBooks: () => setState(() => _index = 1),
       onOpenMovies: () => setState(() => _index = 2),
     ),
-    const BooksScreen(),
-    const MoviesScreen(),
-    const ProfileScreen(),
+    const BooksPage(),
+    const MoviesPage(),
+    const ProfilePage(),
   ];
 
   // M7：SnackBar 一次性调度锁——同一帧多次 rebuild 只弹一次，

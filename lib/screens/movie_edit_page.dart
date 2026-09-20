@@ -41,17 +41,17 @@ String sanitizeDurationInput(String raw) {
 /// - 剧情类型 Tag 多选（FilterChip 高亮）、评分 Slider + 实时星级点亮
 /// - 演员信息动态增删、我的影评 Textarea + 字数统计（/5000）
 /// - 底部：蓝色「保存修改」（新增模式为「保存」）/ 灰色「取消」/ 红色「删除电影」（需二次确认）
-class MovieEditScreen extends StatefulWidget {
-  const MovieEditScreen({super.key, this.movieId});
+class MovieEditPage extends StatefulWidget {
+  const MovieEditPage({super.key, this.movieId});
 
   /// 待编辑电影 id；为空表示新增模式
   final String? movieId;
 
   @override
-  State<MovieEditScreen> createState() => _MovieEditScreenState();
+  State<MovieEditPage> createState() => _MovieEditPageState();
 }
 
-class _MovieEditScreenState extends State<MovieEditScreen> {
+class _MovieEditPageState extends State<MovieEditPage> {
   static const int _reviewMaxChars = 5000;
 
   late final TextEditingController _titleCtrl;

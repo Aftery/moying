@@ -1,4 +1,4 @@
-part of 'error_log_screen.dart';
+part of 'error_log_page.dart';
 
 class _SummaryHeader extends StatelessWidget {
   const _SummaryHeader({

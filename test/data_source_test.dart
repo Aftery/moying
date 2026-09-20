@@ -16,9 +16,9 @@ import 'package:moying/models/book.dart';
 import 'package:moying/models/data_source.dart';
 import 'package:moying/providers/data_source_provider.dart';
 import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/book_edit_screen.dart';
-import 'package:moying/screens/data_source_screen.dart';
-import 'package:moying/screens/movie_edit_screen.dart';
+import 'package:moying/screens/book_edit_page.dart';
+import 'package:moying/screens/data_source_page.dart';
+import 'package:moying/screens/movie_edit_page.dart';
 import 'package:moying/services/backup_service.dart';
 import 'package:moying/services/data_source_interface.dart';
 import 'package:moying/services/data_source_manager.dart';
@@ -648,7 +648,7 @@ void main() {
 
       await tester.pumpWidget(MultiProvider(
         providers: [ChangeNotifierProvider.value(value: provider)],
-        child: const MaterialApp(home: DataSourceScreen()),
+        child: const MaterialApp(home: DataSourcePage()),
       ));
       await tester.pumpAndSettle();
 
@@ -672,7 +672,7 @@ void main() {
 
       await tester.pumpWidget(MultiProvider(
         providers: [ChangeNotifierProvider.value(value: provider)],
-        child: const MaterialApp(home: DataSourceScreen()),
+        child: const MaterialApp(home: DataSourcePage()),
       ));
       await tester.pumpAndSettle();
 
@@ -693,7 +693,7 @@ void main() {
 
       await tester.pumpWidget(MultiProvider(
         providers: [ChangeNotifierProvider.value(value: provider)],
-        child: const MaterialApp(home: DataSourceScreen()),
+        child: const MaterialApp(home: DataSourcePage()),
       ));
       await tester.pumpAndSettle();
 
@@ -726,7 +726,7 @@ void main() {
               body: Center(
                 child: TextButton(
                   onPressed: () => Navigator.of(ctx).push(
-                    MaterialPageRoute(builder: (_) => const BookEditScreen()),
+                    MaterialPageRoute(builder: (_) => const BookEditPage()),
                   ),
                   child: const Text('go'),
                 ),
@@ -811,7 +811,7 @@ void main() {
               body: Center(
                 child: TextButton(
                   onPressed: () => Navigator.of(ctx).push(
-                    MaterialPageRoute(builder: (_) => const MovieEditScreen()),
+                    MaterialPageRoute(builder: (_) => const MovieEditPage()),
                   ),
                   child: const Text('go'),
                 ),

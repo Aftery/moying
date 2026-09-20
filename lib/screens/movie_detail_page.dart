@@ -12,9 +12,9 @@ import '../widgets/cast_bottom_sheet.dart';
 import '../widgets/detail_common.dart';
 import '../widgets/media_cover.dart';
 import '../widgets/rating_stars.dart';
-import 'actor_detail_screen.dart';
-import 'movie_edit_screen.dart';
-import 'movie_stills_screen.dart';
+import 'actor_detail_page.dart';
+import 'movie_edit_page.dart';
+import 'movie_stills_page.dart';
 
 part 'movie_detail_widgets.dart';
 
@@ -24,21 +24,21 @@ part 'movie_detail_widgets.dart';
 /// 顶部海报 → 名称/英文名/导演与评分 → 电影简介 → 补充元数据卡（4 项）
 /// → 主创/演员横滚 → 我的影评卡 → 剧照网格。
 /// AppBar 右上角提供「编辑」入口；从编辑页删除后自动返回上一页。
-class MovieDetailScreen extends StatefulWidget {
-  const MovieDetailScreen({super.key, required this.movieId});
+class MovieDetailPage extends StatefulWidget {
+  const MovieDetailPage({super.key, required this.movieId});
 
   /// 需要展示的电影 id
   final String movieId;
 
   @override
-  State<MovieDetailScreen> createState() => _MovieDetailScreenState();
+  State<MovieDetailPage> createState() => _MovieDetailPageState();
 }
 
-class _MovieDetailScreenState extends State<MovieDetailScreen> {
+class _MovieDetailPageState extends State<MovieDetailPage> {
   Future<void> _openEditor(BuildContext context) async {
     final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(
-        builder: (_) => MovieEditScreen(movieId: widget.movieId),
+        builder: (_) => MovieEditPage(movieId: widget.movieId),
       ),
     );
     // 编辑页里删除了这部电影 → 详情页随之关闭
@@ -370,7 +370,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 ? null
                 : () => Navigator.of(ctx).push(
                       MaterialPageRoute(
-                        builder: (_) => ActorDetailScreen(actorId: item.actorId!),
+                        builder: (_) => ActorDetailPage(actorId: item.actorId!),
                       ),
                     ),
             child: Column(
@@ -419,7 +419,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   /// 无快照时回退本地 Actor 实体（旧数据 / 手动添加）。
   ///
   /// 快照里的姓名逐个匹配本地库拿 actorId，供点击跳转作品页复用
-  /// 现有的 [ActorDetailScreen]（其作品列表按 actorIds 反查，不落盘）。
+  /// 现有的 [ActorDetailPage]（其作品列表按 actorIds 反查，不落盘）。
   List<CastItem> _buildCastItems(Movie movie, List<Actor> localActors) {
     final items = <CastItem>[];
     final snapshot = movie.cast;
@@ -605,7 +605,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       movieTitle: movie.title,
       onTapActor: (actorId) => Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => ActorDetailScreen(actorId: actorId),
+          builder: (_) => ActorDetailPage(actorId: actorId),
         ),
       ),
     );
@@ -616,7 +616,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     final poster = movie.poster;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => MovieStillsScreen(
+        builder: (_) => MovieStillsPage(
           title: movie.title,
           backdrops: movie.stills ?? const <MediaRef>[],
           // 主海报并入「海报」Tab（可能是用户上传的本地图，非 TMDB 网络图）

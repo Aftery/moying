@@ -9,7 +9,7 @@ import '../models/media_ref.dart';
 import '../models/movie.dart';
 import '../providers/library_provider.dart';
 import '../widgets/media_cover.dart';
-import 'movie_detail_screen.dart';
+import 'movie_detail_page.dart';
 
 part 'actor_detail_widgets.dart';
 
@@ -19,8 +19,8 @@ part 'actor_detail_widgets.dart';
 /// [LibraryProvider.moviesByActor] 反查得出、不落盘——删除电影后列表自动消失。
 /// AppBar 提供「编辑资料」（改名/写简介）与「删除演员」：
 /// 被电影引用时删除被拒并列出引用作品，引用清零后才允许删除。
-class ActorDetailScreen extends StatelessWidget {
-  const ActorDetailScreen({super.key, required this.actorId});
+class ActorDetailPage extends StatelessWidget {
+  const ActorDetailPage({super.key, required this.actorId});
 
   /// 需要展示的演员 id
   final String actorId;
@@ -341,7 +341,7 @@ class ActorDetailScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => MovieDetailScreen(movieId: movie.id),
+            builder: (_) => MovieDetailPage(movieId: movie.id),
           ),
         ),
         child: Container(

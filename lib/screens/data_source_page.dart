@@ -15,8 +15,8 @@ part 'data_source_widgets.dart';
 /// - 每行：单选（设为默认）+ 名称 + 状态徽标 + 配置摘要 + 编辑入口
 /// - 「+ 添加」：内置类型选择（豆瓣后续迭代开放）
 /// - 编辑弹窗：动态渲染 [ConfigField]（secret 字段密文输入），支持测试连接
-class DataSourceScreen extends StatelessWidget {
-  const DataSourceScreen({super.key});
+class DataSourcePage extends StatelessWidget {
+  const DataSourcePage({super.key});
 
   @override
   Widget build(BuildContext context) {

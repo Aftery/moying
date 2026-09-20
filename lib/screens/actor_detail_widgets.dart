@@ -1,4 +1,4 @@
-part of 'actor_detail_screen.dart';
+part of 'actor_detail_page.dart';
 
 class _ActorEditResult {
   const _ActorEditResult({

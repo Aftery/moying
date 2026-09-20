@@ -11,7 +11,7 @@ import 'data/persistence.dart';
 import 'providers/data_source_provider.dart';
 import 'providers/library_provider.dart';
 import 'providers/sync_provider.dart';
-import 'screens/main_shell.dart';
+import 'screens/root_page.dart';
 import 'services/app_logger.dart';
 import 'services/data_source_manager.dart';
 
@@ -216,7 +216,7 @@ class _AppShellState extends State<_AppShell> {
       theme: buildAppTheme(AppPalette.light),
       darkTheme: buildAppTheme(AppPalette.dark),
       themeMode: themeMode,
-      home: const MainShell(),
+      home: const RootPage(),
     );
   }
 }

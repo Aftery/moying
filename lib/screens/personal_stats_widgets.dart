@@ -1,4 +1,4 @@
-part of 'personal_stats_screen.dart';
+part of 'personal_stats_page.dart';
 
 class _MetricBar extends StatelessWidget {
   const _MetricBar({required this.annual});
@@ -240,7 +240,7 @@ class _AnnualReportEntry extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => AnnualReportScreen(year: year))),
+          builder: (_) => AnnualReportPage(year: year))),
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(

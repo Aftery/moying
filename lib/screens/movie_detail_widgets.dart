@@ -1,4 +1,4 @@
-part of 'movie_detail_screen.dart';
+part of 'movie_detail_page.dart';
 
 class _CastAvatar extends StatelessWidget {
   const _CastAvatar({

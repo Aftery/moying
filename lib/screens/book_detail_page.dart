@@ -8,8 +8,8 @@ import '../providers/library_provider.dart';
 import '../widgets/detail_common.dart';
 import '../widgets/media_cover.dart';
 import '../widgets/rating_stars.dart';
-import 'book_edit_screen.dart';
-import 'books_screen.dart';
+import 'book_edit_page.dart';
+import 'books_page.dart';
 
 part 'book_detail_widgets.dart';
 
@@ -21,15 +21,15 @@ part 'book_detail_widgets.dart';
 /// - 阅读进度卡（百分比大字 + 进度条）
 /// - 2×2 信息卡（阅读状态 / 出版年份 / 总页数 / ISBN）
 /// - 内容简介（可折叠纯文本）→ 阅读感悟 & 划线卡（含「修改」入口）
-class BookDetailScreen extends StatelessWidget {
-  const BookDetailScreen({super.key, required this.bookId});
+class BookDetailPage extends StatelessWidget {
+  const BookDetailPage({super.key, required this.bookId});
 
   final String bookId;
 
   Future<void> _openEditor(BuildContext context) async {
     final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(
-        builder: (_) => BookEditScreen(bookId: bookId),
+        builder: (_) => BookEditPage(bookId: bookId),
       ),
     );
     // 编辑页里删除了这本书 → 详情页随之关闭
@@ -157,7 +157,7 @@ class BookDetailScreen extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) =>
-                        BooksScreen(initialQuery: book.author),
+                        BooksPage(initialQuery: book.author),
                   ),
                 ),
                 child: Padding(

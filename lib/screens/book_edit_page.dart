@@ -30,16 +30,16 @@ import '../widgets/star_rating_picker.dart';
 /// - 卡片 3：阅读进度更新（状态胶囊 + 已读页数/总页数输入，0 页=想读、填满=完成）
 /// - 卡片 4：出版社 / 出版年份 / ISBN 行（点按弹窗编辑）
 /// - 卡片 5/6：内容简介、阅读感悟 & 划线（1000 字计数）
-class BookEditScreen extends StatefulWidget {
-  const BookEditScreen({super.key, this.bookId});
+class BookEditPage extends StatefulWidget {
+  const BookEditPage({super.key, this.bookId});
 
   final String? bookId;
 
   @override
-  State<BookEditScreen> createState() => _BookEditScreenState();
+  State<BookEditPage> createState() => _BookEditPageState();
 }
 
-class _BookEditScreenState extends State<BookEditScreen> {
+class _BookEditPageState extends State<BookEditPage> {
   bool get _isAddMode => widget.bookId == null;
 
   /// 编辑模式下按 id 查找失败（书已被删除等）

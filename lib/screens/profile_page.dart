@@ -10,10 +10,10 @@ import '../models/stats.dart';
 import '../models/user_profile.dart';
 import '../providers/library_provider.dart';
 import '../widgets/media_cover.dart';
-import 'data_source_screen.dart';
-import 'data_sync_screen.dart';
-import 'error_log_screen.dart';
-import 'personal_stats_screen.dart';
+import 'data_source_page.dart';
+import 'data_sync_page.dart';
+import 'error_log_page.dart';
+import 'personal_stats_page.dart';
 
 part 'profile_widgets.dart';
 
@@ -21,8 +21,8 @@ part 'profile_widgets.dart';
 ///
 /// 档案与主题偏好均持久化于 profile.json（单例集合）；
 /// 编辑弹层交互与演员资料编辑（actor_detail_screen）同构。
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+class ProfilePage extends StatelessWidget {
+  const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +64,7 @@ class ProfileScreen extends StatelessWidget {
             icon: Icons.data_usage_rounded,
             label: '数据统计',
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PersonalStatsScreen()),
+              MaterialPageRoute(builder: (_) => const PersonalStatsPage()),
             ),
           ),
           _SettingItem(
@@ -79,21 +79,21 @@ class ProfileScreen extends StatelessWidget {
               icon: Icons.cloud_download_outlined,
               label: '数据源管理',
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const DataSourceScreen()),
+                MaterialPageRoute(builder: (_) => const DataSourcePage()),
               ),
             ),
             _SettingItem(
               icon: Icons.sync_rounded,
               label: '数据同步',
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const DataSyncScreen()),
+                MaterialPageRoute(builder: (_) => const DataSyncPage()),
               ),
             ),
             _SettingItem(
               icon: Icons.bug_report_rounded,
               label: '错误日志',
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ErrorLogScreen()),
+                MaterialPageRoute(builder: (_) => const ErrorLogPage()),
               ),
             ),
           ],

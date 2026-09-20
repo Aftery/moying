@@ -1,4 +1,4 @@
-part of 'profile_screen.dart';
+part of 'profile_page.dart';
 
 class _ThemeModeLabel extends StatelessWidget {
   const _ThemeModeLabel({required this.mode});

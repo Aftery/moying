@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/book_detail_screen.dart';
-import 'package:moying/screens/books_screen.dart';
+import 'package:moying/screens/book_detail_page.dart';
+import 'package:moying/screens/books_page.dart';
 
 void main() {
   testWidgets('详情页点作者 → 书库按作者过滤出全部同作者书目', (tester) async {
@@ -13,7 +13,7 @@ void main() {
     // 打开《三体》（b6，作者刘慈欣；mock 里另有一本《三体Ⅱ：黑暗森林》b3）
     await tester.pumpWidget(ChangeNotifierProvider.value(
       value: p,
-      child: const MaterialApp(home: BookDetailScreen(bookId: 'b6')),
+      child: const MaterialApp(home: BookDetailPage(bookId: 'b6')),
     ));
     await tester.pumpAndSettle();
 
@@ -22,8 +22,8 @@ void main() {
     await tester.tap(find.byIcon(Icons.manage_search_rounded));
     await tester.pumpAndSettle();
 
-    // 新 BooksScreen 实例按作者预填过滤：刘慈欣共 2 本
-    expect(find.byType(BooksScreen), findsOneWidget);
+    // 新 BooksPage 实例按作者预填过滤：刘慈欣共 2 本
+    expect(find.byType(BooksPage), findsOneWidget);
     expect(find.text('共 2 本'), findsOneWidget);
     expect(find.text('三体'), findsOneWidget);
     expect(find.text('三体Ⅱ：黑暗森林'), findsOneWidget);
@@ -33,7 +33,7 @@ void main() {
     final p = LibraryProvider();
     await tester.pumpWidget(ChangeNotifierProvider.value(
       value: p,
-      child: const MaterialApp(home: BookDetailScreen(bookId: 'b6')),
+      child: const MaterialApp(home: BookDetailPage(bookId: 'b6')),
     ));
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.manage_search_rounded));
@@ -44,6 +44,6 @@ void main() {
     // 返回后详情页仍在
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
-    expect(find.byType(BookDetailScreen), findsOneWidget);
+    expect(find.byType(BookDetailPage), findsOneWidget);
   });
 }

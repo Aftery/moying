@@ -14,8 +14,8 @@ import '../widgets/cover_placeholder.dart';
 /// 1. 最晚读完的一本书（completedAt 时刻最晚）
 /// 2. 阅读页数最多的一周
 /// 3. 打破偏好的那本书（分类与整体最高频分类不同）
-class AnnualReportScreen extends StatelessWidget {
-  const AnnualReportScreen({super.key, required this.year});
+class AnnualReportPage extends StatelessWidget {
+  const AnnualReportPage({super.key, required this.year});
 
   final int year;
 

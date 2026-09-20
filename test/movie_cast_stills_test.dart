@@ -29,8 +29,8 @@ import 'package:moying/models/data_source.dart';
 import 'package:moying/models/media_ref.dart';
 import 'package:moying/models/movie.dart';
 import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/movie_detail_screen.dart';
-import 'package:moying/screens/movie_stills_screen.dart';
+import 'package:moying/screens/movie_detail_page.dart';
+import 'package:moying/screens/movie_stills_page.dart';
 import 'package:moying/services/data_sources/tmdb_data_source.dart';
 
 /// 记录请求 + 返回固定 JSON 的假 HTTP 客户端
@@ -301,7 +301,7 @@ void main() {
         ],
       );
 
-      await tester.pumpWidget(wrap(p, MovieDetailScreen(movieId: movie.id)));
+      await tester.pumpWidget(wrap(p, MovieDetailPage(movieId: movie.id)));
       await tester.pumpAndSettle();
 
       // 角色名来自 cast 快照（本地 Actor 实体没有角色概念）
@@ -323,7 +323,7 @@ void main() {
         ],
       );
 
-      await tester.pumpWidget(wrap(p, MovieDetailScreen(movieId: movie.id)));
+      await tester.pumpWidget(wrap(p, MovieDetailPage(movieId: movie.id)));
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('全部 2'));
@@ -358,7 +358,7 @@ void main() {
         ],
       );
 
-      await tester.pumpWidget(wrap(p, MovieDetailScreen(movieId: movie.id)));
+      await tester.pumpWidget(wrap(p, MovieDetailPage(movieId: movie.id)));
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('全部 2'));
@@ -390,7 +390,7 @@ void main() {
         ],
       );
 
-      await tester.pumpWidget(wrap(p, MovieDetailScreen(movieId: movie.id)));
+      await tester.pumpWidget(wrap(p, MovieDetailPage(movieId: movie.id)));
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('全部 2'));
@@ -409,7 +409,7 @@ void main() {
     testWidgets('无剧照时显示空态，不显示「全部」入口', (tester) async {
       final (p, movie) = buildMovie(stills: const []);
 
-      await tester.pumpWidget(wrap(p, MovieDetailScreen(movieId: movie.id)));
+      await tester.pumpWidget(wrap(p, MovieDetailPage(movieId: movie.id)));
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('暂无剧照'));
@@ -428,14 +428,14 @@ void main() {
         ],
       );
 
-      await tester.pumpWidget(wrap(p, MovieDetailScreen(movieId: movie.id)));
+      await tester.pumpWidget(wrap(p, MovieDetailPage(movieId: movie.id)));
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('全部 2'));
       await tester.tap(find.text('全部 2'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(MovieStillsScreen), findsOneWidget);
+      expect(find.byType(MovieStillsPage), findsOneWidget);
       // 2 张剧照 + 1 张主海报（详情页把主海报并入「海报」Tab）
       expect(find.text('全部 3'), findsOneWidget);
       expect(find.text('剧照 2'), findsOneWidget);
@@ -458,7 +458,7 @@ void main() {
       ));
       final movie = p.movieList.firstWhere((m) => m.id == base.id);
 
-      await tester.pumpWidget(wrap(p, MovieDetailScreen(movieId: movie.id)));
+      await tester.pumpWidget(wrap(p, MovieDetailPage(movieId: movie.id)));
       await tester.pumpAndSettle();
 
       expect(find.text('老演员'), findsOneWidget);

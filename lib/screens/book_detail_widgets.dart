@@ -1,4 +1,4 @@
-part of 'book_detail_screen.dart';
+part of 'book_detail_page.dart';
 
 class _EditPill extends StatelessWidget {
   const _EditPill({required this.onTap});

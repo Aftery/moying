@@ -11,9 +11,9 @@ import 'package:provider/provider.dart';
 
 import 'package:moying/models/actor.dart';
 import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/actor_detail_screen.dart';
-import 'package:moying/screens/movie_detail_screen.dart';
-import 'package:moying/screens/movie_edit_screen.dart';
+import 'package:moying/screens/actor_detail_page.dart';
+import 'package:moying/screens/movie_detail_page.dart';
+import 'package:moying/screens/movie_edit_page.dart';
 
 /// 单屏包裹：注入内存模式 provider，home 作为可 pop 的根路由
 Widget _wrap(LibraryProvider provider, Widget home) {
@@ -43,7 +43,7 @@ void main() {
       final base = p.movieList.first;
       p.updateMovie(base.copyWith(actorIds: [actor.id]));
 
-      await tester.pumpWidget(_wrap(p, MovieDetailScreen(movieId: base.id)));
+      await tester.pumpWidget(_wrap(p, MovieDetailPage(movieId: base.id)));
       await tester.pumpAndSettle();
 
       expect(find.text('甄探'), findsOneWidget);
@@ -57,7 +57,7 @@ void main() {
       final base = p.movieList.first;
       p.updateMovie(base.copyWith(actorIds: [actor.id]));
 
-      await tester.pumpWidget(_wrap(p, MovieDetailScreen(movieId: base.id)));
+      await tester.pumpWidget(_wrap(p, MovieDetailPage(movieId: base.id)));
       await tester.pumpAndSettle();
 
       final actorChip = find.text('甄探');
@@ -65,7 +65,7 @@ void main() {
       await tester.tap(actorChip);
       await tester.pumpAndSettle();
 
-      expect(find.byType(ActorDetailScreen), findsOneWidget);
+      expect(find.byType(ActorDetailPage), findsOneWidget);
       // 演员页内链：参演作品反查到这部电影
       expect(find.text('参演作品'), findsOneWidget);
       expect(find.text(base.title), findsOneWidget);
@@ -73,7 +73,7 @@ void main() {
       // 点作品回到电影详情
       await tester.tap(find.text(base.title).last);
       await tester.pumpAndSettle();
-      expect(find.byType(MovieDetailScreen), findsOneWidget);
+      expect(find.byType(MovieDetailPage), findsOneWidget);
     });
   });
 
@@ -85,7 +85,7 @@ void main() {
       final base = p.movieList.first;
       p.updateMovie(base.copyWith(actorIds: [actor.id]));
 
-      await tester.pumpWidget(_wrap(p, MovieEditScreen(movieId: base.id)));
+      await tester.pumpWidget(_wrap(p, MovieEditPage(movieId: base.id)));
       await tester.pumpAndSettle();
 
       expect(find.text('甄探'), findsWidgets);
@@ -106,7 +106,7 @@ void main() {
               builder: (context) => Center(
                 child: TextButton(
                   onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const MovieEditScreen()),
+                    MaterialPageRoute(builder: (_) => const MovieEditPage()),
                   ),
                   child: const Text('go'),
                 ),
@@ -146,13 +146,13 @@ void main() {
       expect(p.actors.any((a) => a.name == '新星小颖'), isTrue);
 
       // 详情页显示名字
-      await tester.pumpWidget(_wrap(p, MovieDetailScreen(movieId: movie.id)));
+      await tester.pumpWidget(_wrap(p, MovieDetailPage(movieId: movie.id)));
       await tester.pumpAndSettle();
       expect(find.text('新星小颖'), findsOneWidget);
       expect(find.text(movie.actorIds!.single), findsNothing);
 
       // 编辑回填显示名字
-      await tester.pumpWidget(_wrap(p, MovieEditScreen(movieId: movie.id)));
+      await tester.pumpWidget(_wrap(p, MovieEditPage(movieId: movie.id)));
       await tester.pumpAndSettle();
       expect(find.text('新星小颖'), findsWidgets);
       expect(find.text(movie.actorIds!.single), findsNothing);
@@ -167,7 +167,7 @@ void main() {
       final base = p.movieList.first;
       p.updateMovie(base.copyWith(actorIds: [actor.id]));
 
-      await tester.pumpWidget(_wrap(p, MovieDetailScreen(movieId: base.id)));
+      await tester.pumpWidget(_wrap(p, MovieDetailPage(movieId: base.id)));
       await tester.pumpAndSettle();
       final chip = find.text('旧艺名');
       await tester.ensureVisible(chip);
@@ -201,7 +201,7 @@ void main() {
       final base = p.movieList.first;
       p.updateMovie(base.copyWith(actorIds: [actor.id]));
 
-      await tester.pumpWidget(_wrap(p, MovieDetailScreen(movieId: base.id)));
+      await tester.pumpWidget(_wrap(p, MovieDetailPage(movieId: base.id)));
       await tester.pumpAndSettle();
       final chip = find.text('甄探');
       await tester.ensureVisible(chip);
@@ -225,9 +225,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(p.actors.any((a) => a.id == actor.id), isFalse);
-      expect(find.byType(ActorDetailScreen), findsNothing);
+      expect(find.byType(ActorDetailPage), findsNothing);
       // 回到电影详情：演员区因引用清空而整块隐藏
-      expect(find.byType(MovieDetailScreen), findsOneWidget);
+      expect(find.byType(MovieDetailPage), findsOneWidget);
       expect(find.text('甄探'), findsNothing);
     });
   });

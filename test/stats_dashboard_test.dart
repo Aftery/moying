@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moying/screens/personal_stats_screen.dart';
+import 'package:moying/screens/personal_stats_page.dart';
 import 'package:moying/widgets/heatmap_calendar.dart';
 import 'package:provider/provider.dart';
 
@@ -19,9 +19,9 @@ Widget _wrap(Widget child, {LibraryProvider? provider}) {
 }
 
 void main() {
-  group('PersonalStatsScreen 三段式渲染', () {
+  group('PersonalStatsPage 三段式渲染', () {
     testWidgets('三段区块与年报入口渲染', (tester) async {
-      await tester.pumpWidget(_wrap(const PersonalStatsScreen()));
+      await tester.pumpWidget(_wrap(const PersonalStatsPage()));
       await tester.pumpAndSettle();
 
       expect(find.text('个人统计'), findsOneWidget); // AppBar
@@ -36,7 +36,7 @@ void main() {
     });
 
     testWidgets('热力图范围切换 30天→季度→年度', (tester) async {
-      await tester.pumpWidget(_wrap(const PersonalStatsScreen()));
+      await tester.pumpWidget(_wrap(const PersonalStatsPage()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('季度'));
@@ -49,7 +49,7 @@ void main() {
     });
 
     testWidgets('年报入口点击跳转年报页', (tester) async {
-      await tester.pumpWidget(_wrap(const PersonalStatsScreen()));
+      await tester.pumpWidget(_wrap(const PersonalStatsPage()));
       await tester.pumpAndSettle();
 
       // 年报入口在页面底部，先滚动到可见

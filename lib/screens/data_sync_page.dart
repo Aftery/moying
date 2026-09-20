@@ -19,14 +19,14 @@ part 'data_sync_widgets.dart';
 ///
 /// 结构对齐设计稿：云同步卡（上次同步 + 立即备份 / 从云端恢复）→
 /// 服务器设置（4 输入 + 测试连接）→ 同步偏好（3 开关）→ 本地备份（导出 / 导入）。
-class DataSyncScreen extends StatefulWidget {
-  const DataSyncScreen({super.key});
+class DataSyncPage extends StatefulWidget {
+  const DataSyncPage({super.key});
 
   @override
-  State<DataSyncScreen> createState() => _DataSyncScreenState();
+  State<DataSyncPage> createState() => _DataSyncPageState();
 }
 
-class _DataSyncScreenState extends State<DataSyncScreen> {
+class _DataSyncPageState extends State<DataSyncPage> {
   late final TextEditingController _urlCtrl;
   late final TextEditingController _userCtrl;
   late final TextEditingController _passwordCtrl;

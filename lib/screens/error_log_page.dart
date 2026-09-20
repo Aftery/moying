@@ -11,14 +11,14 @@ part 'error_log_widgets.dart';
 ///
 /// **纯本地**：日志只写在设备上，本页不上传任何数据；用户可通过
 /// 「导出日志」（系统分享面板）或「复制全部」（剪贴板）把内容反馈给开发者。
-class ErrorLogScreen extends StatefulWidget {
-  const ErrorLogScreen({super.key});
+class ErrorLogPage extends StatefulWidget {
+  const ErrorLogPage({super.key});
 
   @override
-  State<ErrorLogScreen> createState() => _ErrorLogScreenState();
+  State<ErrorLogPage> createState() => _ErrorLogPageState();
 }
 
-class _ErrorLogScreenState extends State<ErrorLogScreen> {
+class _ErrorLogPageState extends State<ErrorLogPage> {
   String _stamp() {
     final now = DateTime.now();
     String p2(int v) => v.toString().padLeft(2, '0');

@@ -8,8 +8,8 @@ import '../providers/library_provider.dart';
 import '../widgets/book_list_card.dart';
 import '../widgets/filter_dropdown.dart';
 import '../widgets/search_bar_widget.dart';
-import 'book_detail_screen.dart';
-import 'book_edit_screen.dart';
+import 'book_detail_page.dart';
+import 'book_edit_page.dart';
 
 /// 图书库主页面（替换原占位页）
 ///
@@ -18,17 +18,17 @@ import 'book_edit_screen.dart';
 /// - 阅读进度 + 图书分类两个下拉筛选（可组合）
 /// - 双排卡片网格（BookListCard）
 /// - 单击 → 详情页；长按 → 编辑页
-class BooksScreen extends StatefulWidget {
-  const BooksScreen({super.key, this.initialQuery = ''});
+class BooksPage extends StatefulWidget {
+  const BooksPage({super.key, this.initialQuery = ''});
 
   /// 初始搜索词：书籍详情点「作者」跳转时预填，进入即按作者过滤
   final String initialQuery;
 
   @override
-  State<BooksScreen> createState() => _BooksScreenState();
+  State<BooksPage> createState() => _BooksPageState();
 }
 
-class _BooksScreenState extends State<BooksScreen> {
+class _BooksPageState extends State<BooksPage> {
   late final TextEditingController _searchCtrl;
   late String _query;
   BookStatus? _statusFilter;
@@ -182,14 +182,14 @@ class _BooksScreenState extends State<BooksScreen> {
 
   void _openDetail(String bookId) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => BookDetailScreen(bookId: bookId)),
+      MaterialPageRoute(builder: (_) => BookDetailPage(bookId: bookId)),
     );
   }
 
   Future<void> _openEditor(String bookId) async {
     final messenger = ScaffoldMessenger.of(context);
     final result = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => BookEditScreen(bookId: bookId)),
+      MaterialPageRoute(builder: (_) => BookEditPage(bookId: bookId)),
     );
     // 删除返回后无需额外处理：Provider 已移除该书，网格自动刷新
     if (result == kEditResultDeleted) {
@@ -201,7 +201,7 @@ class _BooksScreenState extends State<BooksScreen> {
   Future<void> _openCreate() async {
     final messenger = ScaffoldMessenger.of(context);
     final result = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const BookEditScreen()),
+      MaterialPageRoute(builder: (_) => const BookEditPage()),
     );
     if (result == kEditResultSaved && messenger.mounted) {
       messenger.showSnackBar(const SnackBar(content: Text('图书已添加')));
