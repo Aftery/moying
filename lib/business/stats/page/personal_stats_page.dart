@@ -35,8 +35,8 @@ class _PersonalStatsPageState extends State<PersonalStatsPage> {
         context.select<LibraryProvider, List<Movie>>((p) => p.movieList);
 
     final now = DateTime.now();
-    final annual = computeAnnualStats(
-        books: books, movies: movies, year: now.year);
+    final annual =
+        computeAnnualStats(books: books, movies: movies, year: now.year);
     final heatmap = _buildHeatmap(books, movies, now);
     final categories = categoryDistribution(books);
     final top5 = categories.take(5).toList();
@@ -50,170 +50,26 @@ class _PersonalStatsPageState extends State<PersonalStatsPage> {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
           // ==================== 第一段：年度概览 ====================
-          MetricBar(annual: annual),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: '打卡记录',
-            trailing: RangeSwitch(
-              value: _range,
-              onChanged: (v) => setState(() => _range = v),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                HeatmapCalendar(
-                  data: heatmap,
-                  endDate: now,
-                  hue: _range == HeatmapRange.month30 ? 160 : 260,
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    LegendDot(color: context.colors.surfaceHigh, label: '未打卡'),
-                    const SizedBox(width: 10),
-                    LegendDot(
-                        color: HSLColor.fromAHSL(1, _range == HeatmapRange.month30 ? 160 : 260, 0.65, 0.5)
-                            .toColor()
-                            .withOpacity(0.35),
-                        label: '1 次'),
-                    const SizedBox(width: 10),
-                    LegendDot(
-                        color: HSLColor.fromAHSL(1, _range == HeatmapRange.month30 ? 160 : 260, 0.65, 0.5)
-                            .toColor()
-                            .withOpacity(0.95),
-                        label: '3+ 次'),
-                  ],
-                ),
-              ],
-            ),
+          _OverviewSection(
+            annual: annual,
+            heatmap: heatmap,
+            now: now,
+            range: _range,
+            onRangeChanged: (v) => setState(() => _range = v),
           ),
 
           // ==================== 第二段：偏好分析 ====================
-          const SizedBox(height: 20),
-          SectionCard(
-            title: '类型偏好',
-            child: top5.isEmpty
-                ? const EmptyHint(text: '读完的书标记分类后，这里会展示你的口味分布')
-                : Row(
-                    children: [
-                      DonutChart(
-                        percentages: top5.map((e) => e.percent).toList(),
-                        labels: top5.map((e) => e.category).toList(),
-                        centerText: '${categories.fold<int>(0, (a, e) => a + e.count)} 本',
-                      ),
-                      const SizedBox(width: 18),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            for (var i = 0; i < top5.length; i++)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: _segColor(i),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(top5[i].category,
-                                          style: TextStyle(
-                                              fontSize: 12,
-                                              color: context.colors.textSecondary)),
-                                    ),
-                                    Text(
-                                      '${(top5[i].percent * 100).round()}%',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: context.colors.textPrimary),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: '评分习惯',
-            child: ratings.total == 0
-                ? const EmptyHint(text: '评分后这里会展示 1~5 星的分布')
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      RatingBarChart(distribution: ratings),
-                      const SizedBox(height: 6),
-                      Text('共 ${ratings.total} 条评分',
-                          style: TextStyle(
-                              fontSize: 11, color: context.colors.textMuted)),
-                    ],
-                  ),
+          _PreferenceSection(
+            top5: top5,
+            totalBooks: categories.fold<int>(0, (a, e) => a + e.count),
+            ratings: ratings,
           ),
 
           // ==================== 第三段：进行中与里程碑 ====================
-          const SizedBox(height: 20),
-          SectionCard(
-            title: reading.isEmpty ? '进行中' : '进行中 · ${reading.length} 本在读',
-            child: reading.isEmpty
-                ? const EmptyHint(text: '书架里还没有在读的书，去添加一本吧')
-                : Column(
-                    children: [
-                      for (final r in reading.take(3))
-                        ReadingProgressBar(item: r),
-                      if (reading.length > 3)
-                        TextButton(
-                          onPressed: () => _showAllReading(context, reading),
-                          child: Text('查看全部 ${reading.length} 本在读'),
-                        ),
-                    ],
-                  ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: fiveStar.isEmpty ? '本年度最高分' : '本年度最高分 · ${fiveStar.length} 部五星',
-            child: fiveStar.isEmpty
-                ? const EmptyHint(text: '今年标记 5 星的书影会出现在这里')
-                : SizedBox(
-                    height: 120,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: fiveStar.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 10),
-                      itemBuilder: (_, i) {
-                        final item = fiveStar[i];
-                        return SizedBox(
-                          width: 84,
-                          child: Column(
-                            children: [
-                              CoverPlaceholder(
-                                title: item.$2,
-                                emoji: item.$3,
-                                hue: item.$4,
-                                aspectRatio: 3 / 4,
-                                borderRadius: 10,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(item.$2,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      color: context.colors.textSecondary)),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+          _ProgressSection(
+            reading: reading,
+            fiveStar: fiveStar,
+            onShowAllReading: () => _showAllReading(context, reading),
           ),
 
           // ==================== 年报入口 ====================
@@ -226,7 +82,8 @@ class _PersonalStatsPageState extends State<PersonalStatsPage> {
 
   // ---------- 数据组装 ----------
 
-  HeatmapData _buildHeatmap(List<Book> books, List<Movie> movies, DateTime now) {
+  HeatmapData _buildHeatmap(
+      List<Book> books, List<Movie> movies, DateTime now) {
     final (from, to) = _rangeBounds(now);
     final entities = [
       for (final b in books) (b.id, bookActivityDates(b)),
@@ -265,13 +122,6 @@ class _PersonalStatsPageState extends State<PersonalStatsPage> {
     return result;
   }
 
-  /// 扇区配色：统一取自 [AppPalette.chartSeries]。
-  ///
-  /// 原为本地 5 色、与环图组件各存一份；收敛后分类多于 5 个时也能拿到
-  /// 不重复的颜色（此前第 6 个起会绕回重复用色）。
-  Color _segColor(int i) =>
-      AppPalette.chartSeries[i % AppPalette.chartSeries.length];
-
   void _showAllReading(BuildContext context, List<ReadingProgress> items) {
     showModalBottomSheet<void>(
       context: context,
@@ -304,4 +154,249 @@ class _PersonalStatsPageState extends State<PersonalStatsPage> {
 
 // ==================== 子组件 ====================
 
-/// 指标栏：年度读书 X 本 · 观影 Y 部 · 阅读时长 Z 小时
+/// 第一段：年度概览（打卡热力图 + metric bar）
+class _OverviewSection extends StatefulWidget {
+  const _OverviewSection({
+    required this.annual,
+    required this.heatmap,
+    required this.now,
+    required this.range,
+    required this.onRangeChanged,
+  });
+
+  final AnnualStats annual;
+  final HeatmapData heatmap;
+  final DateTime now;
+  final HeatmapRange range;
+  final ValueChanged<HeatmapRange> onRangeChanged;
+
+  @override
+  State<_OverviewSection> createState() => _OverviewSectionState();
+}
+
+class _OverviewSectionState extends State<_OverviewSection> {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        MetricBar(annual: widget.annual),
+        const SizedBox(height: 16),
+        SectionCard(
+          title: '打卡记录',
+          trailing: RangeSwitch(
+            value: widget.range,
+            onChanged: widget.onRangeChanged,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              HeatmapCalendar(
+                data: widget.heatmap,
+                endDate: widget.now,
+                hue: widget.range == HeatmapRange.month30 ? 160 : 260,
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  LegendDot(color: context.colors.surfaceHigh, label: '未打卡'),
+                  const SizedBox(width: 10),
+                  LegendDot(
+                      color: HSLColor.fromAHSL(
+                              1,
+                              widget.range == HeatmapRange.month30 ? 160 : 260,
+                              0.65,
+                              0.5)
+                          .toColor()
+                          .withOpacity(0.35),
+                      label: '1 次'),
+                  const SizedBox(width: 10),
+                  LegendDot(
+                      color: HSLColor.fromAHSL(
+                              1,
+                              widget.range == HeatmapRange.month30 ? 160 : 260,
+                              0.65,
+                              0.5)
+                          .toColor()
+                          .withOpacity(0.95),
+                      label: '3+ 次'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 第二段：偏好分析（类型分布环图 + 评分习惯柱状图）
+class _PreferenceSection extends StatelessWidget {
+  const _PreferenceSection({
+    required this.top5,
+    required this.totalBooks,
+    required this.ratings,
+  });
+
+  final List<CategoryEntry> top5;
+  final int totalBooks;
+  final RatingDistribution ratings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 20),
+        SectionCard(
+          title: '类型偏好',
+          child: top5.isEmpty
+              ? const EmptyHint(text: '读完的书标记分类后，这里会展示你的口味分布')
+              : Row(
+                  children: [
+                    DonutChart(
+                      percentages: top5.map((e) => e.percent).toList(),
+                      labels: top5.map((e) => e.category).toList(),
+                      centerText: '$totalBooks 本',
+                    ),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (var i = 0; i < top5.length; i++)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: AppPalette.chartSeries[
+                                          i % AppPalette.chartSeries.length],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(top5[i].category,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color:
+                                                context.colors.textSecondary)),
+                                  ),
+                                  Text(
+                                    '${(top5[i].percent * 100).round()}%',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: context.colors.textPrimary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+        const SizedBox(height: 16),
+        SectionCard(
+          title: '评分习惯',
+          child: ratings.total == 0
+              ? const EmptyHint(text: '评分后这里会展示 1~5 星的分布')
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RatingBarChart(distribution: ratings),
+                    const SizedBox(height: 6),
+                    Text('共 ${ratings.total} 条评分',
+                        style: TextStyle(
+                            fontSize: 11, color: context.colors.textMuted)),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 第三段：进行中与里程碑（在读进度 + 五星封面墙）
+class _ProgressSection extends StatelessWidget {
+  const _ProgressSection({
+    required this.reading,
+    required this.fiveStar,
+    required this.onShowAllReading,
+  });
+
+  final List<ReadingProgress> reading;
+  final List<(String, String, String?, double)> fiveStar;
+  final VoidCallback onShowAllReading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 20),
+        SectionCard(
+          title: reading.isEmpty ? '进行中' : '进行中 · ${reading.length} 本在读',
+          child: reading.isEmpty
+              ? const EmptyHint(text: '书架里还没有在读的书，去添加一本吧')
+              : Column(
+                  children: [
+                    for (final r in reading.take(3))
+                      ReadingProgressBar(item: r),
+                    if (reading.length > 3)
+                      TextButton(
+                        onPressed: onShowAllReading,
+                        child: Text('查看全部 ${reading.length} 本在读'),
+                      ),
+                  ],
+                ),
+        ),
+        const SizedBox(height: 16),
+        SectionCard(
+          title:
+              fiveStar.isEmpty ? '本年度最高分' : '本年度最高分 · ${fiveStar.length} 部五星',
+          child: fiveStar.isEmpty
+              ? const EmptyHint(text: '今年标记 5 星的书影会出现在这里')
+              : SizedBox(
+                  height: 120,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: fiveStar.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    itemBuilder: (_, i) {
+                      final item = fiveStar[i];
+                      return SizedBox(
+                        width: 84,
+                        child: Column(
+                          children: [
+                            CoverPlaceholder(
+                              title: item.$2,
+                              emoji: item.$3,
+                              hue: item.$4,
+                              aspectRatio: 3 / 4,
+                              borderRadius: 10,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(item.$2,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    color: context.colors.textSecondary)),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
