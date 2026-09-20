@@ -34,7 +34,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // 顶部搜索栏与结果计数
-      expect(find.byType(SearchBarWidget), findsOneWidget);
+      expect(find.byType(SearchBarView), findsOneWidget);
       expect(find.text('共 12 本'), findsOneWidget);
       // 网格卡片已渲染（懒加载，首行即可见）
       expect(find.byType(BookListCard), findsWidgets);

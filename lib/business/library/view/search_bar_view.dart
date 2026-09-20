@@ -6,8 +6,8 @@ import '../../../component/theme/app_palette.dart';
 ///
 /// - 实时回调 [onChanged]（输入清空/变化均触发）
 /// - 有内容时显示清除按钮
-class SearchBarWidget extends StatelessWidget {
-  const SearchBarWidget({
+class SearchBarView extends StatelessWidget {
+  const SearchBarView({
     super.key,
     required this.onChanged,
     this.hintText = '搜索书名或作者…',

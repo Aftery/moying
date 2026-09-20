@@ -76,7 +76,7 @@ class _MoviesPageState extends State<MoviesPage> {
             // ---------- 搜索栏 ----------
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-              child: SearchBarWidget(
+              child: SearchBarView(
                 controller: _searchCtrl,
                 hintText: '搜索电影/导演…',
                 onChanged: (v) => setState(() => _query = v),

@@ -100,7 +100,7 @@ class _BooksPageState extends State<BooksPage> {
             // ---------- 搜索栏 ----------
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-              child: SearchBarWidget(
+              child: SearchBarView(
                 controller: _searchCtrl,
                 onChanged: (v) => setState(() => _query = v),
               ),
