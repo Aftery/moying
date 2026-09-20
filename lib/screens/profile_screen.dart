@@ -12,6 +12,7 @@ import '../providers/library_provider.dart';
 import '../widgets/media_cover.dart';
 import 'data_source_screen.dart';
 import 'data_sync_screen.dart';
+import 'error_log_screen.dart';
 import 'personal_stats_screen.dart';
 
 part 'profile_widgets.dart';
@@ -86,6 +87,13 @@ class ProfileScreen extends StatelessWidget {
               label: '数据同步',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const DataSyncScreen()),
+              ),
+            ),
+            _SettingItem(
+              icon: Icons.bug_report_rounded,
+              label: '错误日志',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ErrorLogScreen()),
               ),
             ),
           ],

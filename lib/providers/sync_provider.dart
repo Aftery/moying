@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../data/library_store.dart';
 import '../models/sync_settings.dart';
+import '../services/app_logger.dart';
 import '../services/backup_service.dart';
 import '../services/merge_engine.dart';
 import '../services/secure_storage_service.dart';
@@ -112,6 +113,13 @@ class SyncProvider extends ChangeNotifier {
 
   // ==================== 连接与同步动作 ====================
 
+  /// 记一次同步 / 连接失败到应用日志（供用户在「个人 → 错误日志」导出反馈）。
+  ///
+  /// 只写错误信息与操作范围，**不写**服务器地址、用户名或密码。
+  void _logSyncFailure(String message, {String scope = 'webdav'}) {
+    AppLogger.instance.error('sync', message, meta: {'scope': scope});
+  }
+
   /// 测试连接：验证 URL/凭据并确保远程目录存在
   Future<void> testConnection() async {
     final client = await _requireClient();
@@ -120,6 +128,7 @@ class SyncProvider extends ChangeNotifier {
       _lastError = null;
     } on WebDavException catch (e) {
       _lastError = e.message;
+      _logSyncFailure(e.message);
       rethrow;
     } finally {
       client.close();
@@ -191,6 +200,7 @@ class SyncProvider extends ChangeNotifier {
       await store.saveSettings(_settings);
     } on WebDavException catch (e) {
       _lastError = e.message;
+      _logSyncFailure(e.message);
       rethrow;
     } finally {
       client.close();
@@ -225,6 +235,7 @@ class SyncProvider extends ChangeNotifier {
       );
     } on WebDavException catch (e) {
       _lastError = e.message;
+      _logSyncFailure(e.message);
       rethrow;
     } finally {
       client.close();
@@ -251,6 +262,7 @@ class SyncProvider extends ChangeNotifier {
       _lastError = null;
     } on BackupException catch (e) {
       _lastError = e.message;
+      _logSyncFailure(e.message, scope: 'restore');
       rethrow;
     } finally {
       _isSyncing = false;

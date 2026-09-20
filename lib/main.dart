@@ -12,6 +12,7 @@ import 'providers/data_source_provider.dart';
 import 'providers/library_provider.dart';
 import 'providers/sync_provider.dart';
 import 'screens/main_shell.dart';
+import 'services/app_logger.dart';
 import 'services/data_source_manager.dart';
 
 /// 「墨影」入口 —— 书籍与电影记录应用
@@ -21,10 +22,27 @@ import 'services/data_source_manager.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 全局兜底：捕获所有未处理异常，保证 App 永不完全崩溃
-  FlutterError.onError = (d) => debugPrint('[FlutterError] ${d.exception}');
+  // 日志中枢尽早就位：启动期的问题也要能记下来（供「个人 → 错误日志」查看导出）
+  await AppLogger.instance.init();
+  AppLogger.instance.info('app', '应用启动');
+
+  // 全局兜底：捕获所有未处理异常，保证 App 永不完全崩溃。
+  // 除控制台外同步写入日志，用户可在导出后反馈给开发者。
+  FlutterError.onError = (details) {
+    debugPrint('[FlutterError] ${details.exception}');
+    AppLogger.instance.fatal(
+      'flutter',
+      'Flutter 框架错误',
+      error: details.exception,
+      stack: details.stack,
+      meta: {
+        if ((details.library ?? '').isNotEmpty) 'library': details.library!,
+      },
+    );
+  };
   PlatformDispatcher.instance.onError = (e, st) {
     debugPrint('[AsyncError] $e\n$st');
+    AppLogger.instance.fatal('async', '未捕获的异步异常', error: e, stack: st);
     return true; // 已处理，不继续向上传播
   };
 

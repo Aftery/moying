@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/data_source.dart';
+import '../services/app_logger.dart';
 import '../services/book_result_merger.dart';
 import '../services/data_source_interface.dart';
 import '../services/data_source_manager.dart';
@@ -34,6 +35,30 @@ class DataSourceProvider extends ChangeNotifier {
 
   void _notifyIfAlive() {
     if (!_disposed) notifyListeners();
+  }
+
+  /// 记一次数据源失败到应用日志（供用户在「个人 → 错误日志」导出反馈）。
+  ///
+  /// 隐私约束：只写「哪个源 / 什么错 / 是否只是能力缺失」，
+  /// **不写**搜索词（用户行为）与任何凭据。
+  void _logSourceFailure(
+    String scope, {
+    required String message,
+    DataSourceConfig? source,
+    DataSourceCategory? category,
+    bool silent = false,
+  }) {
+    AppLogger.instance.error(
+      'data-source',
+      message,
+      meta: {
+        'scope': scope,
+        if (source != null) 'source': source.id,
+        if (source != null) 'type': source.type.name,
+        if (category != null) 'category': category.name,
+        'silent': '$silent',
+      },
+    );
   }
 
   // ---------- 缓存 ----------
@@ -268,6 +293,14 @@ class DataSourceProvider extends ChangeNotifier {
       if (_searchRequestIds[category] != requestId) return;
       setResults(null);
       _searchError = e.message;
+      // 用户实际看到的检索失败——最值得记的一条（报障常是「怎么搜都没有」）
+      _logSourceFailure(
+        'search',
+        message: '检索失败：${e.message}',
+        source: source,
+        category: category,
+        silent: e.silent,
+      );
     } finally {
       if (_searchRequestIds[category] == requestId) {
         _activeSearches.remove(category);
@@ -355,6 +388,17 @@ class DataSourceProvider extends ChangeNotifier {
         if (merged.length >= _bookResultLimit) break;
       } on DataSourceException catch (e) {
         failure ??= e;
+        // 源级根因（哪个源、什么错），比上层终态日志更具体；
+        // silent 只是「能力缺失」而非失败，不记，避免噪音。
+        if (!e.silent) {
+          _logSourceFailure(
+            'search-source',
+            message: '数据源检索失败：${e.message}',
+            source: source,
+            category: DataSourceCategory.book,
+            silent: e.silent,
+          );
+        }
       }
     }
 
@@ -411,7 +455,16 @@ class DataSourceProvider extends ChangeNotifier {
       );
       if (key != null) _movieDetailCache.put(key, detail);
       return detail;
-    } on DataSourceException {
+    } on DataSourceException catch (e) {
+      if (!e.silent) {
+        _logSourceFailure(
+          'movie-detail',
+          message: '影视详情补全失败：${e.message}',
+          source: source,
+          category: DataSourceCategory.movie,
+          silent: e.silent,
+        );
+      }
       return null;
     }
   }
@@ -460,7 +513,16 @@ class DataSourceProvider extends ChangeNotifier {
     } on DataSourceException catch (e) {
       // 能力缺失（源不支持详情 / 未配置详情接口）不是失败：搜索结果已经够用，
       // 报「补全失败」是误报。只有真实失败（网络、格式）才写入原因供调用方提示。
-      if (!e.silent) _lastDetailError = e.message;
+      if (!e.silent) {
+        _lastDetailError = e.message;
+        _logSourceFailure(
+          'book-detail',
+          message: '图书详情补全失败：${e.message}',
+          source: source,
+          category: DataSourceCategory.book,
+          silent: e.silent,
+        );
+      }
       return null;
     }
   }
@@ -499,6 +561,11 @@ class DataSourceProvider extends ChangeNotifier {
       return true;
     } on DataSourceException catch (e) {
       _actionError = e.message;
+      _logSourceFailure(
+        'test-connection',
+        message: '测试连接失败：${e.message}',
+        source: source,
+      );
       return false;
     } finally {
       _testingId = null;
@@ -517,6 +584,11 @@ class DataSourceProvider extends ChangeNotifier {
       return true;
     } on DataSourceException catch (e) {
       _actionError = e.message;
+      _logSourceFailure(
+        'test-draft',
+        message: '测试连接失败：${e.message}',
+        source: config,
+      );
       return false;
     } finally {
       _testingId = null;

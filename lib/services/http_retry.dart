@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import 'app_logger.dart';
+
 /// 数据源网络请求的**分层超时 + 一次重试**
 ///
 /// **为什么不是简单地把超时调长**：慢源（OpenLibrary / Google Books /
@@ -18,6 +20,8 @@ import 'package:http/http.dart' as http;
 ///
 /// 只对**可安全重放的失败**重试：超时、连接被拒/重置。HTTP 4xx/5xx 不重试——
 /// 那是服务端的明确回答，重试只会加重对方负担（如 429 限流）。
+///
+/// 重试仍失败时，把这次失败记入 [AppLogger]（供用户在「个人 → 错误日志」导出反馈）。
 
 /// 首跳超时（快速失败，把预算留给重试）
 const Duration kFirstAttemptTimeout = Duration(seconds: 6);
@@ -51,12 +55,53 @@ Future<http.Response> getWithRetry(
     try {
       return await client.get(uri, headers: headers).timeout(timeout);
     } on TimeoutException {
-      if (attempt >= _kMaxAttempts) rethrow;
-    } on SocketException {
-      if (attempt >= _kMaxAttempts) rethrow;
-    } on http.ClientException {
-      if (attempt >= _kMaxAttempts) rethrow;
+      if (attempt >= _kMaxAttempts) {
+        _logNetworkFailure(
+          uri,
+          'TimeoutException',
+          '请求超时（${timeout.inSeconds}s）',
+          attempt,
+        );
+        rethrow;
+      }
+    } on SocketException catch (e) {
+      if (attempt >= _kMaxAttempts) {
+        _logNetworkFailure(
+          uri,
+          'SocketException',
+          '连接失败：${e.osError?.message ?? e.message}',
+          attempt,
+        );
+        rethrow;
+      }
+    } on http.ClientException catch (e) {
+      if (attempt >= _kMaxAttempts) {
+        _logNetworkFailure(
+          uri,
+          'ClientException',
+          '请求异常：${e.message}',
+          attempt,
+        );
+        rethrow;
+      }
     }
     if (backoff > Duration.zero) await Future<void>.delayed(backoff);
   }
+}
+
+/// 记一条请求失败日志。
+///
+/// **只记主机与路径，刻意不记 query**——API key（如 TMDB 的 `api_key=`）与
+/// 用户搜索词都在 query 里，写进日志既泄露凭据又泄露用户行为。
+void _logNetworkFailure(Uri uri, String type, String message, int attempts) {
+  AppLogger.instance.error(
+    'http',
+    message,
+    meta: {
+      'host': uri.host,
+      'path': uri.path,
+      'type': type,
+      'attempts': '$attempts',
+    },
+  );
 }
