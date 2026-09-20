@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:moying/main.dart';
-import 'package:moying/widgets/section_header.dart';
+import 'package:moying/business/stats/view/section_header.dart';
 
 void main() {
   group('仪表盘「查看全部」跳转', () {

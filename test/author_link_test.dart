@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/book_detail_page.dart';
-import 'package:moying/screens/books_page.dart';
+import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/business/library/page/book_detail_page.dart';
+import 'package:moying/business/library/page/books_page.dart';
 
 void main() {
   testWidgets('详情页点作者 → 书库按作者过滤出全部同作者书目', (tester) async {

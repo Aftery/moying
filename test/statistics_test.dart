@@ -4,9 +4,9 @@
 // 类型占比、评分分布、在读进度、年度指标与年报亮点。
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moying/data/statistics.dart';
-import 'package:moying/models/book.dart';
-import 'package:moying/models/movie.dart';
+import 'package:moying/business/stats/model/statistics.dart';
+import 'package:moying/business/library/model/book.dart';
+import 'package:moying/business/library/model/movie.dart';
 
 Book _book({
   required String id,

@@ -1,0 +1,384 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../../../foundation/storage/library_store.dart';
+import '../model/sync_settings.dart';
+import '../../../foundation/logger/app_logger.dart';
+import '../service/backup_service.dart';
+import '../service/merge_engine.dart';
+import '../../../foundation/storage/secure_storage_service.dart';
+import '../service/snapshot_service.dart';
+import '../service/webdav_client.dart';
+import '../../library/view_model/library_provider.dart';
+
+/// 云端待恢复项（[fetchLatestBackup] 的返回，确认弹窗 → [confirmRestore]）
+class PendingRestore {
+  const PendingRestore({
+    required this.fileName,
+    required this.bytes,
+    required this.manifest,
+  });
+
+  final String fileName;
+  final Uint8List bytes;
+  final BackupManifest manifest;
+}
+
+/// 云同步状态与动作（ChangeNotifier）
+///
+/// 依赖注入：
+/// - [clientFactory] 按当前配置构造 WebDAV 客户端（测试注入 fake）
+/// - [saveFile] 导出备份落盘的实现（默认 FilePicker 选位置保存，
+///   写入失败自动回退系统分享面板；测试替换为收集器）
+/// - [connectivity] Wi-Fi 探测（null = 不拦截，仅测试环境）
+class SyncProvider extends ChangeNotifier {
+  SyncProvider({
+    required LibraryStore? store,
+    required LibraryProvider library,
+    SecureStorageService? secureStorage,
+    WebDavClient Function(SyncSettings settings, String password)?
+        clientFactory,
+    Future<bool> Function(String fileName, Uint8List bytes)? saveFile,
+    Connectivity? connectivity,
+  })  : _store = store,
+        _library = library,
+        _secure = secureStorage ?? SecureStorageService(),
+        _clientFactory = clientFactory ?? _defaultClient,
+        _saveFile = saveFile ?? _defaultSaveFile,
+        _connectivity = connectivity;
+
+  final LibraryStore? _store;
+  final LibraryProvider _library;
+  final SecureStorageService _secure;
+  final WebDavClient Function(SyncSettings, String) _clientFactory;
+  final Future<bool> Function(String, Uint8List) _saveFile;
+  final Connectivity? _connectivity;
+  bool _disposed = false;
+
+  void _notifyIfAlive() {
+    if (!_disposed) notifyListeners();
+  }
+
+  SyncSettings _settings = const SyncSettings();
+  bool _isSyncing = false;
+  String? _lastError;
+  MergeResult? _lastMerge;
+  Future<void> _operationTail = Future.value();
+
+  Future<T> _runExclusive<T>(Future<T> Function() action) async {
+    final previous = _operationTail;
+    final gate = Completer<void>();
+    _operationTail = gate.future;
+    await previous;
+    try {
+      return await action();
+    } finally {
+      gate.complete();
+    }
+  }
+
+  SyncSettings get settings => _settings;
+  bool get isSyncing => _isSyncing;
+  String? get lastError => _lastError;
+
+  /// 最近一次合并统计（null = 尚未执行过合并；UI 状态指示用）
+  MergeResult? get lastMerge => _lastMerge;
+
+  /// 启动加载配置（main.dart init 阶段调用；损坏回退默认值）
+  Future<void> loadSettings() async {
+    final store = _store;
+    if (store == null) return;
+    _settings = await store.loadSettings();
+    _notifyIfAlive();
+  }
+
+  /// 保存配置（settings.json；密码单独走安全存储见 [savePassword]）
+  Future<void> saveSettings(SyncSettings next) async {
+    _settings = next;
+    _notifyIfAlive();
+    await _store?.saveSettings(next);
+  }
+
+  /// 保存 / 更新 WebDAV 密码（安全存储，不落 settings.json）
+  Future<void> savePassword(String password) =>
+      _secure.saveWebDavPassword(_settings.username.trim(), password);
+
+  /// UI 回填密码用（仅编辑页展示；安全存储按当前用户名读取）
+  Future<String?> readPasswordForUi() =>
+      _secure.readWebDavPassword(_settings.username.trim());
+
+  // ==================== 连接与同步动作 ====================
+
+  /// 记一次同步 / 连接失败到应用日志（供用户在「个人 → 错误日志」导出反馈）。
+  ///
+  /// 只写错误信息与操作范围，**不写**服务器地址、用户名或密码。
+  void _logSyncFailure(String message, {String scope = 'webdav'}) {
+    AppLogger.instance.error('sync', message, meta: {'scope': scope});
+  }
+
+  /// 测试连接：验证 URL/凭据并确保远程目录存在
+  Future<void> testConnection() async {
+    final client = await _requireClient();
+    try {
+      await client.testConnection();
+      _lastError = null;
+    } on WebDavException catch (e) {
+      _lastError = e.message;
+      _logSyncFailure(e.message);
+      rethrow;
+    } finally {
+      client.close();
+      _notifyIfAlive();
+    }
+  }
+
+  /// 立即上传备份（flush → 本地快照 → 拉云端合并 → 上传 → 记录同步时间）
+  ///
+  /// v0.9.1 起接入记录级 LWW：上传前先拉云端最新备份做三集合合并
+  /// （id 并集 + updatedAt 新者胜），合并结果落盘后随包上传——
+  /// 保证双端各自的修改都不会被整包覆盖。云端无备份 / 包损坏时
+  /// 退化为原全量上传行为。
+  Future<void> uploadNow() =>
+      _runExclusive<void>(_uploadNowInner);
+
+  Future<void> _uploadNowInner() async {
+    final store = _store;
+    if (store == null) throw WebDavException(null, '当前平台不支持备份');
+    final client = await _requireClient();
+    _isSyncing = true;
+    _lastError = null;
+    _notifyIfAlive();
+    try {
+      await store.flush();
+      // 1) 合并前本地快照（失败只记日志，不阻断同步）
+      await SnapshotService(store: store).capture(tag: 'pre-merge');
+
+      // 2) 拉云端最新备份并 LWW 合并
+      MergeResult? merge;
+      try {
+        final names = await client.listBackups();
+        if (names.isNotEmpty) {
+          final remoteBytes = await client.download(names.first);
+          final remoteSnap =
+              await BackupService(store: store).extractSnapshot(remoteBytes);
+          merge = mergeSnapshot(
+            local: LibrarySnapshot(
+              books: _library.books,
+              movies: _library.movieList,
+              actors: _library.actors,
+            ),
+            remote: remoteSnap,
+          );
+          if (merge.hasChanges) {
+            // 合并结果落盘（saveXxx 落 v2 头）后从盘重载，updatedAt 原样保留
+            await store.saveBooks(merge.snapshot.books);
+            await store.saveMovies(merge.snapshot.movies);
+            await store.saveActors(merge.snapshot.actors);
+            await _library.reloadFromStore();
+          }
+        }
+      } on BackupException catch (e) {
+        // 云端包损坏 / 版本不符：不阻断上传（保留云端文件不动，本地上传新包）
+        debugPrint('[Sync] 云端备份无法解析，跳过合并直接上传: ${e.message}');
+        merge = null;
+      }
+
+      // 3) 打包上传（buildBackup 读磁盘 = 合并后数据）
+      final backup = BackupService(store: store);
+      final bytes =
+          await backup.buildBackup(includeImages: _settings.includeImages);
+      final now = DateTime.now();
+      final stamp = backup.backupFileStamp(now);
+      final fileName = _settings.includeImages ? '$stamp.zip' : '$stamp.json';
+      await client.upload(fileName, bytes);
+      _lastMerge = merge;
+      _settings = _settings.copyWith(lastSyncAt: now);
+      await store.saveSettings(_settings);
+    } on WebDavException catch (e) {
+      _lastError = e.message;
+      _logSyncFailure(e.message);
+      rethrow;
+    } finally {
+      client.close();
+      _isSyncing = false;
+      _notifyIfAlive();
+    }
+  }
+
+  /// 拉取云端最新备份（不落盘），供确认弹窗展示
+  Future<PendingRestore> fetchLatestBackup() =>
+      _runExclusive<PendingRestore>(_fetchLatestBackupInner);
+
+  Future<PendingRestore> _fetchLatestBackupInner() async {
+    final store = _store;
+    if (store == null) throw WebDavException(null, '当前平台不支持恢复');
+    final client = await _requireClient();
+    _isSyncing = true;
+    _lastError = null;
+    _notifyIfAlive();
+    try {
+      final names = await client.listBackups();
+      if (names.isEmpty) {
+        throw WebDavException(null, '云端还没有备份文件');
+      }
+      final bytes = await client.download(names.first);
+      final manifest = await BackupService(store: store).peekBackup(bytes);
+      _lastError = null;
+      return PendingRestore(
+        fileName: names.first,
+        bytes: bytes,
+        manifest: manifest,
+      );
+    } on WebDavException catch (e) {
+      _lastError = e.message;
+      _logSyncFailure(e.message);
+      rethrow;
+    } finally {
+      client.close();
+      _isSyncing = false;
+      _notifyIfAlive();
+    }
+  }
+
+  /// 确认恢复：覆盖本地数据并重新加载（UI 二次确认后调用）
+  Future<void> confirmRestore(PendingRestore pending) =>
+      _runExclusive<void>(() => _confirmRestoreInner(pending));
+
+  Future<void> _confirmRestoreInner(PendingRestore pending) async {
+    final store = _store;
+    if (store == null) throw WebDavException(null, '当前平台不支持恢复');
+    _isSyncing = true;
+    _notifyIfAlive();
+    try {
+      await _library.flush();
+      await BackupService(store: store).restoreBackup(pending.bytes);
+      await _library.reloadFromStore();
+      _settings = _settings.copyWith(lastSyncAt: DateTime.now());
+      await store.saveSettings(_settings);
+      _lastError = null;
+    } on BackupException catch (e) {
+      _lastError = e.message;
+      _logSyncFailure(e.message, scope: 'restore');
+      rethrow;
+    } finally {
+      _isSyncing = false;
+      _notifyIfAlive();
+    }
+  }
+
+  // ==================== 本地导出 / 导入（保底备选） ====================
+
+  /// 导出备份到本地：按「备份包含本地图片」设置打包（JSON 单文件 / 含图 ZIP），
+  /// FilePicker 选保存位置，用户取消返回 false，写入成功返回 true
+  Future<bool> exportLocal() => _runExclusive<bool>(_exportLocalInner);
+
+  Future<bool> _exportLocalInner() async {
+    final store = _store;
+    if (store == null) throw WebDavException(null, '当前平台不支持导出');
+    await store.flush();
+    final bytes = await BackupService(store: store).buildBackup(
+      includeImages: _settings.includeImages,
+    );
+    final stamp = BackupService(store: store).backupFileStamp(DateTime.now());
+    final fileName = _settings.includeImages ? '$stamp.zip' : '$stamp.json';
+    return _saveFile(fileName, bytes);
+  }
+
+  /// 从本地备份文件恢复（UI 先读文件字节 + peek 弹窗，确认后走 [confirmRestore]）
+  Future<PendingRestore> parseLocalBackup(Uint8List bytes) async {
+    final store = _store;
+    if (store == null) throw WebDavException(null, '当前平台不支持恢复');
+    final manifest = await BackupService(store: store).peekBackup(bytes);
+    return PendingRestore(
+      fileName: '本地文件',
+      bytes: bytes,
+      manifest: manifest,
+    );
+  }
+
+  // ==================== 自动同步 ====================
+
+  /// App 冷启动后首帧触发（main.dart onResume 钩子调用；节流 1 小时）
+  Future<void> tryAutoSyncOnResume() async {
+    if (!_settings.autoSync || !_settings.isConfigured || _isSyncing) return;
+    final last = _settings.lastSyncAt;
+    if (last != null &&
+        DateTime.now().difference(last) < const Duration(hours: 1)) {
+      return;
+    }
+    if (_settings.onlyOnWifi && !await _isOnWifi()) return;
+    try {
+      await uploadNow();
+    } on Exception {
+      // 自动同步静默失败：错误已记入 lastError，不打断启动流程
+    }
+  }
+
+  Future<bool> _isOnWifi() async {
+    final connectivity = _connectivity;
+    if (connectivity == null) return true; // 无法探测时不拦截
+    final results = await connectivity.checkConnectivity();
+    return results.any((r) =>
+        r == ConnectivityResult.wifi || r == ConnectivityResult.ethernet);
+  }
+
+  // ==================== 内部 ====================
+
+  /// 按当前配置 + 安全存储密码构造客户端（未配置 / 无密码抛异常）
+  Future<WebDavClient> _requireClient() async {
+    if (!_settings.isConfigured) {
+      throw WebDavException(null, '请先填写服务器地址与账号');
+    }
+    final password =
+        await _secure.readWebDavPassword(_settings.username.trim());
+    if (password == null || password.isEmpty) {
+      throw WebDavException(null, '请先填写密码（应用授权码）');
+    }
+    return _clientFactory(_settings, password);
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  static WebDavClient _defaultClient(SyncSettings settings, String password) {
+    return WebDavClientHttp(
+      remoteDirUrl: settings.remoteDirUrl,
+      username: settings.username.trim(),
+      password: password,
+    );
+  }
+
+  /// 默认导出实现：写入临时目录后调用系统分享面板。
+  /// 优势：跨平台一致行为（桌面也可在分享面板选「保存到文件夹」；
+  /// Android / iOS 无需依赖 file_picker 不可靠的 saveFile 实现）。
+  static Future<bool> _defaultSaveFile(String fileName, Uint8List bytes) async {
+    final tmp = File(
+      '${Directory.systemTemp.path}${Platform.pathSeparator}$fileName',
+    );
+    await tmp.writeAsBytes(bytes);
+    try {
+      await Share.shareXFiles(
+        [XFile(tmp.path)],
+        subject: '墨影数据备份',
+      );
+      return true;
+    } finally {
+      // M5：分享面板异步持有文件，iOS/Android 上短暂缓存后再清；
+      // 若分享抛出也兜底删除，避免临时目录长期堆积用户数据。
+      if (await tmp.exists()) {
+        try {
+          await tmp.delete();
+        } on Object catch (e) {
+          debugPrint('[Sync] 清理临时导出文件失败: $e');
+        }
+      }
+    }
+  }
+}

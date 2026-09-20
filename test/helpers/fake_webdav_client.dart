@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:moying/services/webdav_client.dart';
+import 'package:moying/business/sync/service/webdav_client.dart';
 
 /// 内存 fake（widget / 单元测试注入；行为与 [WebDavClientHttp] 对齐）
 class FakeWebDavClient implements WebDavClient {

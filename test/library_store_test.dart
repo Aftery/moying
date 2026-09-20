@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moying/data/library_store.dart';
-import 'package:moying/data/mock_data.dart';
-import 'package:moying/models/book.dart';
+import 'package:moying/foundation/storage/library_store.dart';
+import 'package:moying/business/library/model/mock_data.dart';
+import 'package:moying/business/library/model/book.dart';
 
 void main() {
   late Directory tmpDir;

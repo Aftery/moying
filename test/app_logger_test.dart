@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moying/services/app_logger.dart';
-import 'package:moying/services/log_sink.dart';
-import 'package:moying/services/log_sink_io.dart';
+import 'package:moying/foundation/logger/app_logger.dart';
+import 'package:moying/foundation/logger/log_sink.dart';
+import 'package:moying/foundation/logger/log_sink_io.dart';
 
 /// 内存 sink：只收行、不落盘，便于验证缓冲 / 导出 / 清空
 class _MemorySink implements LogSink {

@@ -15,11 +15,11 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:moying/models/book.dart';
-import 'package:moying/models/data_source.dart';
-import 'package:moying/services/book_category_mapper.dart';
-import 'package:moying/services/data_sources/custom_data_source.dart';
-import 'package:moying/services/data_sources/open_library_data_source.dart';
+import 'package:moying/business/library/model/book.dart';
+import 'package:moying/business/data_source/model/data_source.dart';
+import 'package:moying/business/data_source/service/book_category_mapper.dart';
+import 'package:moying/business/data_source/service/data_sources/custom_data_source.dart';
+import 'package:moying/business/data_source/service/data_sources/open_library_data_source.dart';
 
 /// 中文 mock 响应必须声明 UTF-8：`http.Response` 默认按 latin1 编码，
 /// 直接返回含中文的 JSON 会抛 "Contains invalid characters"。

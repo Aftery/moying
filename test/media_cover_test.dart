@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moying/models/media_ref.dart';
-import 'package:moying/providers/library_provider.dart';
-import 'package:moying/widgets/media_cover.dart';
-import 'package:moying/widgets/media_tile.dart';
+import 'package:moying/component/media/model/media_ref.dart';
+import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/component/media/media_cover.dart';
+import 'package:moying/component/media/media_tile.dart';
 import 'package:provider/provider.dart';
 
 /// 1×1 透明 PNG

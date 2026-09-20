@@ -1,7 +1,7 @@
 // Book 模型时间字段单元测试：createdAt 必填 / sentinel 置空 / readingDays 计算
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:moying/models/book.dart';
+import 'package:moying/business/library/model/book.dart';
 
 Book _book({DateTime? startedAt, DateTime? finishedAt}) => Book(
       id: 't1',

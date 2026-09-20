@@ -11,17 +11,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:moying/data/library_store.dart';
-import 'package:moying/models/book.dart';
-import 'package:moying/models/data_source.dart';
-import 'package:moying/providers/data_source_provider.dart';
-import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/book_edit_page.dart';
-import 'package:moying/screens/data_source_page.dart';
-import 'package:moying/screens/movie_edit_page.dart';
-import 'package:moying/services/backup_service.dart';
-import 'package:moying/services/data_source_interface.dart';
-import 'package:moying/services/data_source_manager.dart';
+import 'package:moying/foundation/storage/library_store.dart';
+import 'package:moying/business/library/model/book.dart';
+import 'package:moying/business/data_source/model/data_source.dart';
+import 'package:moying/business/data_source/view_model/data_source_provider.dart';
+import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/business/library/page/book_edit_page.dart';
+import 'package:moying/business/data_source/page/data_source_page.dart';
+import 'package:moying/business/library/page/movie_edit_page.dart';
+import 'package:moying/business/sync/service/backup_service.dart';
+import 'package:moying/business/data_source/service/data_source_interface.dart';
+import 'package:moying/business/data_source/service/data_source_manager.dart';
 
 // ==================== Fake 实现 ====================
 

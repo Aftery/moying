@@ -3,13 +3,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moying/data/library_store.dart';
-import 'package:moying/data/mock_data.dart';
-import 'package:moying/models/book.dart';
-import 'package:moying/models/media_ref.dart';
-import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/book_edit_page.dart';
-import 'package:moying/services/image_pick_service.dart';
+import 'package:moying/foundation/storage/library_store.dart';
+import 'package:moying/business/library/model/mock_data.dart';
+import 'package:moying/business/library/model/book.dart';
+import 'package:moying/component/media/model/media_ref.dart';
+import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/business/library/page/book_edit_page.dart';
+import 'package:moying/foundation/utils/image_pick_service.dart';
 import 'package:provider/provider.dart';
 
 /// 1×1 透明 PNG（极小合法图片，供 decode/复制验证）

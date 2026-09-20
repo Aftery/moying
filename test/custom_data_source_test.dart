@@ -8,10 +8,10 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
-import 'package:moying/models/data_source.dart';
-import 'package:moying/services/data_source_interface.dart';
-import 'package:moying/services/data_source_manager.dart';
-import 'package:moying/services/data_sources/custom_data_source.dart';
+import 'package:moying/business/data_source/model/data_source.dart';
+import 'package:moying/business/data_source/service/data_source_interface.dart';
+import 'package:moying/business/data_source/service/data_source_manager.dart';
+import 'package:moying/business/data_source/service/data_sources/custom_data_source.dart';
 
 // ==================== Fake HTTP ====================
 

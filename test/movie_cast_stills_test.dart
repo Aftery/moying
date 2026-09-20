@@ -24,14 +24,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
-import 'package:moying/models/actor.dart';
-import 'package:moying/models/data_source.dart';
-import 'package:moying/models/media_ref.dart';
-import 'package:moying/models/movie.dart';
-import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/movie_detail_page.dart';
-import 'package:moying/screens/movie_stills_page.dart';
-import 'package:moying/services/data_sources/tmdb_data_source.dart';
+import 'package:moying/business/library/model/actor.dart';
+import 'package:moying/business/data_source/model/data_source.dart';
+import 'package:moying/component/media/model/media_ref.dart';
+import 'package:moying/business/library/model/movie.dart';
+import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/business/library/page/movie_detail_page.dart';
+import 'package:moying/business/library/page/movie_stills_page.dart';
+import 'package:moying/business/data_source/service/data_sources/tmdb_data_source.dart';
 
 /// 记录请求 + 返回固定 JSON 的假 HTTP 客户端
 ///

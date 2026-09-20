@@ -5,12 +5,12 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:moying/data/library_store.dart';
-import 'package:moying/providers/library_provider.dart';
-import 'package:moying/providers/sync_provider.dart';
-import 'package:moying/models/sync_settings.dart';
-import 'package:moying/services/secure_storage_service.dart';
-import 'package:moying/services/webdav_client.dart';
+import 'package:moying/foundation/storage/library_store.dart';
+import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/business/sync/view_model/sync_provider.dart';
+import 'package:moying/business/sync/model/sync_settings.dart';
+import 'package:moying/foundation/storage/secure_storage_service.dart';
+import 'package:moying/business/sync/service/webdav_client.dart';
 
 /// H1/L1：WebDAV 列目录改用标准 PROPFIND（RFC 4918），
 /// 不再依赖 `GET + Depth:1` 这种部分服务不接受的请求；

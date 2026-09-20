@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:moying/config/app_palette.dart';
-import 'package:moying/config/app_theme.dart';
-import 'package:moying/data/deploy_guide.dart';
-import 'package:moying/widgets/data_source_guide_sheet.dart';
+import 'package:moying/app/config/app_palette.dart';
+import 'package:moying/app/config/app_theme.dart';
+import 'package:moying/business/data_source/model/deploy_guide.dart';
+import 'package:moying/business/data_source/view/data_source_guide_sheet.dart';
 
 void main() {
   group('部署指南文案', () {

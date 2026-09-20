@@ -1,12 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moying/data/library_store.dart';
-import 'package:moying/data/mock_data.dart';
-import 'package:moying/models/actor.dart';
-import 'package:moying/models/book.dart';
-import 'package:moying/models/movie.dart';
-import 'package:moying/providers/library_provider.dart';
+import 'package:moying/foundation/storage/library_store.dart';
+import 'package:moying/business/library/model/mock_data.dart';
+import 'package:moying/business/library/model/actor.dart';
+import 'package:moying/business/library/model/book.dart';
+import 'package:moying/business/library/model/movie.dart';
+import 'package:moying/business/library/view_model/library_provider.dart';
 
 void main() {
   late Directory tmpDir;

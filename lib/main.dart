@@ -5,15 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import 'config/app_palette.dart';
-import 'config/app_theme.dart';
-import 'data/persistence.dart';
-import 'providers/data_source_provider.dart';
-import 'providers/library_provider.dart';
-import 'providers/sync_provider.dart';
-import 'screens/root_page.dart';
-import 'services/app_logger.dart';
-import 'services/data_source_manager.dart';
+import 'app/config/app_palette.dart';
+import 'app/config/app_theme.dart';
+import 'foundation/storage/persistence.dart';
+import 'business/data_source/view_model/data_source_provider.dart';
+import 'business/library/view_model/library_provider.dart';
+import 'business/sync/view_model/sync_provider.dart';
+import 'app/pages/root_page.dart';
+import 'foundation/logger/app_logger.dart';
+import 'business/data_source/service/data_source_manager.dart';
 
 /// 「墨影」入口 —— 书籍与电影记录应用
 ///

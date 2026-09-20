@@ -5,10 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-import 'package:moying/data/library_store.dart';
-import 'package:moying/providers/library_provider.dart';
-import 'package:moying/services/image_compress_service.dart';
-import 'package:moying/services/webdav_client.dart';
+import 'package:moying/foundation/storage/library_store.dart';
+import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/foundation/utils/image_compress_service.dart';
+import 'package:moying/business/sync/service/webdav_client.dart';
 
 void main() {
   group('M9 ImageCompressService', () {

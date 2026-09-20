@@ -16,8 +16,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:moying/models/data_source.dart';
-import 'package:moying/widgets/quick_search_panel.dart';
+import 'package:moying/business/data_source/model/data_source.dart';
+import 'package:moying/business/library/view/quick_search_panel.dart';
 
 void main() {
   group('MovieSearchResult.mergeWith', () {

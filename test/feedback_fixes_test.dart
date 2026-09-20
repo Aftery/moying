@@ -10,14 +10,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:moying/data/library_store.dart';
-import 'package:moying/models/user_profile.dart';
-import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/book_edit_page.dart';
-import 'package:moying/screens/dashboard_page.dart';
-import 'package:moying/screens/movie_edit_page.dart';
-import 'package:moying/screens/profile_page.dart';
-import 'package:moying/widgets/grid_item_card.dart';
+import 'package:moying/foundation/storage/library_store.dart';
+import 'package:moying/business/profile/model/user_profile.dart';
+import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/business/library/page/book_edit_page.dart';
+import 'package:moying/business/stats/page/dashboard_page.dart';
+import 'package:moying/business/library/page/movie_edit_page.dart';
+import 'package:moying/business/profile/page/profile_page.dart';
+import 'package:moying/component/common/grid_item_card.dart';
 
 /// 单屏包裹：注入内存模式 provider，home 作为可 pop 的根路由
 Widget _wrap(LibraryProvider provider, Widget home) {

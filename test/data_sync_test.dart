@@ -7,15 +7,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:moying/data/library_store.dart';
-import 'package:moying/data/mock_data.dart';
-import 'package:moying/models/sync_settings.dart';
-import 'package:moying/providers/library_provider.dart';
-import 'package:moying/providers/sync_provider.dart';
-import 'package:moying/screens/data_sync_page.dart';
-import 'package:moying/services/backup_service.dart';
-import 'package:moying/services/secure_storage_service.dart';
-import 'package:moying/services/webdav_client.dart';
+import 'package:moying/foundation/storage/library_store.dart';
+import 'package:moying/business/library/model/mock_data.dart';
+import 'package:moying/business/sync/model/sync_settings.dart';
+import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/business/sync/view_model/sync_provider.dart';
+import 'package:moying/business/sync/page/data_sync_page.dart';
+import 'package:moying/business/sync/service/backup_service.dart';
+import 'package:moying/foundation/storage/secure_storage_service.dart';
+import 'package:moying/business/sync/service/webdav_client.dart';
 import 'helpers/fake_webdav_client.dart';
 
 /// P5 数据同步/备份：备份往返、版本校验、路径拼接、fake WebDAV、

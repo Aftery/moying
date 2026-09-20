@@ -4,11 +4,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moying/screens/personal_stats_page.dart';
-import 'package:moying/widgets/heatmap_calendar.dart';
+import 'package:moying/business/stats/page/personal_stats_page.dart';
+import 'package:moying/business/stats/view/heatmap_calendar.dart';
 import 'package:provider/provider.dart';
 
-import 'package:moying/providers/library_provider.dart';
+import 'package:moying/business/library/view_model/library_provider.dart';
 
 Widget _wrap(Widget child, {LibraryProvider? provider}) {
   final p = provider ?? LibraryProvider();

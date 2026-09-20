@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:moying/widgets/star_rating_picker.dart';
+import 'package:moying/business/library/view/star_rating_picker.dart';
 
 void main() {
   /// 装一个平台通道探针，记录 HapticFeedback 的调用。

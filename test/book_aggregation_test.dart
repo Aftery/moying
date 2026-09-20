@@ -9,11 +9,11 @@
 // 因为国内访问 OpenLibrary / Google Books 都慢，回归时最容易被改坏。
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moying/models/data_source.dart';
-import 'package:moying/providers/data_source_provider.dart';
-import 'package:moying/services/book_result_merger.dart';
-import 'package:moying/services/data_source_interface.dart';
-import 'package:moying/services/data_source_manager.dart';
+import 'package:moying/business/data_source/model/data_source.dart';
+import 'package:moying/business/data_source/view_model/data_source_provider.dart';
+import 'package:moying/business/data_source/service/book_result_merger.dart';
+import 'package:moying/business/data_source/service/data_source_interface.dart';
+import 'package:moying/business/data_source/service/data_source_manager.dart';
 
 // ==================== Fake 实现 ====================
 

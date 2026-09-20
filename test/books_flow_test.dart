@@ -3,15 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:moying/data/mock_data.dart';
+import 'package:moying/business/library/model/mock_data.dart';
 import 'package:moying/main.dart';
-import 'package:moying/models/book.dart';
-import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/book_detail_page.dart';
-import 'package:moying/screens/book_edit_page.dart';
-import 'package:moying/screens/books_page.dart';
-import 'package:moying/widgets/book_list_card.dart';
-import 'package:moying/widgets/search_bar_widget.dart';
+import 'package:moying/business/library/model/book.dart';
+import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/business/library/page/book_detail_page.dart';
+import 'package:moying/business/library/page/book_edit_page.dart';
+import 'package:moying/business/library/page/books_page.dart';
+import 'package:moying/business/library/view/book_list_card.dart';
+import 'package:moying/business/library/view/search_bar_view.dart';
 
 void main() {
   // 输入框按 hint 定位（v2 卡片式布局中字段不再有 labelText）

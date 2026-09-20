@@ -3,17 +3,17 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:moying/data/library_store.dart';
-import 'package:moying/models/actor.dart';
-import 'package:moying/models/book.dart';
-import 'package:moying/models/movie.dart';
-import 'package:moying/models/sync_settings.dart';
-import 'package:moying/providers/sync_provider.dart';
-import 'package:moying/services/backup_service.dart';
-import 'package:moying/services/merge_engine.dart';
-import 'package:moying/services/snapshot_service.dart';
-import 'package:moying/services/secure_storage_service.dart';
-import 'package:moying/providers/library_provider.dart';
+import 'package:moying/foundation/storage/library_store.dart';
+import 'package:moying/business/library/model/actor.dart';
+import 'package:moying/business/library/model/book.dart';
+import 'package:moying/business/library/model/movie.dart';
+import 'package:moying/business/sync/model/sync_settings.dart';
+import 'package:moying/business/sync/view_model/sync_provider.dart';
+import 'package:moying/business/sync/service/backup_service.dart';
+import 'package:moying/business/sync/service/merge_engine.dart';
+import 'package:moying/business/sync/service/snapshot_service.dart';
+import 'package:moying/foundation/storage/secure_storage_service.dart';
+import 'package:moying/business/library/view_model/library_provider.dart';
 import 'helpers/fake_webdav_client.dart';
 
 /// 记录级 LWW 合并引擎 + 同步前快照 + 旧数据（无 updatedAt）兼容

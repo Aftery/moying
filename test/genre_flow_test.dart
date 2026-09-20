@@ -8,8 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:moying/providers/library_provider.dart';
-import 'package:moying/screens/movie_edit_page.dart';
+import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/business/library/page/movie_edit_page.dart';
 
 /// 单屏包裹：注入内存模式 provider，home 作为可 pop 的根路由
 Widget _wrap(LibraryProvider provider, Widget home) {
