@@ -29,7 +29,11 @@ import '../../../foundation/utils/image_pick_service.dart';
 class LibraryProvider extends ChangeNotifier {
   LibraryProvider({LibraryStore? store, ImagePickService? picker})
       : _store = store,
-        _picker = picker;
+        _picker = picker,
+        // L-5: 内存模式载入演示 seed；持久模式留空由 init() 从盘填充——生产启动不浪费 allocation，seed 也不随包发布
+        _books = store == null ? List.of(kAllBooks) : const [],
+        _movieList = store == null ? List.of(kMovieList) : const [],
+        _actors = store == null ? List.of(kActors) : const [];
 
   /// 持久化存储（null = 内存模式）
   final LibraryStore? _store;
@@ -49,23 +53,23 @@ class LibraryProvider extends ChangeNotifier {
   bool get canPickImage => _picker != null;
 
   /// 全量书库（图书模块唯一可变数据源，支持增删改）
-  List<Book> _books = List.of(kAllBooks);
+  List<Book> _books;
 
   /// 想看电影演示集（独立于持久化的三集合，固定来自 mock）
-  List<Movie> _movieList = List.of(kMovieList);
+  List<Movie> _movieList;
 
   /// 演员实体集合（actors.json，电影通过 actorIds 单向引用）
-  List<Actor> _actors = List.of(kActors);
+  List<Actor> _actors;
 
   /// 用户档案（profile.json 单例；内存模式用默认档案）
   UserProfile _userProfile = const UserProfile();
 
-  /// 从存储加载全部数据（持久模式初始化入口，内存模式为 no-op）。
+  /// 从存储加载全部数据（持久模式初始化入口，内存模式为无操作）。
   ///
   /// main() 中 `await` 完成后再 runApp，避免启动闪现 seed 数据。
   Future<void> init() async {
     final store = _store;
-    if (store == null) return; // 内存模式
+    if (store == null) return; // 内存模式无需重复加载
     final snap = await store.load();
     _books = List.of(snap.books);
     _movieList = List.of(snap.movies);
@@ -158,7 +162,8 @@ class LibraryProvider extends ChangeNotifier {
     if (bytes.length > maxBytes) {
       throw StoreException('图片超过 5 MB，请先压缩后重试');
     }
-    final ext = p.extension(source.path).isEmpty ? '.jpg' : p.extension(source.path);
+    final ext =
+        p.extension(source.path).isEmpty ? '.jpg' : p.extension(source.path);
     final name = '$entryId$ext';
     final compressed = await const ImageCompressService().compressImage(bytes);
     if (compressed != null) {

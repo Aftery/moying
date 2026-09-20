@@ -113,10 +113,8 @@ class BookResultMerger {
   /// `三体 (The Three-Body Problem)`、`三体（精）` 与 `三体` 归一到同一个键，
   /// 否则跨源去重基本失效。注意不去数字与字母——`三体Ⅱ` 与 `三体` 必须保持
   /// 区分，不能被过度归一化并成一本。
-  static String normalizeTitle(String raw) => raw
-      .toLowerCase()
-      .replaceAll(_bracketRe, '')
-      .replaceAll(_punctRe, '');
+  static String normalizeTitle(String raw) =>
+      raw.toLowerCase().replaceAll(_bracketRe, '').replaceAll(_punctRe, '');
 
   /// 作者归一化（仅用于比对，不用于展示）
   static String normalizeAuthor(String raw) =>
