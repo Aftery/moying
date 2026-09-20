@@ -25,8 +25,7 @@ class SourceTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         // 单选：设为该类别默认源
         leading: Radio<String>(
           value: config.id,
@@ -65,8 +64,7 @@ class SourceTile extends StatelessWidget {
             if (config.isDefault) ...[
               const SizedBox(width: 6),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
                   color: c.accent.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(6),
@@ -171,7 +169,8 @@ class _StatusDot extends StatelessWidget {
 ///   Provider 凭据通道（安全存储）；
 /// - 保存返回配置实例；编辑态额外提供「测试连接」与「删除」。
 class SourceEditSheet extends StatefulWidget {
-  const SourceEditSheet({super.key,
+  const SourceEditSheet({
+    super.key,
     required this.config,
     required this.isNew,
     required DataSourceProvider provider,
@@ -191,9 +190,13 @@ class _SourceEditSheetState extends State<SourceEditSheet> {
 
   late final TextEditingController _nameCtrl =
       TextEditingController(text: _config.name);
-  late final List<ConfigField> _fields;
-  late final Map<String, TextEditingController> _plainCtrls;
-  late final Map<String, TextEditingController> _secretCtrls;
+  // L-4：容器字段**非空且提前建好**（不再 `late final` 待 initState 赋值）。
+  // configFieldsOf 若对未知类型抛错，initState 会在容器仍为空时中断，
+  // 此时 dispose 遍历空容器即可安全返回——不会二次抛 LateInitializationError
+  // 掩盖原始异常（旧写法把这两个 map 声明成 `late final`，正是这个隐患）。
+  List<ConfigField> _fields = const [];
+  final Map<String, TextEditingController> _plainCtrls = {};
+  final Map<String, TextEditingController> _secretCtrls = {};
   late final Map<String, bool> _secretVisible;
 
   /// 防止异步操作连击
@@ -203,18 +206,17 @@ class _SourceEditSheetState extends State<SourceEditSheet> {
   void initState() {
     super.initState();
     // 字段描述由 Manager 注册表提供——经 Provider 转发（避免暴露 manager）
+    // 可能抛错的调用放在容器就绪之后。
     _fields = _ds.configFieldsOf(_config.type);
-    _plainCtrls = {
-      for (final f in _fields)
-        if (!f.isSecret)
-          f.key: TextEditingController(
-            text: _config.config[f.key]?.toString() ?? '',
-          ),
-    };
-    _secretCtrls = {
-      for (final f in _fields)
-        if (f.isSecret) f.key: TextEditingController(),
-    };
+    for (final f in _fields) {
+      if (f.isSecret) {
+        _secretCtrls[f.key] = TextEditingController();
+      } else {
+        _plainCtrls[f.key] = TextEditingController(
+          text: _config.config[f.key]?.toString() ?? '',
+        );
+      }
+    }
     for (final f in _fields.where((f) => f.isSecret)) {
       _secretModified[f.key] = false;
       _secretCtrls[f.key]!.addListener(() {
@@ -223,7 +225,10 @@ class _SourceEditSheetState extends State<SourceEditSheet> {
         }
       });
     }
-    _secretVisible = {for (final f in _fields) if (f.isSecret) f.key: false};
+    _secretVisible = {
+      for (final f in _fields)
+        if (f.isSecret) f.key: false
+    };
     // 预填 secret 字段的掩码占位（已有凭据时显示「已保存」态）
     _loadSecretMask();
   }
@@ -269,8 +274,7 @@ class _SourceEditSheetState extends State<SourceEditSheet> {
       hintStyle: TextStyle(color: c.textMuted.withOpacity(0.7), fontSize: 13),
       filled: true,
       fillColor: c.surface,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: c.outline, width: 0.8),
@@ -388,11 +392,10 @@ class _SourceEditSheetState extends State<SourceEditSheet> {
       final matches =
           _ds.configs.where((c) => c.id == _config.id).toList(growable: false);
       final latest = matches.isEmpty ? null : matches.first;
-      _toast(ok
-          ? '连接成功 ✓'
-          : (latest?.summary ?? _ds.actionError ?? '连接失败'));
+      _toast(ok ? '连接成功 ✓' : (latest?.summary ?? _ds.actionError ?? '连接失败'));
       if (ok) {
-        Navigator.of(context).pop(draft.copyWith(status: DataSourceStatus.connected));
+        Navigator.of(context)
+            .pop(draft.copyWith(status: DataSourceStatus.connected));
       }
     } on Object catch (e) {
       if (mounted) _toast('测试失败：$e');
@@ -422,7 +425,8 @@ class _SourceEditSheetState extends State<SourceEditSheet> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('取消', style: TextStyle(color: context.colors.textMuted)),
+            child:
+                Text('取消', style: TextStyle(color: context.colors.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
