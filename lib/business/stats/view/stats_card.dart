@@ -4,6 +4,24 @@ import '../../../component/theme/app_palette.dart';
 import '../model/stats.dart';
 import '../../../component/common/progress_ring.dart';
 
+/// 渐变卡上的白色叠加层不透明度（L-7：语义化命名，避免 0.16/0.18/0.22/0.35 靠猜）。
+///
+/// 这些值仅用于 `Colors.white.withOpacity(x)` 场景（渐变背景上的次级表面/描边/底槽）。
+/// 语义上「永远是白的」——不属于主题色板（不应放 AppPalette），故在本文件私有命名。
+abstract final class _OnGradient {
+  /// 进度环底槽
+  static const double trackFill = 0.22;
+
+  /// 次级卡片底
+  static const double softSurface = 0.18;
+
+  /// 小徽标底
+  static const double chipFill = 0.16;
+
+  /// 小徽标描边
+  static const double chipBorder = 0.35;
+}
+
 /// 统计卡片展示类型
 enum StatsCardType { reading, movie }
 
@@ -31,8 +49,9 @@ class StatsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isReading = type == StatsCardType.reading;
-    final gradient =
-        isReading ? context.colors.readingGradient : context.colors.movieGradient;
+    final gradient = isReading
+        ? context.colors.readingGradient
+        : context.colors.movieGradient;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -90,7 +109,7 @@ class StatsCard extends StatelessWidget {
               progress: stats.progress,
               size: 56,
               strokeWidth: 5,
-              trackColor: Colors.white.withOpacity(0.22),
+              trackColor: Colors.white.withOpacity(_OnGradient.trackFill),
               colors: const [Colors.white, Color(0xFFD9DEFF)],
               // 不传 label：ProgressRing 默认显示「百分比」
               labelColor: Colors.white,
@@ -198,7 +217,7 @@ class _CardKicker extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.18),
+        color: Colors.white.withOpacity(_OnGradient.softSurface),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -227,8 +246,11 @@ class _AvgScoreBadge extends StatelessWidget {
       height: 56,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white.withOpacity(0.16),
-        border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.5),
+        color: Colors.white.withOpacity(_OnGradient.chipFill),
+        border: Border.all(
+          color: Colors.white.withOpacity(_OnGradient.chipBorder),
+          width: 1.5,
+        ),
       ),
       child: Center(
         child: Text.rich(
