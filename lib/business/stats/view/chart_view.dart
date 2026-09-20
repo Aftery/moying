@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../app/config/app_typography.dart';
 import '../../../component/theme/app_palette.dart';
 import '../model/statistics.dart';
 
@@ -20,8 +21,10 @@ class DonutChart extends StatelessWidget {
 
   /// 各扇区占比（0.0~1.0）
   final List<double> percentages;
+
   /// 各扇区名称（图例用）
   final List<String> labels;
+
   /// 中央文字
   final String centerText;
   final double size;
@@ -127,7 +130,8 @@ class _RingPainter extends CustomPainter {
 
 /// 评分分布柱状图（1~5 星）
 class RatingBarChart extends StatelessWidget {
-  const RatingBarChart({super.key, required this.distribution, this.height = 120});
+  const RatingBarChart(
+      {super.key, required this.distribution, this.height = 120});
 
   final RatingDistribution distribution;
   final double height;
@@ -159,7 +163,7 @@ class RatingBarChart extends StatelessWidget {
                         Text(
                           '${counts[i]}',
                           style: TextStyle(
-                              fontSize: 10, color: colors.textMuted),
+                              fontSize: AppType.micro, color: colors.textMuted),
                         ),
                         const SizedBox(height: 2),
                         Container(
@@ -191,8 +195,7 @@ class RatingBarChart extends StatelessWidget {
             children: [
               for (var i = 0; i < 5; i++) ...[
                 Expanded(
-                  child: Icon(Icons.star_rounded,
-                      size: 13, color: colors.star),
+                  child: Icon(Icons.star_rounded, size: 13, color: colors.star),
                 ),
                 if (i < 4) const SizedBox(width: 6),
               ],
