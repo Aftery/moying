@@ -180,10 +180,10 @@ class _CastSheetState extends State<_CastSheet> {
             ),
           ),
           const SizedBox(height: 8),
-          // ---------- 分组列表 ----------
+          // ---------- 分组列表（懒构建：演职员可达 50~100+，eager 会一次性全建）----------
           Flexible(
             child: all.isEmpty
-                ?  Center(
+                ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(28),
                       child: Text(
@@ -193,17 +193,40 @@ class _CastSheetState extends State<_CastSheet> {
                       ),
                     ),
                   )
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                    children: [
+                : CustomScrollView(
+                    slivers: [
+                      // 左右留白对齐每个 sliver（与原 ListView 整体 padding 等价：
+                      // 上 4 落在分组标题的 8 上边距前，下 24 由尾块补齐）
                       if (directors.isNotEmpty) ...[
-                        _groupTitle(context, '导演'),
-                        ...directors.map(_buildRow),
-                        const SizedBox(height: 12),
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                          sliver: SliverToBoxAdapter(
+                            child: _groupTitle(context, '导演'),
+                          ),
+                        ),
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          sliver: SliverList.builder(
+                            itemCount: directors.length,
+                            itemBuilder: (_, i) => _buildRow(directors[i]),
+                          ),
+                        ),
+                        const SliverToBoxAdapter(child: SizedBox(height: 12)),
                       ],
                       if (actors.isNotEmpty) ...[
-                        _groupTitle(context, '主要演员'),
-                        ...actors.map(_buildRow),
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(20, directors.isEmpty ? 4 : 0, 20, 0),
+                          sliver: SliverToBoxAdapter(
+                            child: _groupTitle(context, '主要演员'),
+                          ),
+                        ),
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                          sliver: SliverList.builder(
+                            itemCount: actors.length,
+                            itemBuilder: (_, i) => _buildRow(actors[i]),
+                          ),
+                        ),
                       ],
                     ],
                   ),
