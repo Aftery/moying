@@ -29,8 +29,10 @@ class TmdbDataSource implements MovieDataSource {
 
   /// 请求超时（H3：弱网下不设超时会让 UI 永久转圈，无任何恢复路径）
   static const Duration _kTimeout = Duration(seconds: 15);
-  static Never _onTimeout() =>
-      throw const DataSourceException('请求超时，请检查网络连接后重试');
+  static Never _onTimeout() => throw const DataSourceException(
+        '请求超时，请检查网络连接后重试',
+        kind: DataSourceErrorKind.timeout,
+      );
 
   /// 内置类型 id → 中文名（搜索结果只有 genre_ids 时兜底展示）
   static const Map<int, String> _genreNames = {
@@ -105,7 +107,10 @@ class TmdbDataSource implements MovieDataSource {
       throw const DataSourceException('网络请求失败，请检查网络连接');
     }
     if (resp.statusCode == 401) {
-      throw const DataSourceException('API Key 无效或已过期（401）');
+      throw const DataSourceException(
+        'API Key 无效或已过期（401）',
+        kind: DataSourceErrorKind.auth,
+      );
     }
     if (resp.statusCode != 200) {
       throw DataSourceException('TMDB 接口异常（HTTP ${resp.statusCode}）');
@@ -182,9 +187,7 @@ class TmdbDataSource implements MovieDataSource {
 
     final credits = json['credits'] as Map<String, dynamic>? ?? const {};
     final crew = credits['crew'] as List? ?? const [];
-    final director = crew
-        .whereType<Map<String, dynamic>>()
-        .firstWhere(
+    final director = crew.whereType<Map<String, dynamic>>().firstWhere(
           (c) => c['job'] == 'Director',
           orElse: () => const {},
         )['name'] as String?;
@@ -195,7 +198,8 @@ class TmdbDataSource implements MovieDataSource {
         .map((c) => CastMember(
               name: (c['name'] ?? '') as String,
               character: c['character'] as String?,
-              profilePath: _imageUrl(c['profile_path'] as String?, _profileBase),
+              profilePath:
+                  _imageUrl(c['profile_path'] as String?, _profileBase),
             ))
         .toList();
 
@@ -277,10 +281,9 @@ class TmdbDataSource implements MovieDataSource {
     return MovieSearchResult(
       externalId: '${item['id']}',
       title: title,
-      originalTitle:
-          (original == null || original.isEmpty || original == title)
-              ? null
-              : original,
+      originalTitle: (original == null || original.isEmpty || original == title)
+          ? null
+          : original,
       year: releaseDate != null && releaseDate.length >= 4
           ? int.tryParse(releaseDate.substring(0, 4))
           : null,

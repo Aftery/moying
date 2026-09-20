@@ -62,13 +62,20 @@ class GoogleBooksDataSource implements BookDataSource {
       // 最坏耗时与原来的单次 15s 基本持平
       resp = await getWithRetry(_client, uri);
     } on TimeoutException {
-      throw const DataSourceException('请求超时，请检查网络连接后重试');
+      throw const DataSourceException(
+        '请求超时，请检查网络连接后重试',
+        kind: DataSourceErrorKind.timeout,
+      );
     } on Exception catch (_) {
-      throw const DataSourceException('网络请求失败，请检查网络连接');
+      throw const DataSourceException(
+        '网络请求失败，请检查网络连接',
+        kind: DataSourceErrorKind.network,
+      );
     }
     if (resp.statusCode == 403) {
       throw const DataSourceException(
         'Google Books 拒绝访问（403），可在数据源配置中填写国家代码重试',
+        kind: DataSourceErrorKind.auth,
       );
     }
     if (resp.statusCode == 429) {
@@ -80,7 +87,8 @@ class GoogleBooksDataSource implements BookDataSource {
       throw DataSourceException('Google Books 接口异常（HTTP ${resp.statusCode}）');
     }
     try {
-      final root = jsonDecode(utf8.decode(resp.bodyBytes, allowMalformed: true));
+      final root =
+          jsonDecode(utf8.decode(resp.bodyBytes, allowMalformed: true));
       if (root is! Map<String, dynamic>) {
         throw const DataSourceException('Google Books 返回格式异常');
       }
@@ -137,11 +145,10 @@ class GoogleBooksDataSource implements BookDataSource {
         .where((e) => e['type'] == 'ISBN_13')
         .map((e) => e['identifier'] as String?)
         .firstWhere((e) => e != null, orElse: () => null);
-    final anyIsbn = isbns.isEmpty
-        ? null
-        : (isbn13 ?? isbns.first['identifier'] as String?);
-    final thumbnail =
-        (volume['imageLinks'] as Map<String, dynamic>?)?['thumbnail'] as String?;
+    final anyIsbn =
+        isbns.isEmpty ? null : (isbn13 ?? isbns.first['identifier'] as String?);
+    final thumbnail = (volume['imageLinks']
+        as Map<String, dynamic>?)?['thumbnail'] as String?;
     final categories =
         (volume['categories'] as List? ?? const []).cast<String>().toList();
 

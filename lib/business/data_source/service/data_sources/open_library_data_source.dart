@@ -73,9 +73,15 @@ class OpenLibraryDataSource implements BookDataSource {
       // （见 http_retry.dart）。最坏耗时与原来的单次 15s 基本持平。
       resp = await getWithRetry(_client, uri);
     } on TimeoutException {
-      throw const DataSourceException('请求超时，请检查网络连接后重试');
+      throw const DataSourceException(
+        '请求超时，请检查网络连接后重试',
+        kind: DataSourceErrorKind.timeout,
+      );
     } on Exception catch (_) {
-      throw const DataSourceException('网络请求失败，请检查网络连接');
+      throw const DataSourceException(
+        '网络请求失败，请检查网络连接',
+        kind: DataSourceErrorKind.network,
+      );
     }
     if (resp.statusCode != 200) {
       throw DataSourceException(_httpError(resp));

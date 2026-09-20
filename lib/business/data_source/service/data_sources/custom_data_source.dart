@@ -28,25 +28,60 @@ class SmartResponseParser {
   /// 字段别名表（按优先级，首个命中者生效）
   static const Map<String, List<String>> _aliases = {
     'title': [
-      'title', 'name', 'book_name', 'movie_title', 'film_name',
-      'display_name', 'label', '书名', '名称', '片名',
+      'title',
+      'name',
+      'book_name',
+      'movie_title',
+      'film_name',
+      'display_name',
+      'label',
+      '书名',
+      '名称',
+      '片名',
     ],
     'cover': [
-      'cover', 'cover_url', 'image', 'image_url', 'poster', 'poster_url',
-      'pic', 'thumbnail', 'thumb', 'photo', 'avatar', 'url', '封面', '图片',
+      'cover',
+      'cover_url',
+      'image',
+      'image_url',
+      'poster',
+      'poster_url',
+      'pic',
+      'thumbnail',
+      'thumb',
+      'photo',
+      'avatar',
+      'url',
+      '封面',
+      '图片',
     ],
     'author': ['author', 'authors', 'author_name', 'writer', 'creator', '作者'],
     'publisher': ['publisher', 'press', 'publish_house', '出版社'],
     // pubdate / publish_date 是豆瓣系接口（BookVo 的 @JsonProperty("pubdate")）用的键名
     'year': [
-      'year', 'publish_year', 'pub_year', 'pubdate', 'publish_date', 'date',
-      '出版年份', '年份',
+      'year',
+      'publish_year',
+      'pub_year',
+      'pubdate',
+      'publish_date',
+      'date',
+      '出版年份',
+      '年份',
     ],
     'isbn': ['isbn', 'isbn13', 'isbn10'],
     'pageCount': ['page_count', 'pages', 'number_of_pages', '页数'],
     'description': [
-      'description', 'desc', 'summary', 'intro', 'introduction', 'abstract',
-      'overview', 'content', '简介', '内容简介', '剧情简介',
+      'description',
+      'desc',
+      'summary',
+      'intro',
+      'introduction',
+      'abstract',
+      'overview',
+      'content',
+      '简介',
+      '内容简介',
+      '剧情简介',
     ],
     'rating': ['rating', 'score', 'rate', 'star', '评分'],
     'director': ['director', 'directed_by', 'director_name', '导演'],
@@ -58,8 +93,19 @@ class SmartResponseParser {
 
   /// 常见「列表容器」键名（递归兜底前的优先探测）
   static const List<String> _listKeys = [
-    'data', 'results', 'items', 'list', 'records', 'docs', 'books',
-    'movies', 'entries', 'content', 'rows', 'subjects', 'search',
+    'data',
+    'results',
+    'items',
+    'list',
+    'records',
+    'docs',
+    'books',
+    'movies',
+    'entries',
+    'content',
+    'rows',
+    'subjects',
+    'search',
   ];
 
   /// 递归查找第一个「元素为对象」且非空的数组。
@@ -99,12 +145,14 @@ class SmartResponseParser {
   }
 
   /// 提取字符串列表（数组或分隔串皆可）
-  static List<String> extractList(Map<String, dynamic> obj, List<String> aliases) {
+  static List<String> extractList(
+      Map<String, dynamic> obj, List<String> aliases) {
     for (final key in aliases) {
       final v = obj[key];
       if (v is List) {
         final out = v
-            .map((e) => e is String ? e.trim() : (e is Map ? _mapToLabel(e) : null))
+            .map((e) =>
+                e is String ? e.trim() : (e is Map ? _mapToLabel(e) : null))
             .whereType<String>()
             .where((s) => s.isNotEmpty)
             .toList();
@@ -181,7 +229,11 @@ class SmartResponseParser {
   /// 嵌套对象里的数值键名（刻意不含 star_count —— 那是 5 分制星数，
   /// 与 value/average 的 10 分制不同源，混用会把 9.4 压成 4.7）
   static const List<String> _nestedNumberKeys = [
-    'average', 'value', 'score', 'rating', 'rate',
+    'average',
+    'value',
+    'score',
+    'rating',
+    'rate',
   ];
 
   /// 剥掉 HTML 标签与实体。
@@ -336,12 +388,17 @@ abstract class _CustomDataSourceBase {
       // 分层超时 + 一次重试（见 http_retry.dart）：自建代理常有冷启动
       // （如 Render 免费实例闲置休眠后首次请求要 50s 才回），
       // 首跳 6s 失败后重试那一跳往往已经把它唤醒。
-      resp = await getWithRetry(_client, uri,
-          headers: _headersOf(credentials));
+      resp = await getWithRetry(_client, uri, headers: _headersOf(credentials));
     } on TimeoutException {
-      throw const DataSourceException('请求超时，请检查网络或自定义 API 地址');
+      throw const DataSourceException(
+        '请求超时，请检查网络或自定义 API 地址',
+        kind: DataSourceErrorKind.timeout,
+      );
     } on Exception catch (_) {
-      throw const DataSourceException('网络请求失败，请检查网络与自定义 API 地址');
+      throw const DataSourceException(
+        '网络请求失败，请检查网络与自定义 API 地址',
+        kind: DataSourceErrorKind.network,
+      );
     }
     if (resp.statusCode != 200) {
       throw DataSourceException('自定义 API 响应异常（HTTP ${resp.statusCode}）');
@@ -364,8 +421,7 @@ abstract class _CustomDataSourceBase {
     required String notFoundMessage,
   }) async {
     final base = _baseUrlOf(config);
-    final qs =
-        '?q=${Uri.encodeQueryComponent(query)}&limit=$limit';
+    final qs = '?q=${Uri.encodeQueryComponent(query)}&limit=$limit';
     for (final template in searchPathTemplates) {
       try {
         final json = await _getJson(
@@ -374,11 +430,8 @@ abstract class _CustomDataSourceBase {
         );
         final list = SmartResponseParser.findFirstList(json);
         if (list == null) continue;
-        final results = list
-            .map(fromJsonItem)
-            .whereType<T>()
-            .take(limit)
-            .toList();
+        final results =
+            list.map(fromJsonItem).whereType<T>().take(limit).toList();
         if (results.isNotEmpty) return results;
         // 列表存在但一条都解析不出 → 继续尝试下一路径模板
       } on DataSourceException {

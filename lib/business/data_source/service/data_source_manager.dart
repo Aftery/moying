@@ -48,7 +48,8 @@ class DataSourceManager {
   /// 当前生效的配置列表（内存镜像；改动即落盘；M2: 对外只读，防绕过 notifyListeners 改状态）
   List<DataSourceConfig> _configs = [];
 
-  UnmodifiableListView<DataSourceConfig> get configs => UnmodifiableListView(_configs);
+  UnmodifiableListView<DataSourceConfig> get configs =>
+      UnmodifiableListView(_configs);
 
   void registerMovie(MovieDataSource impl) => _movieImpls[impl.type] = impl;
 
@@ -209,7 +210,8 @@ class DataSourceManager {
       throw const DataSourceException('要更新的数据源不存在');
     }
     _configs = [
-      for (final c in _configs) if (c.id == config.id) config else c,
+      for (final c in _configs)
+        if (c.id == config.id) config else c,
     ];
     await saveConfigs();
   }
@@ -282,13 +284,14 @@ class DataSourceManager {
       final ok = implMovie != null
           ? await implMovie.testConnection(
               config: config.config, credentials: credentials)
-          : await implBook!.testConnection(
-              config: config.config, credentials: credentials);
+          : await implBook!
+              .testConnection(config: config.config, credentials: credentials);
       status = ok ? DataSourceStatus.connected : DataSourceStatus.error;
       summary = ok ? '连接成功' : '接口响应异常';
     } on DataSourceException catch (e) {
-      final msg = e.message.toLowerCase();
-      status = msg.contains('超时') || msg.contains('timeout')
+      // M-7：按语义分类判状态，不再匹配中文文案
+      // （旧写法 `msg.contains('超时')` 改一个字即静默失效）。
+      status = e.kind == DataSourceErrorKind.timeout
           ? DataSourceStatus.timeout
           : DataSourceStatus.error;
       summary = e.message;

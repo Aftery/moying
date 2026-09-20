@@ -150,7 +150,8 @@ class DataSourceConfig {
         'isDefault': isDefault,
         'config': config,
         'status': status.name,
-        if (lastTestedAt != null) 'lastTestedAt': lastTestedAt!.toIso8601String(),
+        if (lastTestedAt != null)
+          'lastTestedAt': lastTestedAt!.toIso8601String(),
         if (summary != null) 'summary': summary,
       };
 
@@ -165,8 +166,7 @@ class DataSourceConfig {
       status: json['status'] == null
           ? DataSourceStatus.notConfigured
           : DataSourceStatus.values.byName(json['status'] as String),
-      lastTestedAt:
-          lastTested is String ? DateTime.tryParse(lastTested) : null,
+      lastTestedAt: lastTested is String ? DateTime.tryParse(lastTested) : null,
       summary: json['summary'] as String?,
     );
   }
@@ -271,7 +271,8 @@ class BookSearchResult {
     return BookSearchResult(
       externalId: externalId,
       // title：detail 非空且与 base 不同时覆盖（同 title 时省去一次 controller.setText 抖动）
-      title: hasText(detail.title) && detail.title != title ? detail.title : title,
+      title:
+          hasText(detail.title) && detail.title != title ? detail.title : title,
       authors: detail.authors.isNotEmpty ? detail.authors : authors,
       publisher: hasText(detail.publisher) ? detail.publisher : publisher,
       year: detail.year ?? year,
@@ -279,7 +280,8 @@ class BookSearchResult {
       pageCount: detail.pageCount ?? pageCount,
       coverUrl: hasText(detail.coverUrl) ? detail.coverUrl : coverUrl,
       rating: detail.rating ?? rating,
-      description: hasText(detail.description) ? detail.description : description,
+      description:
+          hasText(detail.description) ? detail.description : description,
       categories: detail.categories.isNotEmpty ? detail.categories : categories,
     );
   }
@@ -406,10 +408,10 @@ class MovieSearchResult {
     bool hasText(String? s) => s != null && s.isNotEmpty;
     return MovieSearchResult(
       externalId: externalId,
-      title: hasText(detail.title) && detail.title != title ? detail.title : title,
-      originalTitle: hasText(detail.originalTitle)
-          ? detail.originalTitle
-          : originalTitle,
+      title:
+          hasText(detail.title) && detail.title != title ? detail.title : title,
+      originalTitle:
+          hasText(detail.originalTitle) ? detail.originalTitle : originalTitle,
       year: detail.year ?? year,
       director: hasText(detail.director) ? detail.director : director,
       genres: detail.genres.isNotEmpty ? detail.genres : genres,
@@ -426,9 +428,26 @@ class MovieSearchResult {
 
 // ==================== 数据源操作异常 ====================
 
+/// 异常语义分类（M-7：控制流靠枚举，不靠文本）
+///
+/// 之前 `runTest` 靠 `e.message.contains('超时')` 判断状态——
+/// 改一个字（如「超时」→「连接慢」）就会**静默失效**。改为在**抛出侧**
+/// 直接标 kind，判断侧只看 kind。
+///
+/// 取值刻意保守（只有 timeout 目前被状态判定消费），其余供未来扩展：
+/// - network：DNS / 连接被拒 / TLS / Socket 等传输层失败
+/// - auth：凭据错误 / 401 / 403（区别于普通 4xx）
+/// - format：响应不是预期结构 / 解析失败
+/// - unknown：默认值——不区分就是 error 状态
+enum DataSourceErrorKind { timeout, network, auth, format, unknown }
+
 /// 数据源操作异常（网络失败 / 凭据无效 / 响应解析失败等，message 面向用户展示）
 class DataSourceException implements Exception {
-  const DataSourceException(this.message, {this.silent = false});
+  const DataSourceException(
+    this.message, {
+    this.silent = false,
+    this.kind = DataSourceErrorKind.unknown,
+  });
 
   /// 面向用户的错误描述（中文）
   final String message;
@@ -440,6 +459,9 @@ class DataSourceException implements Exception {
   /// 网络异常、响应格式错误等真实失败保持 false，必须让用户看见。
   final bool silent;
 
+  /// 语义分类（M-7：判断侧只看这个字段，不看 message）
+  final DataSourceErrorKind kind;
+
   @override
-  String toString() => 'DataSourceException: $message';
+  String toString() => 'DataSourceException($kind): $message';
 }
