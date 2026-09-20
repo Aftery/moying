@@ -836,7 +836,7 @@ class _BookEditScreenState extends State<BookEditScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                '轻按星星评分\n再点一次清除',
+                '轻按或拖动星星打分\n再点一次清除',
                 textAlign: TextAlign.right,
                 style: TextStyle(
                   color: context.colors.textMuted,
@@ -1575,7 +1575,9 @@ class _BookEditScreenState extends State<BookEditScreen> {
       // 换选新书时一律覆盖——否则会残留上一本书的分类。
       final mapped = BookCategoryMapper.map(r.categories);
       if (mapped != null) _categoryCtrl.text = mapped;
-      if (r.rating != null && r.rating! > 0) _rating = r.rating!;
+      // 评分**刻意不自动填充**：数据源给的是豆瓣 / OpenLibrary 的「大众平均分」，
+      // 与用户自己的打分不是一回事——混进来会让「我的评分」变成别人的均分。
+      // 评分只由用户在上方星级里自己打。
       if (r.coverUrl != null && r.coverUrl!.isNotEmpty) {
         _coverEdited = true;
         _pendingCoverFile = null;
@@ -1607,6 +1609,9 @@ class _BookEditScreenState extends State<BookEditScreen> {
     final action = await showCoverActionSheet(
       context: context,
       canPickImage: lib.canPickImage,
+      // 有书籍默认源才给「联网自动找封面」——没配源时点了也只会白等
+      canLookup:
+          _tryReadDataSource(context, listen: false)?.defaultBookSource != null,
     );
     if (!mounted || action == null) return;
     switch (action) {
@@ -1614,6 +1619,8 @@ class _BookEditScreenState extends State<BookEditScreen> {
         await _pickFromGallery();
       case 'url':
         await _promptCoverUrl();
+      case 'lookup':
+        await _lookupCoverOnline();
       case 'remove':
         setState(() {
           _coverEdited = true;
@@ -1621,6 +1628,56 @@ class _BookEditScreenState extends State<BookEditScreen> {
           _coverUrlCtrl.clear();
         });
     }
+  }
+
+  /// 联网给「手动录入」的书找一张封面（按 ISBN 优先、否则书名）。
+  ///
+  /// 网络要 2–5s，用一个不自动消失的 SnackBar 当进度提示（结束主动收起），
+  /// 省掉一个只服务单次交互的 State 字段。命中即写入封面 URL，走「粘贴链接」
+  /// 同一条通道；保存时由 [_resolveDraftCover] 缓存到本地。
+  Future<void> _lookupCoverOnline() async {
+    final ds = _tryReadDataSource(context, listen: false);
+    final title = _titleCtrl.text.trim();
+    final isbn = _isbnCtrl.text.trim();
+    if (ds == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('未配置书籍数据源，无法联网查找封面')),
+      );
+      return;
+    }
+    if (title.isEmpty && isbn.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('先填上书名或 ISBN，再做联网查找')),
+      );
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(const SnackBar(
+      content: Text('正在联网查找封面…'),
+      // 正常情况下结束时会 hide；给个长时长只是防「异常路径下永久挂着」
+      duration: Duration(minutes: 1),
+    ));
+    String? url;
+    try {
+      url = await ds.lookupBookCover(title: title, isbn: isbn);
+    } finally {
+      if (mounted) messenger.hideCurrentSnackBar();
+    }
+    if (!mounted) return;
+
+    if (url == null || url.isEmpty) {
+      messenger.showSnackBar(const SnackBar(
+        content: Text('没找到合适的封面，可改用「粘贴网络图片链接」'),
+      ));
+      return;
+    }
+    setState(() {
+      _coverEdited = true;
+      _pendingCoverFile = null;
+      _coverUrlCtrl.text = url!;
+    });
+    messenger.showSnackBar(const SnackBar(content: Text('已找到封面，保存后生效')));
   }
 
   /// 系统相册选图（保存时才复制进 images/，取消/失败则维持现状）

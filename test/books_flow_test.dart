@@ -57,8 +57,8 @@ void main() {
       expect(find.byType(BookDetailScreen), findsOneWidget);
       expect(find.text('阅读进度'), findsOneWidget);
 
-      // 返回列表（v2 详情页为自定义圆形返回按钮）
-      await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+      // 返回列表（详情页用系统默认 AppBar 返回箭头，与电影详情页一致）
+      await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
       expect(find.byType(BooksScreen), findsOneWidget);
     });

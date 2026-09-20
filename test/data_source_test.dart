@@ -98,6 +98,11 @@ class _FakeBookSource implements BookDataSource {
         year: 2008,
         isbn: '9787536692930',
         coverUrl: 'https://example.com/cover.jpg',
+        // 带评分是刻意的：守住「评分不被自动填充」——回填后「我的评分」
+        // 必须仍是「未评分」（源给的是大众均分，不是用户打分）。
+        // 注意别顺手把 pageCount / description / categories 也补齐，
+        // 否则会踩到「两跳压一跳」判定、让详情用例静默失效。
+        rating: 4.5,
       ),
     ];
   }
@@ -536,6 +541,34 @@ void main() {
       missing = await provider.sourcesMissingCredentials();
       expect(missing, isEmpty);
     });
+
+    test('lookupBookCover 取首个非空封面，且不污染快速检索状态', () async {
+      final provider = DataSourceProvider(manager: _managerWithFakes());
+      await provider.init();
+
+      // 先跑一次真实搜索留下状态，用来验证补封面动作不会把它顶掉
+      await provider.searchBooks('三体');
+      expect(provider.bookResults, isNotNull);
+      final beforeQuery = provider.lastQuery;
+
+      // 紧接着就查封面：3s 节流窗口内仍须放行（显式点击不节流），
+      // 否则这里会拿到 null
+      final url = await provider.lookupBookCover(title: '三体');
+      expect(url, 'https://example.com/cover.jpg');
+
+      expect(provider.bookResults, isNotNull,
+          reason: '找封面不该清空 / 覆盖「快速检索」的结果列表');
+      expect(provider.lastQuery, beforeQuery, reason: 'lastQuery 不该被改写');
+      expect(provider.isSearching, isFalse,
+          reason: '找封面不该把检索面板切到「搜索中」');
+    });
+
+    test('lookupBookCover：空查询词直接返回 null，不发请求', () async {
+      final provider = DataSourceProvider(manager: _managerWithFakes());
+      await provider.init();
+
+      expect(await provider.lookupBookCover(title: '  ', isbn: '  '), isNull);
+    });
   });
 
   group('备份恢复纳入数据源配置', () {
@@ -734,6 +767,9 @@ void main() {
         (w) => w is TextField && w.decoration?.hintText == '输入书名',
       ));
       expect(titleField.controller!.text, '三体');
+      // 评分**不**自动填充：fake 源给了 rating 4.5，回填后仍应是「未评分」
+      expect(find.text('未评分'), findsOneWidget);
+      expect(find.text('4.5 分'), findsNothing);
 
       final baseBooks = library.books.length;
       // 顶栏保存胶囊（Material+InkWell 包裹）

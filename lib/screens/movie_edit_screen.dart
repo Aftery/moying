@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_palette.dart';
@@ -687,9 +688,8 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
       if (detail.runtimeMinutes != null && detail.runtimeMinutes! > 0) {
         _durationCtrl.text = '${detail.runtimeMinutes}';
       }
-      if (detail.rating != null && detail.rating! > 0) {
-        _rating = detail.rating!;
-      }
+      // 评分**刻意不自动填充**（同书籍页）：源给的是 TMDB 大众平均分，
+      // 不是「我的评分」；填进来会让用户以为自己打过这个分。
       if (detail.posterUrl != null && detail.posterUrl!.isNotEmpty) {
         _posterEdited = true;
         _pendingPosterFile = null;
@@ -1188,7 +1188,12 @@ class _MovieEditScreenState extends State<MovieEditScreen> {
               value: _rating,
               max: 5,
               divisions: 10,
-              onChanged: (v) => setState(() => _rating = v),
+              // 拖动时下方星级实时点亮；每跨半星给一次轻微触感，
+              // 与书籍页的星星选择器手感一致（见 star_rating_picker.dart）
+              onChanged: (v) {
+                if (v != _rating) unawaited(HapticFeedback.selectionClick());
+                setState(() => _rating = v);
+              },
             ),
           ),
           const SizedBox(height: 2),

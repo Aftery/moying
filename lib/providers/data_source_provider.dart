@@ -351,8 +351,9 @@ class DataSourceProvider extends ChangeNotifier {
   /// 整条检索拖垮。
   Future<_BookSearchOutcome> _searchBooksAggregated(
     DataSourceConfig primary,
-    String q,
-  ) async {
+    String q, {
+    bool ignoreThrottle = false,
+  }) async {
     final batches = <List<BookSearchResult>>[];
     final sourceNames = <String>[];
     var merged = const <BookSearchResult>[];
@@ -364,7 +365,8 @@ class DataSourceProvider extends ChangeNotifier {
       // 同类型源 3s 节流：被节流则跳过该源（备用源缺席好过整条检索失败）。
       // 主源的节流门在 _search 里已拦过，此处对主源必然放行。
       final last = _lastRequestTime[source.type];
-      if (last != null &&
+      if (!ignoreThrottle &&
+          last != null &&
           DateTime.now().difference(last) < _minRequestInterval) {
         continue;
       }
@@ -407,6 +409,47 @@ class DataSourceProvider extends ChangeNotifier {
       results: merged.take(_bookResultLimit).toList(),
       sourceNames: sourceNames,
     );
+  }
+
+  /// 为**手动录入**的书补一张封面：按 ISBN（有则优先，精确度高得多）或书名
+  /// 去默认源 + 备用源跑一次聚合检索，取首个非空封面地址。
+  ///
+  /// 与 [searchBooks] 的关键差别：**不写**搜索状态（`bookResults` /
+  /// `searchError` / `lastQuery`）——它只是编辑页封面菜单里的一个辅助动作，
+  /// 把「快速检索」面板的结果列表顶掉会很突兀。
+  ///
+  /// 失败一律返回 null（未配置源 / 网络故障 / 结果都没封面），由调用方给中性
+  /// 提示——「找不到封面」不是错误，不值得弹红字。
+  ///
+  /// 恒以 `ignoreThrottle` 调聚合检索：这是用户的**显式点击**，而 3s 节流是
+  /// 为了拦「打字过程中连发请求」；否则刚搜过一次再点「找封面」会静默无结果。
+  Future<String?> lookupBookCover({
+    required String title,
+    String? isbn,
+  }) async {
+    final primary = defaultBookSource;
+    if (primary == null) return null;
+    // ISBN 精确度远高于书名（同名书太多），优先拿它当查询词
+    final code = isbn?.trim() ?? '';
+    final query = code.isNotEmpty ? code : title.trim();
+    if (query.isEmpty) return null;
+    try {
+      final outcome =
+          await _searchBooksAggregated(primary, query, ignoreThrottle: true);
+      for (final result in outcome.results) {
+        final url = result.coverUrl?.trim();
+        if (url != null && url.isNotEmpty) return url;
+      }
+    } on DataSourceException catch (e) {
+      // 网络 / 格式失败 → 一律当「没找到」，不向用户报错。
+      // 但记一条 warn：这是用户的显式点击，失败却「静默无结果」时最容易让人困惑。
+      AppLogger.instance.warn(
+        'data-source',
+        '自动找封面失败：${e.message}',
+        meta: {'scope': 'cover-lookup'},
+      );
+    }
+    return null;
   }
 
   /// 按关键词搜索电影（用当前影视默认源；结果走缓存）

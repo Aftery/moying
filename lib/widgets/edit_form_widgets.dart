@@ -88,6 +88,7 @@ class EditInputField extends StatelessWidget {
 Future<String?> showCoverActionSheet({
   required BuildContext context,
   required bool canPickImage,
+  bool canLookup = false,
   String removeLabel = '移除封面',
 }) {
   return showModalBottomSheet<String>(
@@ -112,6 +113,17 @@ Future<String?> showCoverActionSheet({
                 style: TextStyle(color: context.colors.textPrimary)),
             onTap: () => Navigator.of(ctx).pop('url'),
           ),
+          if (canLookup)
+            ListTile(
+              leading: Icon(Icons.travel_explore_rounded,
+                  color: context.colors.textSecondary),
+              title: Text('联网自动找封面',
+                  style: TextStyle(color: context.colors.textPrimary)),
+              subtitle: Text('按 ISBN / 书名检索一次数据源',
+                  style: TextStyle(
+                      color: context.colors.textMuted, fontSize: 12)),
+              onTap: () => Navigator.of(ctx).pop('lookup'),
+            ),
           ListTile(
             leading: Icon(Icons.image_not_supported_outlined,
                 color: context.colors.danger),
