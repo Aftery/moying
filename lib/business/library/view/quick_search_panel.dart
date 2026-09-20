@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 
 /// 搜索结果条目的展示数据（Book/Movie 搜索结果的公共投影，
 /// 由调用方从各自的结果类型 map 而来，组件不感知具体模型）

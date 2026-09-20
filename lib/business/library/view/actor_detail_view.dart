@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 import '../../../component/media/model/media_ref.dart';
 import '../view_model/library_provider.dart';
 import '../../../component/media/media_cover.dart';

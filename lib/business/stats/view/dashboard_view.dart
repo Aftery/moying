@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 import '../../library/model/book.dart';
 import '../../library/model/movie.dart';
 import '../../../component/common/grid_item_card.dart';

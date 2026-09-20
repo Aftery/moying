@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'app_palette.dart';
+import '../../component/theme/app_palette.dart';
 import 'fade_slide_transitions.dart';
 
 /// 全局主题构建器（按色板生成，暗/浅共用一套结构）

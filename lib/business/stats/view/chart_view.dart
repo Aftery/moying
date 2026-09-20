@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 import '../model/statistics.dart';
 
 /// 环形图（类型占比/评分分布通用）

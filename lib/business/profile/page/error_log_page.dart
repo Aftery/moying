@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 import '../../../foundation/logger/app_logger.dart';
 import '../../../foundation/logger/log_exporter.dart';
 import '../view/error_log_view.dart';

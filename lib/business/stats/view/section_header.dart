@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 
 /// 区块标题（主标题 + 可选副标题/操作）
 class SectionHeader extends StatelessWidget {

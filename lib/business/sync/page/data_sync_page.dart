@@ -5,7 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 import '../model/sync_settings.dart';
 import '../../data_source/view_model/data_source_provider.dart';
 import '../view_model/sync_provider.dart';

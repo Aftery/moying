@@ -1,4 +1,4 @@
-import '../../business/library/view_model/library_provider.dart';
+import '../view_model/library_provider.dart';
 import 'library_store.dart';
 import 'persistence_stub.dart' if (dart.library.io) 'persistence_io.dart'
     as impl;

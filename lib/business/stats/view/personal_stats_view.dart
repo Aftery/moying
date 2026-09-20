@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 import '../model/statistics.dart';
 import '../page/annual_report_page.dart';
 

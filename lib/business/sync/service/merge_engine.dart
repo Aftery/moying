@@ -17,7 +17,7 @@ library;
 import '../../library/model/actor.dart';
 import '../../library/model/book.dart';
 import '../../library/model/movie.dart';
-import '../../../foundation/storage/library_store.dart';
+import '../../library/repository/library_store.dart';
 
 /// 一次合并的统计结果（供 UI 展示「本次同步：N 条来自云端 / M 条本地保留」）
 class MergeResult {

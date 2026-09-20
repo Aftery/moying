@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import 'app/config/app_palette.dart';
+import 'component/media/local_media_scope.dart';
+import 'component/theme/app_palette.dart';
 import 'app/config/app_theme.dart';
-import 'foundation/storage/persistence.dart';
+import 'business/library/repository/persistence.dart';
 import 'business/data_source/view_model/data_source_provider.dart';
 import 'business/library/view_model/library_provider.dart';
 import 'business/sync/view_model/sync_provider.dart';
@@ -165,6 +166,13 @@ class _AppShellState extends State<_AppShell> {
   bool _autoSyncFired = false;
   String? _lastScheduledThemeMode;
 
+  /// 本地图解析器：component 层只声明契约（[LocalMediaResolver]），
+  /// 真实实现（读 LibraryProvider 解析 images/ 目录）在 app 层注入。
+  /// 用方法 tear-off 而非闭包字段：实例方法 tear-off 身份稳定，
+  /// 不会每次 rebuild 都通知下游重建，也无需在入口 import dart:io。
+  String? _resolveLocalMedia(BuildContext ctx, String? localFile) =>
+      ctx.read<LibraryProvider>().resolveLocalImage(localFile)?.path;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -210,13 +218,17 @@ class _AppShellState extends State<_AppShell> {
         if (mounted) _syncSystemChrome(rawTheme);
       });
     }
-    return MaterialApp(
-      title: '墨影',
-      debugShowCheckedModeBanner: false,
-      theme: buildAppTheme(AppPalette.light),
-      darkTheme: buildAppTheme(AppPalette.dark),
-      themeMode: themeMode,
-      home: const RootPage(),
+    // LocalMediaScope 必须位于 Navigator 之上，pushed 路由与弹层才能取到解析器
+    return LocalMediaScope(
+      resolver: _resolveLocalMedia,
+      child: MaterialApp(
+        title: '墨影',
+        debugShowCheckedModeBanner: false,
+        theme: buildAppTheme(AppPalette.light),
+        darkTheme: buildAppTheme(AppPalette.dark),
+        themeMode: themeMode,
+        home: const RootPage(),
+      ),
     );
   }
 }

@@ -1,4 +1,4 @@
-import '../../business/library/view_model/library_provider.dart';
+import '../view_model/library_provider.dart';
 import 'persistence.dart';
 
 /// Web / 无本地文件系统平台回退：纯内存模式（数据不落盘）。

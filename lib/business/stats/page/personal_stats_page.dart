@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 import '../model/statistics.dart';
 import '../../library/model/book.dart';
 import '../../library/model/movie.dart';

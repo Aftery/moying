@@ -14,7 +14,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
-import '../../../foundation/storage/library_store.dart';
+import '../../library/repository/library_store.dart';
 import 'backup_service.dart';
 
 class SnapshotService {

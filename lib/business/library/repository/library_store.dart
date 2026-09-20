@@ -4,12 +4,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
-import '../../business/library/model/actor.dart';
-import '../../business/library/model/book.dart';
-import '../../business/data_source/model/data_source.dart';
-import '../../business/library/model/movie.dart';
-import '../../business/sync/model/sync_settings.dart';
-import '../../business/profile/model/user_profile.dart';
+import '../model/actor.dart';
+import '../model/book.dart';
+import '../../data_source/model/data_source.dart';
+import '../model/movie.dart';
+import '../../sync/model/sync_settings.dart';
+import '../../profile/model/user_profile.dart';
 
 /// 三集合数据快照（内存形态与磁盘形态之间的统一载体）
 ///

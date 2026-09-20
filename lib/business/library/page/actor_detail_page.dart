@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 import '../model/actor.dart';
 import '../../../component/media/model/media_ref.dart';
 import '../model/movie.dart';

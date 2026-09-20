@@ -5,12 +5,12 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../../foundation/storage/library_store.dart';
+import '../../library/repository/library_store.dart';
 import '../model/sync_settings.dart';
 import '../../../foundation/logger/app_logger.dart';
 import '../service/backup_service.dart';
 import '../service/merge_engine.dart';
-import '../../../foundation/storage/secure_storage_service.dart';
+import '../service/secure_storage_service.dart';
 import '../service/snapshot_service.dart';
 import '../service/webdav_client.dart';
 import '../../library/view_model/library_provider.dart';

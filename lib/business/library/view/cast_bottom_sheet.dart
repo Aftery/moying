@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 import '../model/cast_item.dart';
 
 /// 演职员表弹层（详情页「主创 / 演员 → 全部」入口）

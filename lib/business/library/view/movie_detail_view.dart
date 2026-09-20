@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 import '../../../component/media/model/media_ref.dart';
 
 class CastAvatar extends StatelessWidget {

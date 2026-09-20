@@ -13,7 +13,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:moying/business/data_source/service/cover_headers.dart';
+import 'package:moying/foundation/network/cover_headers.dart';
 import 'package:moying/business/data_source/service/data_sources/google_books_data_source.dart';
 import 'package:moying/business/data_source/service/data_sources/open_library_data_source.dart';
 import 'package:moying/foundation/network/http_retry.dart';

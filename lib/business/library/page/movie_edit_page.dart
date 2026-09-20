@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app/config/app_palette.dart';
-import '../../../app/config/edit_results.dart';
+import '../../../component/theme/app_palette.dart';
+import '../model/edit_result.dart';
 import '../model/actor.dart';
 import '../../data_source/model/data_source.dart';
 import '../../../component/media/model/media_ref.dart';

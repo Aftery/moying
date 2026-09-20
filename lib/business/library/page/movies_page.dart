@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app/config/app_palette.dart';
-import '../../../app/config/edit_results.dart';
+import '../../../component/theme/app_palette.dart';
+import '../model/edit_result.dart';
 import '../model/movie.dart';
 import '../view_model/library_provider.dart';
 import '../view/filter_dropdown.dart';

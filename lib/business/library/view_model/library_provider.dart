@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
-import '../../../foundation/storage/library_store.dart';
+import '../repository/library_store.dart';
 import '../model/mock_data.dart';
 import '../model/actor.dart';
 import '../model/book.dart';

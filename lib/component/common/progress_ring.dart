@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../app/config/app_palette.dart';
+import '../theme/app_palette.dart';
 
 /// 圆形进度环
 ///

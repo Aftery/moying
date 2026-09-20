@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 
 /// 分类 / 出版社等「小胶囊」标签（图书与影视详情页共用）
 ///

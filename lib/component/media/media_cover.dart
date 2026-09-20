@@ -1,18 +1,17 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../../app/config/app_palette.dart';
-import 'model/media_ref.dart';
-import '../../business/library/view_model/library_provider.dart';
-import '../../business/data_source/service/cover_headers.dart';
+import '../../foundation/network/cover_headers.dart';
+import '../theme/app_palette.dart';
 import 'cover_placeholder.dart';
+import 'local_media_scope.dart';
+import 'model/media_ref.dart';
 
 /// 媒体图三态展示组件（Book 封面 / Movie 海报 / Actor 头像共用）
 ///
 /// 展示优先级：**待落盘图**（[pendingFile]，编辑中选中尚未复制进 images/）
-/// > **本地图**（media.localFile，由 [LibraryProvider] 解析 images 目录）
+/// > **本地图**（media.localFile，经 [LocalMediaScope] 注入的解析器映射到 images/ 目录）
 /// > **网络图**（media.remoteUrl）> **占位**（coverHue + emoji 渐变）。
 /// 任何图加载失败均回退占位——图片是可降级资源，绝不让 UI 因此缺角。
 ///
@@ -66,17 +65,6 @@ class MediaCover extends StatelessWidget {
   /// 圆形模式（演员头像）；需父级正方形约束
   final bool circular;
 
-  /// 解析本地图目录的 Provider（可选探测）：
-  /// MediaCover 也用于孤立预览/无 Provider 树的测试，此时本地图无法解析，
-  /// 静默回退占位。网络图展示不依赖 Provider，不受影响。
-  LibraryProvider? _libOf(BuildContext context) {
-    try {
-      return context.read<LibraryProvider>();
-    } on ProviderNotFoundException {
-      return null;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     // ---------- 确定图片来源 ----------
@@ -88,7 +76,10 @@ class MediaCover extends StatelessWidget {
       final m = media;
       if (m != null) {
         if (m.isLocal) {
-          local = _libOf(context)?.resolveLocalImage(m.localFile);
+          // 本地图解析规则属业务（images/ 目录），由 app 层经 LocalMediaScope 注入；
+          // 未接入时（孤立预览 / 组件测试）取到 null，静默降级为网络图或占位。
+          final resolved = LocalMediaScope.of(context)?.call(context, m.localFile);
+          if (resolved != null) local = File(resolved);
         }
         if (m.isNetwork) {
           network = m.remoteUrl;

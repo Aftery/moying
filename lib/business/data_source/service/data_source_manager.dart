@@ -1,13 +1,13 @@
 import 'dart:collection';
 
-import '../../../foundation/storage/library_store.dart';
+import '../../library/repository/library_store.dart';
 import '../model/data_source.dart';
 import 'data_source_interface.dart';
 import 'data_sources/custom_data_source.dart';
 import 'data_sources/google_books_data_source.dart';
 import 'data_sources/open_library_data_source.dart';
 import 'data_sources/tmdb_data_source.dart';
-import '../../../foundation/storage/secure_storage_service.dart';
+import 'data_source_secure_credentials.dart';
 
 /// 数据源注册与管理（服务层，无 UI 状态）
 ///

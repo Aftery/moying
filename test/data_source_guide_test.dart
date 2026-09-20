@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:moying/app/config/app_palette.dart';
+import 'package:moying/component/theme/app_palette.dart';
 import 'package:moying/app/config/app_theme.dart';
 import 'package:moying/business/data_source/model/deploy_guide.dart';
 import 'package:moying/business/data_source/view/data_source_guide_sheet.dart';

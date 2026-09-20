@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:moying/foundation/storage/library_store.dart';
+import 'package:moying/business/library/repository/library_store.dart';
 import 'package:moying/business/library/model/actor.dart';
 import 'package:moying/business/library/model/book.dart';
 import 'package:moying/business/library/model/movie.dart';
@@ -12,7 +12,8 @@ import 'package:moying/business/sync/view_model/sync_provider.dart';
 import 'package:moying/business/sync/service/backup_service.dart';
 import 'package:moying/business/sync/service/merge_engine.dart';
 import 'package:moying/business/sync/service/snapshot_service.dart';
-import 'package:moying/foundation/storage/secure_storage_service.dart';
+import 'package:moying/business/sync/service/secure_storage_service.dart';
+import 'package:moying/foundation/storage/secure_store.dart';
 import 'package:moying/business/library/view_model/library_provider.dart';
 import 'helpers/fake_webdav_client.dart';
 

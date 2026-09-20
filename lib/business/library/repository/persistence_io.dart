@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 
-import '../../business/library/view_model/library_provider.dart';
-import '../utils/image_pick_service.dart';
+import '../view_model/library_provider.dart';
+import '../../../foundation/utils/image_pick_service.dart';
 import 'library_store.dart';
 import 'persistence.dart';
 

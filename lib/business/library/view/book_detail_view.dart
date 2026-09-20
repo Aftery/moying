@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 
 class EditPill extends StatelessWidget {
   const EditPill({super.key, required this.onTap});

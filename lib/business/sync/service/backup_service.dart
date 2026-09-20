@@ -5,7 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
-import '../../../foundation/storage/library_store.dart';
+import '../../library/repository/library_store.dart';
 import '../../library/model/actor.dart';
 import '../../library/model/book.dart';
 import '../../library/model/movie.dart';

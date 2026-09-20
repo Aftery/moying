@@ -7,14 +7,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:moying/foundation/storage/library_store.dart';
+import 'package:moying/business/library/repository/library_store.dart';
 import 'package:moying/business/library/model/mock_data.dart';
 import 'package:moying/business/sync/model/sync_settings.dart';
 import 'package:moying/business/library/view_model/library_provider.dart';
 import 'package:moying/business/sync/view_model/sync_provider.dart';
 import 'package:moying/business/sync/page/data_sync_page.dart';
 import 'package:moying/business/sync/service/backup_service.dart';
-import 'package:moying/foundation/storage/secure_storage_service.dart';
+import 'package:moying/business/sync/service/secure_storage_service.dart';
+import 'package:moying/foundation/storage/secure_store.dart';
 import 'package:moying/business/sync/service/webdav_client.dart';
 import 'helpers/fake_webdav_client.dart';
 

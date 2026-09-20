@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moying/foundation/storage/library_store.dart';
+import 'package:moying/business/library/repository/library_store.dart';
 import 'package:moying/business/library/model/mock_data.dart';
 import 'package:moying/business/library/model/actor.dart';
 import 'package:moying/business/library/model/book.dart';

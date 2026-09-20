@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:moying/app/config/app_palette.dart';
+import 'package:moying/component/theme/app_palette.dart';
 
 /// 通用筛选项
 class FilterItem<T> {

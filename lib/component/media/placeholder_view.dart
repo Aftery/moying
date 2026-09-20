@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../app/config/app_palette.dart';
+import '../theme/app_palette.dart';
 
 /// 统一的占位空态视图（书籍/电影/个人页复用）
 class PlaceholderView extends StatelessWidget {

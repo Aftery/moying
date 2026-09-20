@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 import '../../../foundation/logger/app_logger.dart';
 
 class SummaryHeader extends StatelessWidget {

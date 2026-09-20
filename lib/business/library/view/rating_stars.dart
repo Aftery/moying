@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/config/app_palette.dart';
+import '../../../component/theme/app_palette.dart';
 
 /// 五星评分展示（支持小数，例如 4.2 → 四颗满星 + 一颗部分填充）
 class RatingStars extends StatelessWidget {

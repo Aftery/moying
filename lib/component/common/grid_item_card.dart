@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../app/config/app_palette.dart';
+import '../theme/app_palette.dart';
 import '../media/model/media_ref.dart';
 import '../media/media_cover.dart';
 
