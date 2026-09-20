@@ -13,7 +13,8 @@ import '../../../component/media/model/media_ref.dart';
 import '../../data_source/view_model/data_source_provider.dart';
 import '../view_model/library_provider.dart';
 import '../../data_source/service/book_category_mapper.dart';
-import '../view/edit_form_view.dart' show TextPromptDialog, showCoverActionSheet;
+import '../view/edit_form_view.dart'
+    show TextPromptDialog, showCoverActionSheet;
 import '../../../component/media/media_cover.dart';
 import '../view/quick_search_panel.dart';
 import '../view/star_rating_picker.dart';
@@ -1623,8 +1624,14 @@ class _BookEditPageState extends State<BookEditPage> {
     if (!mounted) return;
 
     if (url == null || url.isEmpty) {
-      messenger.showSnackBar(const SnackBar(
-        content: Text('没找到合适的封面，可改用「粘贴网络图片链接」'),
+      // L-8：区分两种成因——「数据源没返回」vs「返回了但该记录无封面图」——
+      // 减少用户无效重试。
+      messenger.showSnackBar(SnackBar(
+        content: Text(
+          isbn.isEmpty
+              ? '按书名没找到封面，填上 ISBN 再试会更准'
+              : '这个 ISBN 在数据源里没有封面图，可改用「粘贴网络图片链接」',
+        ),
       ));
       return;
     }
