@@ -5,15 +5,18 @@ import '../config/app_palette.dart';
 import '../config/edit_results.dart';
 import '../models/book.dart';
 import '../providers/library_provider.dart';
+import '../widgets/detail_common.dart';
 import '../widgets/media_cover.dart';
 import '../widgets/rating_stars.dart';
 import 'book_edit_screen.dart';
 import 'books_screen.dart';
 
+part 'book_detail_widgets.dart';
+
 /// 图书详情界面（v2 布局）
 ///
-/// 对齐参考图 1：
-/// - 圆形返回 / 编辑悬浮按钮
+/// 布局对齐参考图 1：
+/// - 顶部返回 / 编辑沿用系统 AppBar（与电影详情页保持一致）
 /// - 封面居左，右侧标题 / 作者 / 我的评分卡 / 出版社与分类标签
 /// - 阅读进度卡（百分比大字 + 进度条）
 /// - 2×2 信息卡（阅读状态 / 出版年份 / 总页数 / ISBN）
@@ -44,20 +47,17 @@ class BookDetailScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: context.colors.background,
+      // 头部与电影详情页统一：系统默认返回箭头 + 普通编辑图标按钮。
+      // 此前这里用自绘圆底悬浮按钮，两页风格与尺寸都不一致，返回箭头也显突兀。
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        leading: _CircleButton(
-          icon: Icons.arrow_back_ios_new_rounded,
-          onTap: () => Navigator.of(context).pop(),
-        ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: _CircleButton(
-              icon: Icons.edit_rounded,
-              onTap: book == null ? null : () => _openEditor(context),
-            ),
+          IconButton(
+            tooltip: '编辑',
+            icon: Icon(Icons.edit_rounded, color: context.colors.textPrimary),
+            onPressed: book == null ? null : () => _openEditor(context),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: book == null
@@ -87,7 +87,7 @@ class BookDetailScreen extends StatelessWidget {
                         book.description!.isNotEmpty) ...[
                       _sectionTitle(context, '内容简介'),
                       const SizedBox(height: 10),
-                      _ExpandableSynopsis(text: book.description!),
+                      ExpandableSynopsis(text: book.description!),
                       const SizedBox(height: 24),
                     ],
                     // ---------- 阅读感悟 & 划线 ----------
@@ -193,8 +193,8 @@ class BookDetailScreen extends StatelessWidget {
                 children: [
                   if (book.publisher != null &&
                       book.publisher!.trim().isNotEmpty)
-                    _InfoChip(label: book.publisher!.trim()),
-                  if (book.category != null) _InfoChip(label: book.category!),
+                    InfoChip(label: book.publisher!.trim()),
+                  if (book.category != null) InfoChip(label: book.category!),
                 ],
               ),
             ],
@@ -535,288 +535,4 @@ class BookDetailScreen extends StatelessWidget {
   }
 }
 
-/// 圆形悬浮按钮（返回 / 编辑）
-class _CircleButton extends StatelessWidget {
-  const _CircleButton({required this.icon, this.onTap});
-
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 12),
-      child: Material(
-        color: context.colors.surfaceHigh,
-        borderRadius: BorderRadius.circular(22),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: onTap,
-          child: SizedBox(
-            width: 44,
-            height: 44,
-            child: Icon(icon, size: 19, color: context.colors.textPrimary),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// 「修改」胶囊按钮（感悟卡右下角）
-class _EditPill extends StatelessWidget {
-  const _EditPill({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: context.colors.surface,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.edit_rounded,
-                  size: 13, color: context.colors.textSecondary),
-              const SizedBox(width: 5),
-              Text(
-                '修改',
-                style: TextStyle(
-                  color: context.colors.textSecondary,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 信息小卡（2×2 网格单元）
-class _InfoCell extends StatelessWidget {
-  const _InfoCell({
-    required this.context,
-    required this.icon,
-    required this.color,
-    required this.label,
-    required this.value,
-  });
-
-  final BuildContext context;
-  final IconData icon;
-  final Color color;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-      decoration: BoxDecoration(
-        color: context.colors.surfaceHigh,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 13, color: color),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 7),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: context.colors.textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 分类 / 出版社小胶囊
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: context.colors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border:
-            Border.all(color: context.colors.outline, width: 0.8),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: context.colors.textSecondary,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
-/// 内容简介文本块（超过 4 行自动折叠，可展开/收起；纯文本无边框卡）
-class _ExpandableSynopsis extends StatefulWidget {
-  const _ExpandableSynopsis({required this.text});
-
-  final String text;
-
-  @override
-  State<_ExpandableSynopsis> createState() => _ExpandableSynopsisState();
-}
-
-class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
-  static const int _foldLines = 4;
-
-  bool _expanded = false;
-  bool _overflow = false;
-  bool _measured = false;
-
-  /// 上次测量的可用宽度（M23：文本或宽度变化才重测，避免每次 rebuild 重复排版）
-  double _lastWidth = -1;
-
-  /// M11：postFrame 调度去重——首帧前若发生多次 rebuild，
-  /// 不重复入队多次相同的 TextPainter 测量任务
-  bool _measureScheduled = false;
-
-  /// 测量简介是否超过 [_foldLines] 行，结果按（文本, 宽度）缓存。
-  ///
-  /// 排版是同步重活，不在 build 阶段执行——由 postFrame 调度本方法，
-  /// 避免长简介下每次 rebuild 都触发一次 TextPainter.layout()。
-  void _measure(double maxWidth) {
-    _measured = true;
-    _measureScheduled = false;
-    _lastWidth = maxWidth;
-    final painter = TextPainter(
-      text: TextSpan(
-        text: widget.text,
-        style: TextStyle(
-          fontSize: 14,
-          height: 1.7,
-          color: context.colors.textSecondary,
-        ),
-      ),
-      maxLines: _foldLines,
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: maxWidth);
-    final needFold = painter.didExceedMaxLines;
-    if (needFold != _overflow && mounted) {
-      setState(() => _overflow = needFold);
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant _ExpandableSynopsis oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // 简介内容变化（如编辑后返回）时重新测量折叠状态
-    if (oldWidget.text != widget.text) {
-      _measured = false;
-      _measureScheduled = false;
-      _lastWidth = -1;
-      _overflow = false;
-      _expanded = false;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // M23：排版不在 build 阶段同步执行，交给 postFrame（_measure 内缓存结果）
-        if (!_measured || constraints.maxWidth != _lastWidth) {
-          if (!_measureScheduled) {
-            _measureScheduled = true;
-            final width = constraints.maxWidth;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _measure(width);
-            });
-          }
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              widget.text,
-              maxLines: _expanded ? null : _foldLines,
-              overflow: _expanded ? null : TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.7,
-                color: context.colors.textSecondary,
-              ),
-            ),
-            if (_overflow)
-              Align(
-                alignment: Alignment.centerRight,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => setState(() => _expanded = !_expanded),
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _expanded ? '收起' : '展开全部',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: context.colors.accent,
-                          ),
-                        ),
-                        Icon(
-                          _expanded
-                              ? Icons.expand_less_rounded
-                              : Icons.expand_more_rounded,
-                          size: 16,
-                          color: context.colors.accent,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
