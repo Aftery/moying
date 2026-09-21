@@ -1,21 +1,21 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../../component/theme/app_palette.dart';
-import '../model/edit_result.dart';
-import '../model/actor.dart';
-import '../../data_source/model/data_source.dart';
-import '../../../component/media/model/media_ref.dart';
-import '../model/movie.dart';
-import '../../data_source/view_model/data_source_provider.dart';
-import '../view_model/library_provider.dart';
-import '../view/edit_form_view.dart';
 import '../../../component/media/media_cover.dart';
+import '../../../component/theme/app_palette.dart';
+import '../../../foundation/utils/date_format.dart';
+import '../../data_source/model/data_source.dart';
+import '../../data_source/view_model/data_source_provider.dart';
+import '../model/actor.dart';
+import '../model/edit_result.dart';
+import '../model/movie.dart';
+import '../view/edit_form_view.dart';
 import '../view/quick_search_panel.dart';
+import '../view_model/library_provider.dart';
+import '../view_model/movie_edit_controller.dart';
 
 /// 片长输入净化正则（提为顶层常量，避免每字符输入重建）
 final _nonDigitRegex = RegExp(r'[^0-9]');
@@ -52,61 +52,11 @@ class MovieEditPage extends StatefulWidget {
 }
 
 class _MovieEditPageState extends State<MovieEditPage> {
-  static const int _reviewMaxChars = 5000;
+  /// 表单状态与业务逻辑（M-5b）：校验、导演 ↔ 演员联动、类型标签、
+  /// 海报解析、保存组装。放在控制器里，可脱离 Widget 树直接单测。
+  late final MovieEditController _c;
 
-  late final TextEditingController _titleCtrl;
-  late final TextEditingController _englishCtrl;
-  late final TextEditingController _directorCtrl;
-  late final TextEditingController _durationCtrl;
-  late final TextEditingController _reviewCtrl;
-
-  late DateTime? _releaseDate;
-  late DateTime? _watchDate;
-  late double _rating;
-  late final Set<String> _selectedGenres;
-
-  /// 剧情类型联想输入（多选标签：点选候选 / 自定义回车 / 保存前兜底提交）
-  late final TextEditingController _genreCtrl;
-  late final FocusNode _genreFocus;
-
-  /// 导演框焦点（失焦触发导演 → 演员槽位自动同步）
-  late final FocusNode _directorFocus;
-
-  /// 当前导演自动槽的文本（用于识别用户是否改过该槽位）
-  String? _directorAutoName;
-
-  /// 用户手动删除自动槽时的导演名——同导演不再自动弹回
-  String? _directorAutoDismissed;
-
-  /// 防止双击重复提交
-  bool _saving = false;
-
-  /// 「添加“X”」哨兵：候选无匹配时提供可点的自定义入口（回车提交同语义）
-  static const String _genreCreateSentinel = '__genre_create__';
-
-  /// 演员槽位（每个槽位 = 联想输入框 + 已解析实体）
-  ///
-  /// 槽位文本与实体分离：文本展示姓名，[ActorSlot.picked] 记录解析出的实体 id。
-  /// 回填/联想/新建都会把 picked 置为实体；保存时未解析的自由文本做
-  /// 「精确吸附已有 + 兜底新建」，保证 actorIds 永远存 id 而非文本。
-  final List<ActorSlot> _actorSlots = [];
-
-  /// 从相册选中、尚未复制进 images/ 的海报（保存时 attach）
-  File? _pendingPosterFile;
-
-  /// 网络海报地址输入
-  final TextEditingController _posterUrlCtrl = TextEditingController();
-
-  /// 海报是否被用户动过（选图/填 URL/移除）——决定保存时沿用原图还是覆盖
-  bool _posterEdited = false;
-
-  Movie? _movie;
-  bool get _isEditMode => widget.movieId != null;
-
-  /// 编辑模式但电影已被并发删除（防 _movie! 崩溃）
-  bool _notFound = false;
-
-  // ---------- 快速检索（联网信息补全）状态 ----------
+  // ---------- 快速检索（联网信息补全）状态：与 Provider / BuildContext 强耦合，留在页面 ----------
 
   /// 搜索词输入
   final TextEditingController _searchCtrl = TextEditingController();
@@ -117,18 +67,6 @@ class _MovieEditPageState extends State<MovieEditPage> {
   /// 最近一次选中回填的搜索结果（结果行「已填充」标记）
   MovieSearchResult? _filledResult;
 
-  /// 数据溯源标记（保存时写入 Movie.source，如 'tmdb:123'）
-  String? _sourceTag;
-
-  /// 演职员表快照（保存时写入 Movie.cast）
-  ///
-  /// 编辑模式进页面时先从原 Movie 载入——用户不重新检索也应保留既有快照；
-  /// 检索回填时用 TMDB credits 覆盖。
-  List<CastMember>? _cast;
-
-  /// 剧照缓存（保存时写入 Movie.stills，TMDB images.backdrops 的网络引用）
-  List<MediaRef>? _stills;
-
   @override
   void initState() {
     super.initState();
@@ -136,63 +74,28 @@ class _MovieEditPageState extends State<MovieEditPage> {
     final movieId = widget.movieId;
     Movie? movie;
     if (movieId != null) {
-      final matches = provider.movieList.where((m) => m.id == movieId).toList();
+      final matches = provider.movieList.where((m) => m.id == movieId);
       movie = matches.isEmpty ? null : matches.first;
-      _notFound = movie == null; // 并发删除时防止 _movie! 崩溃
     }
-    _movie = movie;
-
-    _titleCtrl = TextEditingController(text: movie?.title ?? '');
-    _englishCtrl = TextEditingController(text: movie?.englishTitle ?? '');
-    _directorCtrl = TextEditingController(text: movie?.director ?? '');
-    _durationCtrl =
-        TextEditingController(text: movie?.duration?.toString() ?? '');
-    _reviewCtrl = TextEditingController(text: movie?.review ?? '');
-    _releaseDate = movie?.releaseDate;
-    _watchDate = movie?.watchDate;
-    _rating = movie?.rating ?? 0;
-    // 演职员快照 / 剧照：沿用原值（用户不重新检索时不该丢），检索回填时被覆盖
-    _cast = movie?.cast;
-    _stills = movie?.stills;
-    _selectedGenres = Set.of(movie?.genres ?? const <String>[]);
-    _genreCtrl = TextEditingController();
-    _genreFocus = FocusNode();
+    _c = MovieEditController(
+      movieId: movieId,
+      initialMovie: movie,
+      // 编辑模式回填：actorIds → 实体解析（悬空引用静默丢弃）
+      initialActors: provider.actorsByIds(movie?.actorIds ?? const <String>[]),
+    );
     // 失焦时把未提交的输入收进标签，防止用户中途移开焦点丢输入
-    _genreFocus.addListener(_handleGenreFocusChange);
-    _directorFocus = FocusNode();
+    _c.genreFocus.addListener(_handleGenreFocusChange);
     // 导演失焦 → 自动同步到演员第 0 位（回车提交在导演输入框 onSubmitted 同样触发）
-    _directorFocus.addListener(_handleDirectorFocusChange);
-    // 编辑模式回填：actorIds → 实体解析 → 显示姓名（悬空引用静默丢弃）。
-    // 这是"渲染 actorIds 的地方统一走解析"的第二个渲染点，与详情页同步切换，
-    // 确保用户新建的 id≠name 演员在回填时显示名字而非一串乱码 id。
-    for (final actor
-        in provider.actorsByIds(movie?.actorIds ?? const <String>[])) {
-      _actorSlots.add(ActorSlot(
-        ctrl: TextEditingController(text: actor.name),
-        picked: actor,
-      ));
-    }
-    // 编辑模式回填后同步一次导演（首帧前执行，无需 setState）；
-    // 新增模式导演为空 → no-op
-    _applyDirectorSync();
+    _c.directorFocus.addListener(_handleDirectorFocusChange);
     // 快速检索框：listener 驱动搜索（可读 IME composing，见 _onSearchCtrlChanged）
     _searchCtrl.addListener(_onSearchCtrlChanged);
   }
 
   @override
   void dispose() {
-    _titleCtrl.dispose();
-    _englishCtrl.dispose();
-    _directorCtrl.dispose();
-    _durationCtrl.dispose();
-    _reviewCtrl.dispose();
-    for (final slot in _actorSlots) {
-      slot.dispose();
-    }
-    _genreCtrl.dispose();
-    _genreFocus.dispose();
-    _directorFocus.dispose();
-    _posterUrlCtrl.dispose();
+    _c.genreFocus.removeListener(_handleGenreFocusChange);
+    _c.directorFocus.removeListener(_handleDirectorFocusChange);
+    _c.dispose();
     _searchCtrl.dispose();
     _searchDebounce?.cancel();
     super.dispose();
@@ -202,55 +105,12 @@ class _MovieEditPageState extends State<MovieEditPage> {
 
   /// 失焦时触发（onSubmitted 同语义）
   void _handleDirectorFocusChange() {
-    if (!_directorFocus.hasFocus) _handleDirectorSync();
+    if (!_c.directorFocus.hasFocus) _handleDirectorSync();
   }
 
   void _handleDirectorSync() {
-    _applyDirectorSync();
+    _c.applyDirectorSync();
     setState(() {});
-  }
-
-  /// 同步的纯数据操作（不含 setState；initState 回填后也复用）
-  ///
-  /// - 导演非空：自动槽文本跟随导演；无自动槽且演员区无同名 → 第 0 位插入；
-  ///   用户删过该导演的自动槽（[_directorAutoDismissed]）→ 尊重不弹回
-  /// - 导演清空：移除自动槽
-  /// - 用户改过自动槽文本 → 该槽降级为普通槽（自定义优先，另起自动槽）
-  void _applyDirectorSync() {
-    final director = _directorCtrl.text.trim();
-    ActorSlot? autoSlot;
-    for (final s in _actorSlots) {
-      if (s.autoFromDirector) {
-        autoSlot = s;
-        break;
-      }
-    }
-    if (autoSlot != null && autoSlot.ctrl.text.trim() != _directorAutoName) {
-      autoSlot.autoFromDirector = false; // 用户改过 → 降级
-      autoSlot = null;
-      _directorAutoName = null;
-    }
-    if (director.isEmpty) {
-      if (autoSlot != null) {
-        autoSlot.dispose();
-        _actorSlots.remove(autoSlot);
-      }
-      _directorAutoName = null;
-      return;
-    }
-    if (autoSlot != null) {
-      if (autoSlot.ctrl.text != director) {
-        autoSlot.ctrl.text = director;
-      }
-      return;
-    }
-    final hasSame = _actorSlots.any((s) => s.ctrl.text.trim() == director);
-    if (!hasSame && director != _directorAutoDismissed) {
-      final slot = ActorSlot(ctrl: TextEditingController(text: director))
-        ..autoFromDirector = true;
-      _actorSlots.insert(0, slot);
-      _directorAutoName = director;
-    }
   }
 
   // ---------- 日期选择 ----------
@@ -286,18 +146,14 @@ class _MovieEditPageState extends State<MovieEditPage> {
     if (picked != null) onPicked(picked);
   }
 
-  String? _fmtDate(DateTime? d) {
-    if (d == null) return null;
-    final m = d.month.toString().padLeft(2, '0');
-    final day = d.day.toString().padLeft(2, '0');
-    return '${d.year}-$m-$day';
-  }
+  /// 日期字段展示值（null = 未设置，交给占位文案）
+  String? _fmtDate(DateTime? d) => d == null ? null : formatDateYmd(d);
 
   // ---------- 保存 ----------
 
   Future<void> _save() async {
-    if (_saving) return;
-    setState(() => _saving = true);
+    if (_c.saving) return;
+    setState(() => _c.saving = true);
     try {
       await _doSave();
     } on Object catch (e) {
@@ -306,122 +162,35 @@ class _MovieEditPageState extends State<MovieEditPage> {
         SnackBar(content: Text('保存失败：$e')),
       );
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) setState(() => _c.saving = false);
     }
   }
 
   Future<void> _doSave() async {
-    final title = _titleCtrl.text.trim();
-    if (title.isEmpty) {
+    final error = _c.validate();
+    if (error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('电影标题不能为空')),
+        SnackBar(content: Text(error)),
       );
       return;
     }
-
-    // 输入框里还没回车/点选的自定义类型先收进标签，再统计
-    _commitGenreText();
-    final rating = _rating > 0 ? _rating : null;
-    final duration = int.tryParse(_durationCtrl.text.trim());
-    final actorIds = _collectActorIds();
-
-    final review = _reviewCtrl.text.trim();
-    final genres = _selectedGenres.isEmpty ? null : _selectedGenres.toList();
-
     final provider = context.read<LibraryProvider>();
-    if (_isEditMode && _movie == null) return;
-    // 新增/编辑统一先在保存时刻确定 id，供海报复制落盘
-    final id =
-        _isEditMode ? _movie!.id : 'm_${DateTime.now().microsecondsSinceEpoch}';
-    final poster = await _resolveDraftPoster(provider, id);
-
-    if (_isEditMode) {
-      final original = _movie;
-      if (original == null) return;
-      final updated = original.copyWith(
-        title: title,
-        englishTitle:
-            _englishCtrl.text.trim().isEmpty ? null : _englishCtrl.text.trim(),
-        director: _directorCtrl.text.trim().isEmpty
-            ? null
-            : _directorCtrl.text.trim(),
-        status: rating != null
-            ? MovieStatus.rated
-            : (original.status == MovieStatus.rated
-                ? MovieStatus.watched
-                : original.status),
-        rating: rating,
-        poster: poster,
-        releaseDate: _releaseDate,
-        watchDate: _watchDate,
-        duration: duration,
-        genres: genres,
-        review: review.isEmpty ? null : review,
-        actorIds: actorIds,
-        cast: _cast,
-        stills: _stills,
-        // 未重新检索时保留原溯源标记（copyWith 传 null 会清字段）
-        source: _sourceTag ?? original.source,
-      );
-      provider.updateMovie(updated);
+    final movie = await _c.composeMovie(provider);
+    if (movie == null) return;
+    if (_c.isEditMode) {
+      provider.updateMovie(movie);
     } else {
-      final now = DateTime.now();
-      final newMovie = Movie(
-        id: id,
-        title: title,
-        englishTitle:
-            _englishCtrl.text.trim().isEmpty ? null : _englishCtrl.text.trim(),
-        year: _releaseDate?.year ?? now.year,
-        director: _directorCtrl.text.trim().isEmpty
-            ? null
-            : _directorCtrl.text.trim(),
-        status: rating != null ? MovieStatus.rated : MovieStatus.watchlist,
-        rating: rating,
-        coverHue: (_movie?.coverHue ?? 165),
-        emoji: _movie?.emoji,
-        poster: poster,
-        releaseDate: _releaseDate,
-        watchDate: _watchDate,
-        duration: duration,
-        genres: genres,
-        review: review.isEmpty ? null : review,
-        actorIds: actorIds,
-        cast: _cast,
-        stills: _stills,
-        source: _sourceTag,
-      );
-      provider.addMovie(newMovie);
+      provider.addMovie(movie);
     }
     if (!mounted) return;
     Navigator.of(context).pop(kEditResultSaved);
   }
 
-  /// 计算保存时的海报引用（与书编辑 _resolveDraftCover 同构）：
-  /// 选中本地图 → 先复制进 images/ 再返回 local；没动过 → 沿用原图；
-  /// 动过且填了 URL → **先缓存到本地**（成功 = local+remote 双引用，
-  /// 展示优先读本地、离线回退 URL；缓存失败 = 纯网络引用）；URL 空 → 移除。
-  Future<MediaRef?> _resolveDraftPoster(
-    LibraryProvider provider,
-    String id,
-  ) async {
-    final pending = _pendingPosterFile;
-    if (pending != null) {
-      final rel = await provider.attachImage(pending, id);
-      return rel == null ? null : MediaRef.local(rel);
-    }
-    if (!_posterEdited) return _movie?.poster;
-    final url = _posterUrlCtrl.text.trim();
-    if (url.isEmpty) return null;
-    final cached = await provider.cacheRemoteImage(url, 'movie_poster');
-    if (cached != null) return MediaRef(localFile: cached, remoteUrl: url);
-    return MediaRef.network(url);
-  }
-
   // ---------- 删除 ----------
 
   Future<void> _confirmDelete() async {
-    if (_saving) return;
-    final movie = _movie;
+    if (_c.saving) return;
+    final movie = _c.movie;
     if (movie == null) return;
 
     final confirmed = await showDialog<bool>(
@@ -466,10 +235,10 @@ class _MovieEditPageState extends State<MovieEditPage> {
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
-        title: Text(_isEditMode ? '修改电影' : '添加电影'),
+        title: Text(_c.isEditMode ? '修改电影' : '添加电影'),
         backgroundColor: Colors.transparent,
       ),
-      body: _isEditMode && _notFound
+      body: _c.isEditMode && _c.notFound
           ? Center(
               child:
                   Text('未找到该电影', style: TextStyle(color: context.colors.textMuted)),
@@ -488,22 +257,22 @@ class _MovieEditPageState extends State<MovieEditPage> {
               const EditSectionTitle('基本信息'),
               const SizedBox(height: 10),
               EditInputField(
-                controller: _titleCtrl,
+                controller: _c.titleCtrl,
                 label: '电影标题',
                 hint: '输入片名',
               ),
               const SizedBox(height: 12),
               EditInputField(
-                controller: _englishCtrl,
+                controller: _c.englishCtrl,
                 label: '英文名（可选）',
                 hint: '输入英文名',
               ),
               const SizedBox(height: 12),
               EditInputField(
-                controller: _directorCtrl,
+                controller: _c.directorCtrl,
                 label: '导演',
                 hint: '输入导演姓名',
-                focusNode: _directorFocus,
+                focusNode: _c.directorFocus,
                 onSubmitted: _handleDirectorSync,
               ),
               const SizedBox(height: 26),
@@ -512,20 +281,20 @@ class _MovieEditPageState extends State<MovieEditPage> {
               _buildDateField(
                 label: '上映时间',
                 icon: Icons.calendar_month_rounded,
-                value: _fmtDate(_releaseDate),
+                value: _fmtDate(_c.releaseDate),
                 onTap: () => _pickDate(
-                  current: _releaseDate,
-                  onPicked: (v) => setState(() => _releaseDate = v),
+                  current: _c.releaseDate,
+                  onPicked: (v) => setState(() => _c.releaseDate = v),
                 ),
               ),
               const SizedBox(height: 12),
               _buildDateField(
                 label: '看过时间',
                 icon: Icons.visibility_rounded,
-                value: _fmtDate(_watchDate),
+                value: _fmtDate(_c.watchDate),
                 onTap: () => _pickDate(
-                  current: _watchDate,
-                  onPicked: (v) => setState(() => _watchDate = v),
+                  current: _c.watchDate,
+                  onPicked: (v) => setState(() => _c.watchDate = v),
                 ),
               ),
               const SizedBox(height: 12),
@@ -535,7 +304,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
               // FilteringTextInputFormatter——组合输入中间态会被格式化器吞掉。
               // 最终方案：文本通道 + onChanged 手动净化（见 sanitizeDurationInput）。
               EditInputField(
-                controller: _durationCtrl,
+                controller: _c.durationCtrl,
                 label: '片长',
                 hint: '如 169',
                 suffixText: '分钟',
@@ -543,7 +312,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
                 onChanged: (raw) {
                   final clean = sanitizeDurationInput(raw);
                   if (clean == raw) return;
-                  _durationCtrl.value = TextEditingValue(
+                  _c.durationCtrl.value = TextEditingValue(
                     text: clean,
                     selection: TextSelection.collapsed(offset: clean.length),
                   );
@@ -673,47 +442,33 @@ class _MovieEditPageState extends State<MovieEditPage> {
 
     final source = ds.defaultMovieSource;
     setState(() {
-      _titleCtrl.text = detail.title;
+      _c.titleCtrl.text = detail.title;
       if (detail.originalTitle != null && detail.originalTitle!.isNotEmpty) {
-        _englishCtrl.text = detail.originalTitle!;
+        _c.englishCtrl.text = detail.originalTitle!;
       }
       if (detail.director != null && detail.director!.isNotEmpty) {
-        _directorCtrl.text = detail.director!;
-        _directorAutoDismissed = null;
-        _applyDirectorSync();
+        _c.directorCtrl.text = detail.director!;
+        _c.directorAutoDismissed = null;
+        _c.applyDirectorSync();
       }
       if (detail.year != null) {
-        _releaseDate = DateTime(detail.year!);
+        _c.releaseDate = DateTime(detail.year!);
       }
       if (detail.runtimeMinutes != null && detail.runtimeMinutes! > 0) {
-        _durationCtrl.text = '${detail.runtimeMinutes}';
+        _c.durationCtrl.text = '${detail.runtimeMinutes}';
       }
       // 评分**刻意不自动填充**（同书籍页）：源给的是 TMDB 大众平均分，
       // 不是「我的评分」；填进来会让用户以为自己打过这个分。
       if (detail.posterUrl != null && detail.posterUrl!.isNotEmpty) {
-        _posterEdited = true;
-        _pendingPosterFile = null;
-        _posterUrlCtrl.text = detail.posterUrl!;
+        _c.posterEdited = true;
+        _c.pendingPosterFile = null;
+        _c.posterUrlCtrl.text = detail.posterUrl!;
       }
-      // 主演 → 演员槽位（导演自动槽之外追加；自由文本，保存时精确吸附/新建）
-      for (final member in detail.cast) {
-        final name = member.name.trim();
-        if (name.isEmpty) continue;
-        if (_actorSlots.any((s) => s.ctrl.text.trim() == name)) continue;
-        _actorSlots.add(ActorSlot(
-          ctrl: TextEditingController(text: name),
-          // 头像随槽位带入：新建/吸附本地 Actor 时一并落库，演员页也能显示真头像
-          avatarUrl: member.profilePath,
-        ));
-      }
-      // 演职员快照 + 剧照：非空才覆盖（详情源缺图时不该清掉既有数据）
-      if (detail.cast.isNotEmpty) _cast = detail.cast;
-      if (detail.backdrops.isNotEmpty) {
-        _stills = detail.backdrops.map(MediaRef.network).toList();
-      }
-      _selectedGenres.addAll(detail.genres);
+      // 主演 → 演员槽位（导演自动槽之外追加）；演职员快照 + 剧照非空才覆盖
+      _c.applyCastDetail(detail.cast, detail.backdrops);
+      _c.selectedGenres.addAll(detail.genres);
       _filledResult = r;
-      _sourceTag =
+      _c.sourceTag =
           source == null ? null : '${source.type.name}:${detail.externalId}';
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -725,16 +480,6 @@ class _MovieEditPageState extends State<MovieEditPage> {
   }
 
   // ---------- 顶部封面 + 更改封面 ----------
-
-  /// 海报预览输入：编辑态未改动 → 原图；动过后 → URL 文本（网络）或空（占位）；
-  /// 选中本地图时由 [MediaCover.pendingFile] 优先展示，[media] 归位 null。
-  MediaRef? get _previewPosterMedia {
-    if (_posterEdited) {
-      final url = _posterUrlCtrl.text.trim();
-      return url.isEmpty ? null : MediaRef.network(url);
-    }
-    return _movie?.poster;
-  }
 
   /// 更改海报菜单：从相册选择（持久模式）/ 粘贴网络链接 / 移除海报
   Future<void> _openPosterMenu() async {
@@ -752,9 +497,9 @@ class _MovieEditPageState extends State<MovieEditPage> {
         await _promptPosterUrl();
       case 'remove':
         setState(() {
-          _posterEdited = true;
-          _pendingPosterFile = null;
-          _posterUrlCtrl.clear();
+          _c.posterEdited = true;
+          _c.pendingPosterFile = null;
+          _c.posterUrlCtrl.clear();
         });
     }
   }
@@ -764,9 +509,9 @@ class _MovieEditPageState extends State<MovieEditPage> {
     final picked = await lib.pickImageFile();
     if (picked == null || !mounted) return; // 用户取消
     setState(() {
-      _posterEdited = true;
-      _pendingPosterFile = picked;
-      _posterUrlCtrl.clear();
+      _c.posterEdited = true;
+      _c.pendingPosterFile = picked;
+      _c.posterUrlCtrl.clear();
     });
   }
 
@@ -817,25 +562,25 @@ class _MovieEditPageState extends State<MovieEditPage> {
     if (result == null || !mounted) return;
     final trimmed = result.trim();
     setState(() {
-      _posterEdited = true;
-      _pendingPosterFile = null;
-      _posterUrlCtrl.text = trimmed;
+      _c.posterEdited = true;
+      _c.pendingPosterFile = null;
+      _c.posterUrlCtrl.text = trimmed;
     });
   }
 
   Widget _buildCoverHeader() {
     final title =
-        _titleCtrl.text.trim().isEmpty ? '电影' : _titleCtrl.text.trim();
-    final hue = _movie?.coverHue ?? 165;
-    final emoji = _movie?.emoji;
+        _c.titleCtrl.text.trim().isEmpty ? '电影' : _c.titleCtrl.text.trim();
+    final hue = _c.movie?.coverHue ?? 165;
+    final emoji = _c.movie?.emoji;
     return Center(
       child: Stack(
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: MediaCover(
-              media: _previewPosterMedia,
-              pendingFile: _pendingPosterFile,
+              media: _c.previewPosterMedia,
+              pendingFile: _c.pendingPosterFile,
               title: title,
               emoji: emoji ?? '',
               hue: hue,
@@ -940,53 +685,10 @@ class _MovieEditPageState extends State<MovieEditPage> {
 
   // ---------- 类型联想输入 + 多选标签 ----------
 
-  /// 类型联想候选：预设 ∪ 影库实际用过的类型（去重，预设在前），剔除已选
-  List<String> get _genreCandidates {
-    final used = context.read<LibraryProvider>().usedMovieGenres;
-    return <String>{
-      ...kMovieCategories,
-      ...used,
-    }.where((g) => !_selectedGenres.contains(g)).toList(growable: false);
-  }
-
-  /// 联想规则：空输入 → 全部候选；有输入 → 包含匹配。
-  /// 精确命中的候选置顶（保证回车确认的就是它）；无精确命中且未选过时
-  /// 追加「添加」哨兵——空 options 不渲染浮层，哨兵保证自定义值有可点入口。
-  ///
-  /// 哨兵选项编码为 `_genreCreateSentinel + 用户输入`：RawAutocomplete 选中
-  /// 时会先把 displayString 写进输入框，onSelected 里再读输入框会把哨兵
-  /// 原文当类型吞进去（踩过），所以真实值必须随选项携带（同演员哨兵做法）。
-  List<String> _genreOptionsFor(String rawQuery) {
-    final q = rawQuery.trim();
-    if (q.isEmpty) return _genreCandidates;
-    final options = _genreCandidates.where((c) => c.contains(q)).toList();
-    if (options.contains(q)) {
-      options
-        ..remove(q)
-        ..insert(0, q);
-    } else if (!_selectedGenres.contains(q)) {
-      options.add('$_genreCreateSentinel$q');
-    }
-    return options;
-  }
-
-  /// 添加一个类型标签（空串/已选静默忽略，天然去重）
-  void _addGenre(String genre) {
-    final g = genre.trim();
-    if (g.isEmpty || _selectedGenres.contains(g)) return;
-    setState(() => _selectedGenres.add(g));
-  }
-
-  /// 把输入框里未提交的文本收进标签并清空输入框（无文本时跳过）
-  void _commitGenreText() {
-    final text = _genreCtrl.text.trim();
-    if (text.isEmpty) return;
-    _addGenre(text);
-    _genreCtrl.clear();
-  }
-
+  /// 类型输入框失焦：把未提交的文本收进标签（无文本 / 已存在时 no-op）
   void _handleGenreFocusChange() {
-    if (!_genreFocus.hasFocus) _commitGenreText();
+    if (_c.genreFocus.hasFocus) return;
+    if (_c.commitGenreText()) setState(() {});
   }
 
   Widget _buildGenreSection() {
@@ -994,17 +696,17 @@ class _MovieEditPageState extends State<MovieEditPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // 已选标签（点 × 移除，等价旧 FilterChip 的取消语义）
-        if (_selectedGenres.isNotEmpty)
+        if (_c.selectedGenres.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final g in _selectedGenres)
+                for (final g in _c.selectedGenres)
                   InputChip(
                     label: Text(g),
-                    onDeleted: () => setState(() => _selectedGenres.remove(g)),
+                    onDeleted: () => setState(() => _c.selectedGenres.remove(g)),
                     deleteIconColor: context.colors.textMuted,
                     backgroundColor: context.colors.surfaceHigh,
                     side:
@@ -1022,20 +724,17 @@ class _MovieEditPageState extends State<MovieEditPage> {
             ),
           ),
         RawAutocomplete<String>(
-          textEditingController: _genreCtrl,
-          focusNode: _genreFocus,
-          optionsBuilder: (value) => _genreOptionsFor(value.text),
+          textEditingController: _c.genreCtrl,
+          focusNode: _c.genreFocus,
+          optionsBuilder: (value) => _c.genreOptionsFor(
+            value.text,
+            context.read<LibraryProvider>().usedMovieGenres,
+          ),
           displayStringForOption: (g) => g,
           onSelected: (g) {
-            // 哨兵选项自带用户输入，解析出真实类型；普通选项直接采用。
-            // 两种来源最后统一清空输入框（RawAutocomplete 选中时已把
-            // displayString 写入输入框，不主动清会残留哨兵/旧文本）。
-            if (g.startsWith(_genreCreateSentinel)) {
-              _addGenre(g.substring(_genreCreateSentinel.length));
-            } else {
-              _addGenre(g);
-            }
-            _genreCtrl.clear();
+            // 「添加“X”」哨兵自带用户输入，解析出真实类型；普通选项直接采用；
+            // 两种来源最后统一清空输入框（selector 内部处理）
+            if (_c.selectGenreOption(g)) setState(() {});
           },
           // 注意：fieldViewBuilder 第 4 参是 onFieldSubmitted（回车确认候选），
           // 不是 onChanged；自定义文本的提交在 onFieldSubmitted 之后兜底。
@@ -1048,7 +747,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
               onSubmitted: (_) {
                 // 先走候选确认（有精确/高亮候选时），再把剩余自定义文本收进标签
                 onFieldSubmitted();
-                _commitGenreText();
+                if (_c.commitGenreText()) setState(() {});
               },
               style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
               cursorColor: context.colors.accent,
@@ -1094,7 +793,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
                     itemCount: options.length,
                     itemBuilder: (context, i) {
                       final option = options.elementAt(i);
-                      final isCreate = option.startsWith(_genreCreateSentinel);
+                      final isCreate = option.startsWith(MovieEditController.genreCreateSentinel);
                       return InkWell(
                         onTap: () => onChoose(option),
                         child: Padding(
@@ -1108,7 +807,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        '添加「${option.substring(_genreCreateSentinel.length)}」',
+                                        '添加「${option.substring(MovieEditController.genreCreateSentinel.length)}」',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
@@ -1161,9 +860,9 @@ class _MovieEditPageState extends State<MovieEditPage> {
               ),
               const Spacer(),
               Text(
-                _rating > 0 ? '${_rating.toStringAsFixed(1)} 分' : '未评分',
+                _c.rating > 0 ? '${_c.rating.toStringAsFixed(1)} 分' : '未评分',
                 style: TextStyle(
-                  color: _rating > 0
+                  color: _c.rating > 0
                       ? context.colors.star
                       : context.colors.textMuted,
                   fontSize: 13,
@@ -1185,14 +884,14 @@ class _MovieEditPageState extends State<MovieEditPage> {
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
             ),
             child: Slider(
-              value: _rating,
+              value: _c.rating,
               max: 5,
               divisions: 10,
               // 拖动时下方星级实时点亮；每跨半星给一次轻微触感，
               // 与书籍页的星星选择器手感一致（见 star_rating_picker.dart）
               onChanged: (v) {
-                if (v != _rating) unawaited(HapticFeedback.selectionClick());
-                setState(() => _rating = v);
+                if (v != _c.rating) unawaited(HapticFeedback.selectionClick());
+                setState(() => _c.rating = v);
               },
             ),
           ),
@@ -1204,11 +903,11 @@ class _MovieEditPageState extends State<MovieEditPage> {
               children: [
                 for (var i = 1; i <= 5; i++)
                   Icon(
-                    _rating >= i - 0.25
+                    _c.rating >= i - 0.25
                         ? Icons.star_rounded
                         : Icons.star_outline_rounded,
                     size: 24,
-                    color: _rating >= i - 0.25
+                    color: _c.rating >= i - 0.25
                         ? context.colors.star
                         : context.colors.textMuted.withOpacity(0.4),
                   ),
@@ -1222,14 +921,10 @@ class _MovieEditPageState extends State<MovieEditPage> {
 
   // ---------- 演员动态增删（联想已有 + 快速新建）----------
 
-  /// 联想「新建」哨兵 id：无精确命中时作为候选尾项渲染新建行。
-  /// 实体演员 id 恒为 `a_` + 微秒时间戳，与此值绝不冲突。
-  static const String _actorCreateId = '__actor_create__';
-
   Widget _buildCastEditor() {
     return Column(
       children: [
-        if (_actorSlots.isEmpty)
+        if (_c.actorSlots.isEmpty)
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -1245,7 +940,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
             ),
           )
         else
-          ..._actorSlots.asMap().entries.map((entry) {
+          ..._c.actorSlots.asMap().entries.map((entry) {
             final i = entry.key;
             final slot = entry.value;
             return Padding(
@@ -1264,7 +959,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
                       ),
                       alignment: Alignment.center,
                       child: Text(
-                        _slotInitial(slot, i),
+                        _c.slotInitial(slot, i),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -1278,16 +973,8 @@ class _MovieEditPageState extends State<MovieEditPage> {
                   const SizedBox(width: 6),
                   IconButton(
                     tooltip: '移除',
-                    onPressed: () => setState(() {
-                      // 删除导演自动槽：记录导演名，同导演不再自动弹回
-                      if (slot.autoFromDirector) {
-                        _directorAutoDismissed = _directorCtrl.text.trim();
-                        _directorAutoName = null;
-                        slot.autoFromDirector = false;
-                      }
-                      slot.dispose();
-                      _actorSlots.remove(slot);
-                    }),
+                    // 删除导演自动槽：控制器内部记录导演名，同导演不再自动弹回
+                    onPressed: () => setState(() => _c.removeActorSlot(slot)),
                     icon: Icon(Icons.remove_circle_outline_rounded,
                         color: context.colors.danger, size: 22),
                   ),
@@ -1299,7 +986,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
         Align(
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
-            onPressed: () => setState(() => _actorSlots.add(ActorSlot())),
+            onPressed: () => setState(_c.addActorSlot),
             style: TextButton.styleFrom(
               foregroundColor: context.colors.accent,
             ),
@@ -1312,34 +999,18 @@ class _MovieEditPageState extends State<MovieEditPage> {
     );
   }
 
-  /// 槽位头像字符：有文本取首字，空文本显示序号
-  String _slotInitial(ActorSlot slot, int index) {
-    final text = slot.ctrl.text.trim();
-    return text.isEmpty ? '${index + 1}' : text.characters.first;
-  }
-
   /// 单槽位联想输入框（复用图书分类趟平的 RawAutocomplete 模式：
   /// 文本变化交给 controller 监听，fieldViewBuilder 第 4 参是 onFieldSubmitted）
   Widget _buildActorField(ActorSlot slot) {
     return RawAutocomplete<Actor>(
       textEditingController: slot.ctrl,
       focusNode: slot.focus,
-      optionsBuilder: (value) => _actorOptions(slot, value.text),
+      optionsBuilder: (value) =>
+          _c.actorOptions(slot, value.text, context.read<LibraryProvider>()),
       displayStringForOption: (a) => a.name,
       onSelected: (actor) {
-        if (actor.id == _actorCreateId) {
-          // 回车落在「新建」哨兵上 = 创建实体（录入新演员的唯一入口）
-          final now = DateTime.now();
-          final created = Actor(
-            id: 'a_${now.microsecondsSinceEpoch}',
-            name: actor.name,
-            createdAt: now,
-          );
-          context.read<LibraryProvider>().addActor(created);
-          slot.picked = created;
-        } else {
-          slot.picked = actor;
-        }
+        // 命中「新建」哨兵 → 控制器建实体并落库（录入新演员的唯一入口）
+        _c.pickActor(slot, actor, context.read<LibraryProvider>());
         slot.focus.unfocus();
       },
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
@@ -1386,7 +1057,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
                 itemCount: options.length,
                 itemBuilder: (context, i) {
                   final actor = options.elementAt(i);
-                  final isCreate = actor.id == _actorCreateId;
+                  final isCreate = actor.id == MovieEditController.actorCreateId;
                   return InkWell(
                     onTap: () => onChoose(actor),
                     child: Padding(
@@ -1416,7 +1087,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
                               height: 28,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                gradient: coverGradient(_actorHue(actor.name)),
+                                gradient: coverGradient(MovieEditController.actorHue(actor.name)),
                               ),
                               alignment: Alignment.center,
                               child: Text(
@@ -1453,76 +1124,6 @@ class _MovieEditPageState extends State<MovieEditPage> {
     );
   }
 
-  /// 联想候选：库中名字包含输入（排除其他槽位已选，允许本槽重选），
-  /// 输入非空且无精确命中时在尾部追加「新建」哨兵——保证 overlay 恒可展开。
-  List<Actor> _actorOptions(ActorSlot self, String rawQuery) {
-    final query = rawQuery.trim();
-    final lib = context.read<LibraryProvider>();
-    final taken = _actorSlots
-        .where((s) => !identical(s, self))
-        .map((s) => s.picked?.id)
-        .whereType<String>()
-        .toSet();
-    final matches = lib.actors
-        .where((a) => !taken.contains(a.id) && a.name.contains(query))
-        .toList();
-    if (query.isNotEmpty && !matches.any((a) => a.name == query)) {
-      matches.add(Actor(
-        id: _actorCreateId,
-        name: query,
-        createdAt: DateTime(1970),
-      ));
-    }
-    return matches;
-  }
-
-  double _actorHue(String name) =>
-      (name.codeUnits.fold<int>(0, (s, c) => s + c) % 360).toDouble();
-
-  /// 槽位 → actorIds：已解析槽位直接用实体 id；未解析的自由文本先精确吸附
-  /// 库中同名演员（防「周星驰/周星弛」裂成两个实体），仍无则兜底新建。
-  /// 全部为空返回 null（与旧契约一致：空引用不落盘）。
-  List<String>? _collectActorIds() {
-    final lib = context.read<LibraryProvider>();
-    final ids = <String>[];
-    for (final slot in _actorSlots) {
-      final text = slot.ctrl.text.trim();
-      if (text.isEmpty) continue;
-      final picked = slot.picked;
-      final String id;
-      if (picked != null && picked.name == text) {
-        id = picked.id;
-      } else {
-        Actor? exact;
-        for (final a in lib.actors) {
-          if (a.name == text) {
-            exact = a;
-            break;
-          }
-        }
-        if (exact != null) {
-          id = exact.id;
-          slot.picked = exact;
-        } else {
-          final now = DateTime.now();
-          final url = slot.avatarUrl;
-          final created = Actor(
-            id: 'a_${now.microsecondsSinceEpoch}',
-            name: text,
-            // 检索带回的 TMDB 头像直接落库；无头像时保持 null（UI 回退占位）
-            avatar: (url == null || url.isEmpty) ? null : MediaRef.network(url),
-            createdAt: now,
-          );
-          lib.addActor(created);
-          slot.picked = created;
-          id = created.id;
-        }
-      }
-      if (!ids.contains(id)) ids.add(id);
-    }
-    return ids.isEmpty ? null : ids;
-  }
-
   // ---------- 我的影评 Textarea + 字数统计 ----------
 
   Widget _buildReviewField() {
@@ -1530,10 +1131,10 @@ class _MovieEditPageState extends State<MovieEditPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
-          controller: _reviewCtrl,
+          controller: _c.reviewCtrl,
           maxLines: 6,
           minLines: 4,
-          maxLength: _reviewMaxChars,
+          maxLength: MovieEditController.reviewMaxChars,
           style: TextStyle(
               color: context.colors.textPrimary, fontSize: 14, height: 1.5),
           cursorColor: context.colors.accent,
@@ -1562,13 +1163,13 @@ class _MovieEditPageState extends State<MovieEditPage> {
         Align(
           alignment: Alignment.centerRight,
           child: ValueListenableBuilder<TextEditingValue>(
-            valueListenable: _reviewCtrl,
+            valueListenable: _c.reviewCtrl,
             builder: (_, value, __) {
               final len = value.text.length;
               return Text(
-                '$len/$_reviewMaxChars',
+                '$len/$MovieEditController.reviewMaxChars',
                 style: TextStyle(
-                  color: len >= _reviewMaxChars
+                  color: len >= MovieEditController.reviewMaxChars
                       ? context.colors.danger
                       : context.colors.textMuted,
                   fontSize: 12,
@@ -1607,9 +1208,9 @@ class _MovieEditPageState extends State<MovieEditPage> {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
-                onTap: _saving ? null : _save,
+                onTap: _c.saving ? null : _save,
                 child: Center(
-                  child: _saving
+                  child: _c.saving
                       ? const SizedBox(
                           width: 24,
                           height: 24,
@@ -1619,7 +1220,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
                           ),
                         )
                       : Text(
-                          _isEditMode ? '保存修改' : '保存',
+                          _c.isEditMode ? '保存修改' : '保存',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -1652,7 +1253,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
                 ),
               ),
             ),
-            if (_isEditMode) ...[
+            if (_c.isEditMode) ...[
               const SizedBox(width: 12),
               Expanded(
                 child: SizedBox(
@@ -1688,34 +1289,4 @@ class _MovieEditPageState extends State<MovieEditPage> {
   }
 
   // → EditSectionTitle
-}
-
-/// 编辑页演员槽位：输入控制器 + 焦点 + 已解析实体（可空）。
-///
-/// [picked] 为空表示当前文本尚未吸附到实体——保存时由编辑页
-/// `_collectActorIds` 做「精确吸附已有 / 兜底新建」。
-class ActorSlot {
-  ActorSlot({TextEditingController? ctrl, this.picked, this.avatarUrl})
-      : ctrl = ctrl ?? TextEditingController(),
-        focus = FocusNode();
-
-  final TextEditingController ctrl;
-  final FocusNode focus;
-
-  /// 已解析实体（回填 / 联想选中 / 新建产生）；null = 自由文本
-  Actor? picked;
-
-  /// 检索带回的头像地址（TMDB profile_path 完整 URL）
-  ///
-  /// 仅用于**新建**本地 Actor 时落库；吸附到已有 Actor 时不覆盖其头像
-  /// （用户可能手动换过头像，不该被网络数据冲掉）。
-  final String? avatarUrl;
-
-  /// true = 由导演框自动挂载的槽位（导演失焦/回车同步；用户改过文本或删除后降级）
-  bool autoFromDirector = false;
-
-  void dispose() {
-    ctrl.dispose();
-    focus.dispose();
-  }
 }
