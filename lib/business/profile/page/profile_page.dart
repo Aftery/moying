@@ -52,49 +52,7 @@ class ProfilePage extends StatelessWidget {
           StatSummary(bookStats: bookStats, movieStats: movieStats),
           const SizedBox(height: 24),
 
-          // 设置入口
-          SettingItem(
-            icon: Icons.edit_note_rounded,
-            label: '编辑资料',
-            onTap: () => _openProfileEditor(context, library),
-          ),
-          SettingItem(
-            icon: Icons.data_usage_rounded,
-            label: '数据统计',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PersonalStatsPage()),
-            ),
-          ),
-          SettingItem(
-            icon: Icons.dark_mode_rounded,
-            label: '深色模式',
-            trailing: ThemeModeLabel(mode: themeMode),
-            onTap: () => _chooseThemeMode(context, library),
-          ),
-          // Web 平台无本地存储 / 真实网络栈受限 → 隐藏数据源与同步入口
-          if (!kIsWeb) ...[
-            SettingItem(
-              icon: Icons.cloud_download_outlined,
-              label: '数据源管理',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const DataSourcePage()),
-              ),
-            ),
-            SettingItem(
-              icon: Icons.sync_rounded,
-              label: '数据同步',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const DataSyncPage()),
-              ),
-            ),
-            SettingItem(
-              icon: Icons.bug_report_rounded,
-              label: '错误日志',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ErrorLogPage()),
-              ),
-            ),
-          ],
+          ..._buildSettingItems(context, library, themeMode),
           const SizedBox(height: 32),
           Text(
             '墨影 · v0.8.0\n一个正在成长的书籍与电影记录应用',
@@ -108,6 +66,55 @@ class ProfilePage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// 设置入口列表：编辑资料 / 数据统计 / 深色模式 / 数据源 / 同步 / 错误日志。
+  List<Widget> _buildSettingItems(
+      BuildContext context, LibraryProvider library, String themeMode) {
+    return [
+      SettingItem(
+        icon: Icons.edit_note_rounded,
+        label: '编辑资料',
+        onTap: () => _openProfileEditor(context, library),
+      ),
+      SettingItem(
+        icon: Icons.data_usage_rounded,
+        label: '数据统计',
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PersonalStatsPage()),
+        ),
+      ),
+      SettingItem(
+        icon: Icons.dark_mode_rounded,
+        label: '深色模式',
+        trailing: ThemeModeLabel(mode: themeMode),
+        onTap: () => _chooseThemeMode(context, library),
+      ),
+      // Web 平台无本地存储 / 真实网络栈受限 → 隐藏数据源与同步入口
+      if (!kIsWeb) ...[
+        SettingItem(
+          icon: Icons.cloud_download_outlined,
+          label: '数据源管理',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const DataSourcePage()),
+          ),
+        ),
+        SettingItem(
+          icon: Icons.sync_rounded,
+          label: '数据同步',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const DataSyncPage()),
+          ),
+        ),
+        SettingItem(
+          icon: Icons.bug_report_rounded,
+          label: '错误日志',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ErrorLogPage()),
+          ),
+        ),
+      ],
+    ];
   }
 
   // ---------- 档案只读展示（点卡片弹出，编辑走「编辑资料」行）----------
@@ -125,89 +132,9 @@ class ProfilePage extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 拖拽指示条
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: context.colors.outline,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              // 头像
-              SizedBox(
-                width: 80,
-                height: 80,
-                child: MediaCover(
-                  circular: true,
-                  media: profile.avatar,
-                  title: profile.nickname,
-                  hue: 262,
-                  fontSize: 32,
-                ),
-              ),
-              const SizedBox(height: 18),
-              // 昵称
-              Text(
-                profile.nickname,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: context.colors.textPrimary,
-                ),
-              ),
-              // 签名
-              if (signature.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: context.colors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    signature,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.6,
-                      color: context.colors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 24),
-              // 关闭按钮
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  style: TextButton.styleFrom(
-                    backgroundColor: context.colors.surface,
-                    foregroundColor: context.colors.textSecondary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text('知道了',
-                      style: TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ],
-          ),
-        ),
+      builder: (ctx) => _ProfileInfoSheet(
+        profile: profile,
+        signature: signature,
       ),
     );
   }
@@ -337,6 +264,103 @@ class ProfilePage extends StatelessWidget {
       await lib.setThemeMode(selected);
     }
   }
+}
+
+/// 档案只读弹层内容：拖拽条 + 头像昵称 + 签名 + 关闭按钮。
+class _ProfileInfoSheet extends StatelessWidget {
+  const _ProfileInfoSheet({required this.profile, required this.signature});
+
+  final UserProfile profile;
+  final String signature;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 拖拽指示条
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: context.colors.outline,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // 头像
+            SizedBox(
+              width: 80,
+              height: 80,
+              child: MediaCover(
+                circular: true,
+                media: profile.avatar,
+                title: profile.nickname,
+                hue: 262,
+                fontSize: 32,
+              ),
+            ),
+            const SizedBox(height: 18),
+            // 昵称
+            Text(
+              profile.nickname,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: context.colors.textPrimary,
+              ),
+            ),
+            // 签名
+            if (signature.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: context.colors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  signature,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: context.colors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+            _closeButton(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 关闭按钮：点击收起弹层。
+  Widget _closeButton(BuildContext context) => SizedBox(
+        width: double.infinity,
+        child: TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          style: TextButton.styleFrom(
+            backgroundColor: context.colors.surface,
+            foregroundColor: context.colors.textSecondary,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          child: const Text('知道了',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        ),
+      );
 }
 
 /// 主题偏好当前值标签（设置行 trailing）

@@ -244,106 +244,124 @@ class _MovieEditPageState extends State<MovieEditPage> {
               child:
                   Text('未找到该电影', style: TextStyle(color: context.colors.textMuted)),
             )
-          : SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 快速检索（联网补全）：无默认影视数据源时整块隐藏
-              ..._quickSearchBlocks(),
-              _buildCoverHeader(),
-              const SizedBox(height: 26),
-              const EditSectionTitle('基本信息'),
-              const SizedBox(height: 10),
-              EditInputField(
-                controller: _c.titleCtrl,
-                label: '电影标题',
-                hint: '输入片名',
-              ),
-              const SizedBox(height: 12),
-              EditInputField(
-                controller: _c.englishCtrl,
-                label: '英文名（可选）',
-                hint: '输入英文名',
-              ),
-              const SizedBox(height: 12),
-              EditInputField(
-                controller: _c.directorCtrl,
-                label: '导演',
-                hint: '输入导演姓名',
-                focusNode: _c.directorFocus,
-                onSubmitted: _handleDirectorSync,
-              ),
-              const SizedBox(height: 26),
-              const EditSectionTitle('上映与观影'),
-              const SizedBox(height: 10),
-              _buildDateField(
-                label: AppStrings.releaseDate,
-                icon: Icons.calendar_month_rounded,
-                value: _fmtDate(_c.releaseDate),
-                onTap: () => _pickDate(
-                  current: _c.releaseDate,
-                  onPicked: (v) => setState(() => _c.releaseDate = v),
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildDateField(
-                label: '看过时间',
-                icon: Icons.visibility_rounded,
-                value: _fmtDate(_c.watchDate),
-                onTap: () => _pickDate(
-                  current: _c.watchDate,
-                  onPicked: (v) => setState(() => _c.watchDate = v),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // 片长（数字 + 分钟后缀）
-              // 注意：不能用 TextInputType.number——搜狗等部分国产输入法在该
-              // 模式下弹数字键盘但不提交字符（键盘能弹、输入无效）。也不能用
-              // FilteringTextInputFormatter——组合输入中间态会被格式化器吞掉。
-              // 最终方案：文本通道 + onChanged 手动净化（见 sanitizeDurationInput）。
-              EditInputField(
-                controller: _c.durationCtrl,
-                label: '片长',
-                hint: '如 169',
-                suffixText: '分钟',
-                keyboardType: TextInputType.text,
-                onChanged: (raw) {
-                  final clean = sanitizeDurationInput(raw);
-                  if (clean == raw) return;
-                  _c.durationCtrl.value = TextEditingValue(
-                    text: clean,
-                    selection: TextSelection.collapsed(offset: clean.length),
-                  );
-                },
-              ),
-              const SizedBox(height: 26),
-              const EditSectionTitle('剧情类型'),
-              const SizedBox(height: 10),
-              _buildGenreSection(),
-              const SizedBox(height: 26),
-              const EditSectionTitle('评分'),
-              const SizedBox(height: 4),
-              _buildRatingSlider(),
-              const SizedBox(height: 26),
-              const EditSectionTitle('演员信息'),
-              const SizedBox(height: 10),
-              _buildCastEditor(),
-              const SizedBox(height: 26),
-              const EditSectionTitle(AppStrings.myReview),
-              const SizedBox(height: 8),
-              _buildReviewField(),
-              const SizedBox(height: 32),
-              _buildActions(),
-            ],
-          ),
+          : _buildFormContent(),
+    );
+  }
+
+  /// 表单主体：封面、各分区输入与底部操作，仅在「未找到」分支之外渲染。
+  Widget _buildFormContent() {
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 快速检索（联网补全）：无默认影视数据源时整块隐藏
+            ..._quickSearchBlocks(),
+            _buildCoverHeader(),
+            const SizedBox(height: 26),
+            ..._buildBasicInfoFields(),
+            const SizedBox(height: 26),
+            ..._buildDateFields(),
+            const SizedBox(height: 26),
+            const EditSectionTitle('剧情类型'),
+            const SizedBox(height: 10),
+            _buildGenreSection(),
+            const SizedBox(height: 26),
+            const EditSectionTitle('评分'),
+            const SizedBox(height: 4),
+            _buildRatingSlider(),
+            const SizedBox(height: 26),
+            const EditSectionTitle('演员信息'),
+            const SizedBox(height: 10),
+            _buildCastEditor(),
+            const SizedBox(height: 26),
+            const EditSectionTitle(AppStrings.myReview),
+            const SizedBox(height: 8),
+            _buildReviewField(),
+            const SizedBox(height: 32),
+            _buildActions(),
+          ],
         ),
       ),
     );
   }
 
+  /// 基本信息区：标题 / 英文名 / 导演三个输入行（含分区标题）。
+  List<Widget> _buildBasicInfoFields() {
+    return [
+      const EditSectionTitle('基本信息'),
+      const SizedBox(height: 10),
+      EditInputField(
+        controller: _c.titleCtrl,
+        label: '电影标题',
+        hint: '输入片名',
+      ),
+      const SizedBox(height: 12),
+      EditInputField(
+        controller: _c.englishCtrl,
+        label: '英文名（可选）',
+        hint: '输入英文名',
+      ),
+      const SizedBox(height: 12),
+      EditInputField(
+        controller: _c.directorCtrl,
+        label: '导演',
+        hint: '输入导演姓名',
+        focusNode: _c.directorFocus,
+        onSubmitted: _handleDirectorSync,
+      ),
+    ];
+  }
+
+  /// 上映与观影区：上映日期 / 看过时间 / 片长三个输入行（含分区标题）。
+  List<Widget> _buildDateFields() {
+    return [
+      const EditSectionTitle('上映与观影'),
+      const SizedBox(height: 10),
+      _buildDateField(
+        label: AppStrings.releaseDate,
+        icon: Icons.calendar_month_rounded,
+        value: _fmtDate(_c.releaseDate),
+        onTap: () => _pickDate(
+          current: _c.releaseDate,
+          onPicked: (v) => setState(() => _c.releaseDate = v),
+        ),
+      ),
+      const SizedBox(height: 12),
+      _buildDateField(
+        label: '看过时间',
+        icon: Icons.visibility_rounded,
+        value: _fmtDate(_c.watchDate),
+        onTap: () => _pickDate(
+          current: _c.watchDate,
+          onPicked: (v) => setState(() => _c.watchDate = v),
+        ),
+      ),
+      const SizedBox(height: 12),
+      // 片长（数字 + 分钟后缀）
+      // 注意：不能用 TextInputType.number——搜狗等部分国产输入法在该
+      // 模式下弹数字键盘但不提交字符（键盘能弹、输入无效）。也不能用
+      // FilteringTextInputFormatter——组合输入中间态会被格式化器吞掉。
+      // 最终方案：文本通道 + onChanged 手动净化（见 sanitizeDurationInput）。
+      EditInputField(
+        controller: _c.durationCtrl,
+        label: '片长',
+        hint: '如 169',
+        suffixText: '分钟',
+        keyboardType: TextInputType.text,
+        onChanged: (raw) {
+          final clean = sanitizeDurationInput(raw);
+          if (clean == raw) return;
+          _c.durationCtrl.value = TextEditingValue(
+            text: clean,
+            selection: TextSelection.collapsed(offset: clean.length),
+          );
+        },
+      ),
+    ];
+  }
   // ---------- 快速检索（联网信息补全）----------
 
   /// 检索区块：未注入 DataSourceProvider（部分测试只给 LibraryProvider）
@@ -696,34 +714,8 @@ class _MovieEditPageState extends State<MovieEditPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 已选标签（点 × 移除，等价旧 FilterChip 的取消语义）
-        if (_c.selectedGenres.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final g in _c.selectedGenres)
-                  InputChip(
-                    label: Text(g),
-                    onDeleted: () => setState(() => _c.selectedGenres.remove(g)),
-                    deleteIconColor: context.colors.textMuted,
-                    backgroundColor: context.colors.surfaceHigh,
-                    side:
-                        BorderSide(color: context.colors.movieStart, width: 1),
-                    labelStyle: TextStyle(
-                      color: context.colors.movieEnd,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+        // 已选标签（点 x 移除，等价旧 FilterChip 的取消语义）
+        if (_c.selectedGenres.isNotEmpty) _buildGenreChips(),
         RawAutocomplete<String>(
           textEditingController: _c.genreCtrl,
           focusNode: _c.genreFocus,
@@ -739,106 +731,143 @@ class _MovieEditPageState extends State<MovieEditPage> {
           },
           // 注意：fieldViewBuilder 第 4 参是 onFieldSubmitted（回车确认候选），
           // 不是 onChanged；自定义文本的提交在 onFieldSubmitted 之后兜底。
-          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-            return TextField(
-              key: const ValueKey('genre-input'),
-              controller: controller,
-              focusNode: focusNode,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) {
-                // 先走候选确认（有精确/高亮候选时），再把剩余自定义文本收进标签
-                onFieldSubmitted();
-                if (_c.commitGenreText()) setState(() {});
-              },
-              style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
-              cursorColor: context.colors.accent,
-              decoration: InputDecoration(
-                hintText: '输入或选择类型，回车添加（可多选）',
-                hintStyle:
-                    TextStyle(color: context.colors.textMuted, fontSize: 14),
-                filled: true,
-                fillColor: context.colors.surfaceHigh,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide:
-                      BorderSide(color: context.colors.outline, width: 0.8),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide:
-                      BorderSide(color: context.colors.outline, width: 0.8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide:
-                      BorderSide(color: context.colors.accent, width: 1.3),
-                ),
-              ),
-            );
-          },
-          optionsViewBuilder: (context, onChoose, options) {
-            return Align(
-              alignment: Alignment.topLeft,
-              child: Material(
-                color: context.colors.surface,
-                elevation: 6,
-                borderRadius: BorderRadius.circular(14),
-                child: ConstrainedBox(
-                  constraints:
-                      const BoxConstraints(maxHeight: 220, maxWidth: 340),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    shrinkWrap: true,
-                    itemCount: options.length,
-                    itemBuilder: (context, i) {
-                      final option = options.elementAt(i);
-                      final isCreate = option.startsWith(MovieEditController.genreCreateSentinel);
-                      return InkWell(
-                        onTap: () => onChoose(option),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          child: isCreate
-                              ? Row(
-                                  children: [
-                                    Icon(Icons.add_circle_outline_rounded,
-                                        size: 17, color: context.colors.accent),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        '添加「${option.substring(MovieEditController.genreCreateSentinel.length)}」',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: context.colors.accent,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : Text(
-                                  option,
-                                  style: TextStyle(
-                                      color: context.colors.textPrimary,
-                                      fontSize: 14),
-                                ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            );
-          },
+          fieldViewBuilder: _buildGenreField,
+          optionsViewBuilder: _buildGenreOptionsView,
         ),
       ],
     );
   }
 
+  /// 已选类型标签（点 x 移除）。
+  Widget _buildGenreChips() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final g in _c.selectedGenres)
+            InputChip(
+              label: Text(g),
+              onDeleted: () => setState(() => _c.selectedGenres.remove(g)),
+              deleteIconColor: context.colors.textMuted,
+              backgroundColor: context.colors.surfaceHigh,
+              side: BorderSide(color: context.colors.movieStart, width: 1),
+              labelStyle: TextStyle(
+                color: context.colors.movieEnd,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 类型输入框（RawAutocomplete 的 fieldViewBuilder）。
+  Widget _buildGenreField(
+    BuildContext context,
+    TextEditingController controller,
+    FocusNode focusNode,
+    void Function() onFieldSubmitted,
+  ) {
+    return TextField(
+      key: const ValueKey('genre-input'),
+      controller: controller,
+      focusNode: focusNode,
+      textInputAction: TextInputAction.done,
+      onSubmitted: (_) {
+        // 先走候选确认（有精确/高亮候选时），再把剩余自定义文本收进标签
+        onFieldSubmitted();
+        if (_c.commitGenreText()) setState(() {});
+      },
+      style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
+      cursorColor: context.colors.accent,
+      decoration: InputDecoration(
+        hintText: '输入或选择类型，回车添加（可多选）',
+        hintStyle: TextStyle(color: context.colors.textMuted, fontSize: 14),
+        filled: true,
+        fillColor: context.colors.surfaceHigh,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: context.colors.outline, width: 0.8),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: context.colors.outline, width: 0.8),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: context.colors.accent, width: 1.3),
+        ),
+      ),
+    );
+  }
+
+  /// 类型联想下拉（RawAutocomplete 的 optionsViewBuilder）。
+  Widget _buildGenreOptionsView(
+    BuildContext context,
+    AutocompleteOnSelected<String> onChoose,
+    Iterable<String> options,
+  ) {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Material(
+        color: context.colors.surface,
+        elevation: 6,
+        borderRadius: BorderRadius.circular(14),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 220, maxWidth: 340),
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            shrinkWrap: true,
+            itemCount: options.length,
+            itemBuilder: (context, i) {
+              final option = options.elementAt(i);
+              final isCreate =
+                  option.startsWith(MovieEditController.genreCreateSentinel);
+              return InkWell(
+                onTap: () => onChoose(option),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: isCreate
+                      ? Row(
+                          children: [
+                            Icon(Icons.add_circle_outline_rounded,
+                                size: 17, color: context.colors.accent),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '添加「${option.substring(MovieEditController.genreCreateSentinel.length)}」',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: context.colors.accent,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Text(
+                          option,
+                          style: TextStyle(
+                              color: context.colors.textPrimary, fontSize: 14),
+                        ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
   // ---------- 评分 Slider + 实时星级 ----------
 
   Widget _buildRatingSlider() {
@@ -1010,121 +1039,138 @@ class _MovieEditPageState extends State<MovieEditPage> {
           _c.actorOptions(slot, value.text, context.read<LibraryProvider>()),
       displayStringForOption: (a) => a.name,
       onSelected: (actor) {
-        // 命中「新建」哨兵 → 控制器建实体并落库（录入新演员的唯一入口）
+        // 命中「新建」哨兵 -> 控制器建实体并落库（录入新演员的唯一入口）
         _c.pickActor(slot, actor, context.read<LibraryProvider>());
         slot.focus.unfocus();
       },
-      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-        return TextField(
-          controller: controller,
-          focusNode: focusNode,
-          onSubmitted: (_) => onFieldSubmitted(),
-          style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
-          cursorColor: context.colors.accent,
-          decoration: InputDecoration(
-            hintText: '输入姓名联想选择或新建',
-            hintStyle: TextStyle(color: context.colors.textMuted, fontSize: 13),
-            filled: true,
-            fillColor: context.colors.surface,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: context.colors.outline, width: 0.8),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: context.colors.outline, width: 0.8),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: context.colors.accent, width: 1.2),
-            ),
-          ),
-        );
-      },
-      optionsViewBuilder: (context, onChoose, options) {
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            color: context.colors.surface,
-            elevation: 6,
-            borderRadius: BorderRadius.circular(14),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 240, maxWidth: 380),
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                shrinkWrap: true,
-                itemCount: options.length,
-                itemBuilder: (context, i) {
-                  final actor = options.elementAt(i);
-                  final isCreate = actor.id == MovieEditController.actorCreateId;
-                  return InkWell(
-                    onTap: () => onChoose(actor),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 9),
-                      child: Row(
-                        children: [
-                          if (isCreate) ...[
-                            Icon(Icons.person_add_alt_1_rounded,
-                                size: 17, color: context.colors.accent),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                '新建演员「${actor.name}」',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: context.colors.accent,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ] else ...[
-                            Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: coverGradient(MovieEditController.actorHue(actor.name)),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                actor.name.characters.first,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                actor.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    color: context.colors.textPrimary,
-                                    fontSize: 14),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-      },
+      fieldViewBuilder: _buildActorFieldView,
+      optionsViewBuilder: _buildActorOptionsView,
     );
   }
 
+  /// 演员输入框（RawAutocomplete 的 fieldViewBuilder）。
+  Widget _buildActorFieldView(
+    BuildContext context,
+    TextEditingController controller,
+    FocusNode focusNode,
+    void Function() onFieldSubmitted,
+  ) {
+    return TextField(
+      controller: controller,
+      focusNode: focusNode,
+      onSubmitted: (_) => onFieldSubmitted(),
+      style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
+      cursorColor: context.colors.accent,
+      decoration: InputDecoration(
+        hintText: '输入姓名联想选择或新建',
+        hintStyle: TextStyle(color: context.colors.textMuted, fontSize: 13),
+        filled: true,
+        fillColor: context.colors.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.colors.outline, width: 0.8),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.colors.outline, width: 0.8),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.colors.accent, width: 1.2),
+        ),
+      ),
+    );
+  }
+
+  /// 演员联想下拉（RawAutocomplete 的 optionsViewBuilder）。
+  Widget _buildActorOptionsView(
+    BuildContext context,
+    AutocompleteOnSelected<Actor> onChoose,
+    Iterable<Actor> options,
+  ) {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Material(
+        color: context.colors.surface,
+        elevation: 6,
+        borderRadius: BorderRadius.circular(14),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 240, maxWidth: 380),
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            shrinkWrap: true,
+            itemCount: options.length,
+            itemBuilder: (context, i) =>
+                _buildActorOptionRow(context, onChoose, options.elementAt(i)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 演员下拉单行（新建哨兵 / 已存在演员头像首字）。
+  Widget _buildActorOptionRow(
+    BuildContext context,
+    AutocompleteOnSelected<Actor> onChoose,
+    Actor actor,
+  ) {
+    final isCreate = actor.id == MovieEditController.actorCreateId;
+    return InkWell(
+      onTap: () => onChoose(actor),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        child: Row(
+          children: [
+            if (isCreate) ...[
+              Icon(Icons.person_add_alt_1_rounded,
+                  size: 17, color: context.colors.accent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '新建演员「${actor.name}」',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: context.colors.accent,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ] else ...[
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: coverGradient(MovieEditController.actorHue(actor.name)),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  actor.name.characters.first,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  actor.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
   // ---------- 我的影评 Textarea + 字数统计 ----------
 
   Widget _buildReviewField() {
@@ -1189,99 +1235,14 @@ class _MovieEditPageState extends State<MovieEditPage> {
     final gradient = context.colors.movieGradient;
     return Column(
       children: [
-        // 保存修改（主操作，渐变高亮）
-        SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: gradient,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: context.colors.movieStart.withOpacity(0.35),
-                  blurRadius: 14,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: _c.saving ? null : _save,
-                child: Center(
-                  child: _c.saving
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          _c.isEditMode ? '保存修改' : '保存',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                ),
-              ),
-            ),
-          ),
-        ),
+        _buildSaveButton(gradient),
         const SizedBox(height: 12),
-        // 取消 + 删除（删除仅编辑模式显示）
         Row(
           children: [
-            Expanded(
-              child: SizedBox(
-                height: 50,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: context.colors.textSecondary,
-                    side: BorderSide(color: context.colors.outline, width: 1),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text('取消', style: TextStyle(fontSize: 15)),
-                ),
-              ),
-            ),
+            _buildCancelButton(),
             if (_c.isEditMode) ...[
               const SizedBox(width: 12),
-              Expanded(
-                child: SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _confirmDelete,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: context.colors.error,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.delete_outline_rounded, size: 20),
-                        SizedBox(width: 6),
-                        Text('删除电影',
-                            style: TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              _buildDeleteButton(),
             ],
           ],
         ),
@@ -1289,5 +1250,101 @@ class _MovieEditPageState extends State<MovieEditPage> {
     );
   }
 
+  /// 保存按钮（主操作，渐变高亮）。
+  Widget _buildSaveButton(Gradient gradient) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: context.colors.movieStart.withOpacity(0.35),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: _c.saving ? null : _save,
+            child: Center(
+              child: _c.saving
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      _c.isEditMode ? '保存修改' : '保存',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 取消按钮（返回上一页）。
+  Widget _buildCancelButton() {
+    return Expanded(
+      child: SizedBox(
+        height: 50,
+        child: OutlinedButton(
+          onPressed: () => Navigator.of(context).pop(),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: context.colors.textSecondary,
+            side: BorderSide(color: context.colors.outline, width: 1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: const Text('取消', style: TextStyle(fontSize: 15)),
+        ),
+      ),
+    );
+  }
+
+  /// 删除按钮（仅编辑模式显示）。
+  Widget _buildDeleteButton() {
+    return Expanded(
+      child: SizedBox(
+        height: 50,
+        child: ElevatedButton(
+          onPressed: _confirmDelete,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: context.colors.error,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.delete_outline_rounded, size: 20),
+              SizedBox(width: 6),
+              Text('删除电影',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
   // → EditSectionTitle
 }

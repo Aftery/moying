@@ -49,30 +49,10 @@ class DashboardPage extends StatelessWidget {
           const SizedBox(height: 20),
 
           // ---------- 统计双卡 ----------
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: StatsCard(
-                    type: StatsCardType.reading,
-                    bookStats: bookStats,
-                    movieStats: movieStats,
-                    planToReadCount: planToReadCount,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: StatsCard(
-                    type: StatsCardType.movie,
-                    bookStats: bookStats,
-                    movieStats: movieStats,
-                    planToReadCount: planToReadCount,
-                  ),
-                ),
-              ],
-            ),
+          _StatsCards(
+            bookStats: bookStats,
+            movieStats: movieStats,
+            planToReadCount: planToReadCount,
           ),
           const SizedBox(height: 26),
 
@@ -110,6 +90,48 @@ class DashboardPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           MovieGrid(movies: movieList.take(4).toList()),
+        ],
+      ),
+    );
+  }
+}
+
+/// 统计双卡：阅读与观影两张概览卡并排展示。
+class _StatsCards extends StatelessWidget {
+  const _StatsCards({
+    required this.bookStats,
+    required this.movieStats,
+    required this.planToReadCount,
+  });
+
+  final BookStats bookStats;
+  final MovieStats movieStats;
+  final int planToReadCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: StatsCard(
+              type: StatsCardType.reading,
+              bookStats: bookStats,
+              movieStats: movieStats,
+              planToReadCount: planToReadCount,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: StatsCard(
+              type: StatsCardType.movie,
+              bookStats: bookStats,
+              movieStats: movieStats,
+              planToReadCount: planToReadCount,
+            ),
+          ),
         ],
       ),
     );

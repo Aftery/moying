@@ -11,63 +11,15 @@ import 'fade_slide_transitions.dart';
 /// 色板经 `extensions` 挂入 ThemeData，widget 内统一用 `context.colors` 取色。
 ThemeData buildAppTheme(AppPalette palette) {
   final isDark = palette.background.computeLuminance() < 0.5;
-  final colorScheme = isDark
-      ? ColorScheme.dark(
-          primary: palette.accent,
-          secondary: palette.movieEnd,
-          surface: palette.surface,
-          onPrimary: Colors.white,
-          onSurface: palette.textPrimary,
-          error: palette.error,
-        )
-      : ColorScheme.light(
-          primary: palette.accent,
-          secondary: palette.movieEnd,
-          surface: palette.surface,
-          onPrimary: Colors.white,
-          onSurface: palette.textPrimary,
-          error: palette.error,
-        );
-
   return ThemeData(
     useMaterial3: true,
     brightness: isDark ? Brightness.dark : Brightness.light,
-    colorScheme: colorScheme,
+    colorScheme: _appColorScheme(palette, isDark),
     extensions: [palette],
     scaffoldBackgroundColor: palette.background,
 
     // 文字排版
-    textTheme: TextTheme(
-      headlineMedium: TextStyle(
-        fontSize: 28,
-        fontWeight: FontWeight.w700,
-        color: palette.textPrimary,
-        letterSpacing: 0.5,
-      ),
-      titleLarge: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: palette.textPrimary,
-      ),
-      titleMedium: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: palette.textPrimary,
-      ),
-      bodyMedium: TextStyle(
-        fontSize: 14,
-        color: palette.textSecondary,
-      ),
-      bodySmall: TextStyle(
-        fontSize: 12,
-        color: palette.textMuted,
-      ),
-      labelMedium: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: palette.textSecondary,
-      ),
-    ),
+    textTheme: _appTextTheme(palette),
 
     // 卡片默认样式
     cardTheme: CardTheme(
@@ -93,29 +45,7 @@ ThemeData buildAppTheme(AppPalette palette) {
     ),
 
     // 底部导航
-    navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: palette.surface,
-      indicatorColor: palette.accent.withOpacity(0.22),
-      height: 68,
-      labelTextStyle: WidgetStateProperty.resolveWith(
-        (states) => TextStyle(
-          fontSize: 12,
-          fontWeight: states.contains(WidgetState.selected)
-              ? FontWeight.w600
-              : FontWeight.w400,
-          color: states.contains(WidgetState.selected)
-              ? palette.textPrimary
-              : palette.textMuted,
-        ),
-      ),
-      iconTheme: WidgetStateProperty.resolveWith(
-        (states) => IconThemeData(
-          color: states.contains(WidgetState.selected)
-              ? palette.accent
-              : palette.textMuted,
-        ),
-      ),
-    ),
+    navigationBarTheme: _appNavigationBarTheme(palette),
 
     // 分割线
     dividerTheme: DividerThemeData(
@@ -131,6 +61,89 @@ ThemeData buildAppTheme(AppPalette palette) {
         TargetPlatform.macOS: FadeSlidePageTransitionsBuilder(),
         TargetPlatform.linux: FadeSlidePageTransitionsBuilder(),
       },
+    ),
+  );
+}
+
+/// 暗/浅两态共用的 ColorScheme（由色板反推）。
+ColorScheme _appColorScheme(AppPalette palette, bool isDark) {
+  return isDark
+      ? ColorScheme.dark(
+          primary: palette.accent,
+          secondary: palette.movieEnd,
+          surface: palette.surface,
+          onPrimary: Colors.white,
+          onSurface: palette.textPrimary,
+          error: palette.error,
+        )
+      : ColorScheme.light(
+          primary: palette.accent,
+          secondary: palette.movieEnd,
+          surface: palette.surface,
+          onPrimary: Colors.white,
+          onSurface: palette.textPrimary,
+          error: palette.error,
+        );
+}
+
+/// 全局文字排版（标题 / 正文 / 标签三档）。
+TextTheme _appTextTheme(AppPalette palette) {
+  return TextTheme(
+    headlineMedium: TextStyle(
+      fontSize: 28,
+      fontWeight: FontWeight.w700,
+      color: palette.textPrimary,
+      letterSpacing: 0.5,
+    ),
+    titleLarge: TextStyle(
+      fontSize: 20,
+      fontWeight: FontWeight.w600,
+      color: palette.textPrimary,
+    ),
+    titleMedium: TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: palette.textPrimary,
+    ),
+    bodyMedium: TextStyle(
+      fontSize: 14,
+      color: palette.textSecondary,
+    ),
+    bodySmall: TextStyle(
+      fontSize: 12,
+      color: palette.textMuted,
+    ),
+    labelMedium: TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+      color: palette.textSecondary,
+    ),
+  );
+}
+
+/// 底部导航：选中态高亮文字与图标，统一指示色。
+NavigationBarThemeData _appNavigationBarTheme(AppPalette palette) {
+  return NavigationBarThemeData(
+    backgroundColor: palette.surface,
+    indicatorColor: palette.accent.withOpacity(0.22),
+    height: 68,
+    labelTextStyle: WidgetStateProperty.resolveWith(
+      (states) => TextStyle(
+        fontSize: 12,
+        fontWeight: states.contains(WidgetState.selected)
+            ? FontWeight.w600
+            : FontWeight.w400,
+        color: states.contains(WidgetState.selected)
+            ? palette.textPrimary
+            : palette.textMuted,
+      ),
+    ),
+    iconTheme: WidgetStateProperty.resolveWith(
+      (states) => IconThemeData(
+        color: states.contains(WidgetState.selected)
+            ? palette.accent
+            : palette.textMuted,
+      ),
     ),
   );
 }

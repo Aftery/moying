@@ -68,49 +68,55 @@ class SyncCard extends StatelessWidget {
                     fontSize: 12, color: c.textSecondary.withOpacity(0.8))),
           ],
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: c.accent,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: (isSyncing || !configured) ? null : onUpload,
-                  icon: isSyncing
-                      ? const SizedBox(
-                          width: 15,
-                          height: 15,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.backup_rounded, size: 17),
-                  label: const Text('立即备份'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: c.textPrimary,
-                    side: BorderSide(color: c.outline),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: (isSyncing || !configured) ? null : onRestore,
-                  icon: const Icon(Icons.restore_rounded, size: 17),
-                  label: const Text('从云端恢复'),
-                ),
-              ),
-            ],
-          ),
+          _buildActions(context),
         ],
       ),
+    );
+  }
+
+  /// 备份 / 恢复两个主操作按钮。
+  Widget _buildActions(BuildContext context) {
+    final c = context.colors;
+    return Row(
+      children: [
+        Expanded(
+          child: FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: c.accent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: (isSyncing || !configured) ? null : onUpload,
+            icon: isSyncing
+                ? const SizedBox(
+                    width: 15,
+                    height: 15,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.backup_rounded, size: 17),
+            label: const Text('立即备份'),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: c.textPrimary,
+              side: BorderSide(color: c.outline),
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: (isSyncing || !configured) ? null : onRestore,
+            icon: const Icon(Icons.restore_rounded, size: 17),
+            label: const Text('从云端恢复'),
+          ),
+        ),
+      ],
     );
   }
 }

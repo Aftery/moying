@@ -154,101 +154,13 @@ class _ActorEditDialogState extends State<ActorEditDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ---------- 头像区 ----------
-            Row(
-              children: [
-                // H4：只重建头像预览，姓名输入不再重建整个 Dialog
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _nameCtrl,
-                  builder: (_, value, __) {
-                    final name = value.text.trim();
-                    return SizedBox(
-                      width: 56,
-                      height: 56,
-                      child: MediaCover(
-                        circular: true,
-                        media: _previewAvatar,
-                        pendingFile: _picked,
-                        title: name.isEmpty ? '演员' : name,
-                        hue: widget.hue,
-                        fontSize: 24,
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_canPick)
-                        TextButton.icon(
-                          onPressed: _pickFromGallery,
-                          style: TextButton.styleFrom(
-                            foregroundColor: context.colors.textSecondary,
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(0, 36),
-                          ),
-                          icon: const Icon(Icons.photo_library_outlined,
-                              size: 17),
-                          label: const Text('从相册选择',
-                              style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600)),
-                        ),
-                      TextButton.icon(
-                        onPressed: () => setState(() {
-                          _cleared = true;
-                          _picked = null;
-                          _avatarUrlCtrl.clear();
-                        }),
-                        style: TextButton.styleFrom(
-                          foregroundColor: context.colors.danger,
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(0, 36),
-                        ),
-                        icon: const Icon(Icons.image_not_supported_outlined,
-                            size: 16),
-                        label: const Text('清除头像',
-                            style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600)),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            _buildAvatarSection(context),
             const SizedBox(height: 6),
-            TextField(
-              controller: _avatarUrlCtrl,
-              keyboardType: TextInputType.url,
-              // H4：URL 与本地图互斥（URL 优先）。仅在真有本地图时重建一次，
-              // 后续每个字符不再触发整页 setState。
-              onChanged: (_) {
-                if (_picked != null) setState(() => _picked = null);
-              },
-              style:
-                   TextStyle(color: context.colors.textPrimary, fontSize: 13),
-              cursorColor: context.colors.accent,
-              decoration: _dec(AppStrings.networkAvatarUrl, 'https://…（可选）'),
-            ),
+            _buildUrlField(context),
             const SizedBox(height: 10),
-            TextField(
-              controller: _nameCtrl,
-              style:  TextStyle(color: context.colors.textPrimary, fontSize: 15),
-              cursorColor: context.colors.accent,
-              decoration: _dec('姓名', '演员姓名'),
-            ),
+            _buildNameField(context),
             const SizedBox(height: 10),
-            TextField(
-              controller: _bioCtrl,
-              minLines: 2,
-              maxLines: 4,
-              style:
-                   TextStyle(color: context.colors.textPrimary, fontSize: 14),
-              cursorColor: context.colors.accent,
-              decoration: _dec('简介', '一句话介绍 TA（可选）'),
-            ),
+            _buildBioField(context),
           ],
         ),
       ),
@@ -273,6 +185,114 @@ class _ActorEditDialogState extends State<ActorEditDialog> {
           ),
         ),
       ],
+    );
+  }
+
+  /// 头像区：预览 + 从相册选择 / 清除头像（含姓名 ValueListenable 重建预览）
+  Widget _buildAvatarSection(BuildContext context) {
+    return Row(
+      children: [
+        // H4：只重建头像预览，姓名输入不再重建整个 Dialog
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _nameCtrl,
+          builder: (_, value, __) {
+            final name = value.text.trim();
+            return SizedBox(
+              width: 56,
+              height: 56,
+              child: MediaCover(
+                circular: true,
+                media: _previewAvatar,
+                pendingFile: _picked,
+                title: name.isEmpty ? '演员' : name,
+                hue: widget.hue,
+                fontSize: 24,
+              ),
+            );
+          },
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_canPick)
+                TextButton.icon(
+                  onPressed: _pickFromGallery,
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.colors.textSecondary,
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 36),
+                  ),
+                  icon: const Icon(Icons.photo_library_outlined,
+                      size: 17),
+                  label: const Text('从相册选择',
+                      style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600)),
+                ),
+              TextButton.icon(
+                onPressed: () => setState(() {
+                  _cleared = true;
+                  _picked = null;
+                  _avatarUrlCtrl.clear();
+                }),
+                style: TextButton.styleFrom(
+                  foregroundColor: context.colors.danger,
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 36),
+                ),
+                icon: const Icon(Icons.image_not_supported_outlined,
+                    size: 16),
+                label: const Text('清除头像',
+                    style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 头像 URL 输入框（与本地图互斥，仅在真有本地图时重建一次）
+  Widget _buildUrlField(BuildContext context) {
+    return TextField(
+      controller: _avatarUrlCtrl,
+      keyboardType: TextInputType.url,
+      // H4：URL 与本地图互斥（URL 优先）。仅在真有本地图时重建一次，
+      // 后续每个字符不再触发整页 setState。
+      onChanged: (_) {
+        if (_picked != null) setState(() => _picked = null);
+      },
+      style:
+           TextStyle(color: context.colors.textPrimary, fontSize: 13),
+      cursorColor: context.colors.accent,
+      decoration: _dec(AppStrings.networkAvatarUrl, 'https://…（可选）'),
+    );
+  }
+
+  /// 姓名输入框
+  Widget _buildNameField(BuildContext context) {
+    return TextField(
+      controller: _nameCtrl,
+      style:  TextStyle(color: context.colors.textPrimary, fontSize: 15),
+      cursorColor: context.colors.accent,
+      decoration: _dec('姓名', '演员姓名'),
+    );
+  }
+
+  /// 简介输入框（2~4 行）
+  Widget _buildBioField(BuildContext context) {
+    return TextField(
+      controller: _bioCtrl,
+      minLines: 2,
+      maxLines: 4,
+      style:
+           TextStyle(color: context.colors.textPrimary, fontSize: 14),
+      cursorColor: context.colors.accent,
+      decoration: _dec('简介', '一句话介绍 TA（可选）'),
     );
   }
 }

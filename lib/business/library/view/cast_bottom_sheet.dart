@@ -93,146 +93,162 @@ class _CastSheetState extends State<_CastSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ---------- 拖拽条 ----------
-          Container(
-            margin: const EdgeInsets.only(top: 10, bottom: 16),
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: context.colors.outline,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          // ---------- 标题行 ----------
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '演职员表 (${widget.cast.length})',
-                        style:  TextStyle(
-                          color: context.colors.textPrimary,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      if (widget.movieTitle != null &&
-                          widget.movieTitle!.isNotEmpty) ...[
-                        const SizedBox(height: 3),
-                        Text(
-                          widget.movieTitle!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:  TextStyle(
-                            color: context.colors.textMuted,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                IconButton(
-                  tooltip: '关闭',
-                  icon:  Icon(Icons.close_rounded,
-                      color: context.colors.textMuted),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          ),
+          ..._buildHeader(context),
           const SizedBox(height: 12),
-          // ---------- 搜索框 ----------
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: TextField(
-              controller: _searchCtrl,
-              style:  TextStyle(color: context.colors.textPrimary, fontSize: 14),
-              cursorColor: context.colors.accent,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: '搜索演员或角色姓名…',
-                hintStyle:
-                     TextStyle(color: context.colors.textMuted, fontSize: 13.5),
-                prefixIcon:  Icon(Icons.search_rounded,
-                    size: 19, color: context.colors.textMuted),
-                suffixIcon: _query.isEmpty
-                    ? null
-                    : IconButton(
-                        icon:  Icon(Icons.close_rounded,
-                            size: 17, color: context.colors.textMuted),
-                        onPressed: _searchCtrl.clear,
-                      ),
-                filled: true,
-                fillColor: context.colors.surface,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 11),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
+          _buildSearchField(context),
           const SizedBox(height: 8),
-          // ---------- 分组列表（懒构建：演职员可达 50~100+，eager 会一次性全建）----------
-          Flexible(
-            child: all.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(28),
-                      child: Text(
-                        _query.isEmpty ? '暂无演职员信息' : '没有匹配的演员',
-                        style: TextStyle(
-                            color: context.colors.textMuted, fontSize: 13),
-                      ),
-                    ),
-                  )
-                : CustomScrollView(
-                    slivers: [
-                      // 左右留白对齐每个 sliver（与原 ListView 整体 padding 等价：
-                      // 上 4 落在分组标题的 8 上边距前，下 24 由尾块补齐）
-                      if (directors.isNotEmpty) ...[
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                          sliver: SliverToBoxAdapter(
-                            child: _groupTitle(context, '导演'),
-                          ),
-                        ),
-                        SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          sliver: SliverList.builder(
-                            itemCount: directors.length,
-                            itemBuilder: (_, i) => _buildRow(directors[i]),
-                          ),
-                        ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                      ],
-                      if (actors.isNotEmpty) ...[
-                        SliverPadding(
-                          padding: EdgeInsets.fromLTRB(20, directors.isEmpty ? 4 : 0, 20, 0),
-                          sliver: SliverToBoxAdapter(
-                            child: _groupTitle(context, '主要演员'),
-                          ),
-                        ),
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                          sliver: SliverList.builder(
-                            itemCount: actors.length,
-                            itemBuilder: (_, i) => _buildRow(actors[i]),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-          ),
+          _buildGroupList(context, all, directors, actors),
         ],
       ),
+    );
+  }
+
+  /// 拖拽条 + 标题行「演职员表 (N)」+ 关闭按钮
+  List<Widget> _buildHeader(BuildContext context) {
+    return [
+      // ---------- 拖拽条 ----------
+      Container(
+        margin: const EdgeInsets.only(top: 10, bottom: 16),
+        width: 36,
+        height: 4,
+        decoration: BoxDecoration(
+          color: context.colors.outline,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+      // ---------- 标题行 ----------
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '演职员表 (${widget.cast.length})',
+                    style:  TextStyle(
+                      color: context.colors.textPrimary,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (widget.movieTitle != null &&
+                      widget.movieTitle!.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      widget.movieTitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style:  TextStyle(
+                        color: context.colors.textMuted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: '关闭',
+              icon:  Icon(Icons.close_rounded,
+                  color: context.colors.textMuted),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  /// 搜索框：按姓名 / 角色名过滤（_query 非空时显示清空按钮）
+  Widget _buildSearchField(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: TextField(
+        controller: _searchCtrl,
+        style:  TextStyle(color: context.colors.textPrimary, fontSize: 14),
+        cursorColor: context.colors.accent,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: '搜索演员或角色姓名…',
+          hintStyle:
+               TextStyle(color: context.colors.textMuted, fontSize: 13.5),
+          prefixIcon:  Icon(Icons.search_rounded,
+              size: 19, color: context.colors.textMuted),
+          suffixIcon: _query.isEmpty
+              ? null
+              : IconButton(
+                  icon:  Icon(Icons.close_rounded,
+                      size: 17, color: context.colors.textMuted),
+                  onPressed: _searchCtrl.clear,
+                ),
+          filled: true,
+          fillColor: context.colors.surface,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14, vertical: 11),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 分组列表：导演 + 主要演员（懒构建，演职员可达 50~100+）
+  Widget _buildGroupList(BuildContext context, List<CastItem> all,
+      List<CastItem> directors, List<CastItem> actors) {
+    return Flexible(
+      child: all.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Text(
+                  _query.isEmpty ? '暂无演职员信息' : '没有匹配的演员',
+                  style: TextStyle(
+                      color: context.colors.textMuted, fontSize: 13),
+                ),
+              ),
+            )
+          : CustomScrollView(
+              slivers: [
+                // 左右留白对齐每个 sliver（与原 ListView 整体 padding 等价：
+                // 上 4 落在分组标题的 8 上边距前，下 24 由尾块补齐）
+                if (directors.isNotEmpty) ...[
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                    sliver: SliverToBoxAdapter(
+                      child: _groupTitle(context, '导演'),
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverList.builder(
+                      itemCount: directors.length,
+                      itemBuilder: (_, i) => _buildRow(directors[i]),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                ],
+                if (actors.isNotEmpty) ...[
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(20, directors.isEmpty ? 4 : 0, 20, 0),
+                    sliver: SliverToBoxAdapter(
+                      child: _groupTitle(context, '主要演员'),
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    sliver: SliverList.builder(
+                      itemCount: actors.length,
+                      itemBuilder: (_, i) => _buildRow(actors[i]),
+                    ),
+                  ),
+                ],
+              ],
+            ),
     );
   }
 

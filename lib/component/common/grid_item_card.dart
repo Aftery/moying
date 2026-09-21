@@ -63,104 +63,114 @@ class GridItemCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Stack(
-              children: [
-                MediaCover(
-                  media: media,
-                  title: title,
-                  emoji: emoji,
-                  hue: hue,
-                  aspectRatio: 3 / 4,
-                  borderRadius: 0,
-                  fontSize: 40,
-                ),
-                // 左上角状态徽标
-                if (statusLabel != null)
-                  Positioned(
-                    left: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.45),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        statusLabel!,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:  TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: context.colors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:  TextStyle(
-                      fontSize: 11,
-                      color: context.colors.textMuted,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      if (rating != null) ...[
-                         Icon(
-                          Icons.star_rounded,
-                          size: 15,
-                          color: context.colors.star,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          rating!.toStringAsFixed(1),
-                          style:  TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: context.colors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      Expanded(
-                        child: Container(
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: context.colors.outline,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            _buildCover(context),
+            _buildInfo(context),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 封面区：封面图 + 左上角状态徽标
+  Widget _buildCover(BuildContext context) {
+    return Stack(
+      children: [
+        MediaCover(
+          media: media,
+          title: title,
+          emoji: emoji,
+          hue: hue,
+          aspectRatio: 3 / 4,
+          borderRadius: 0,
+          fontSize: 40,
+        ),
+        // 左上角状态徽标
+        if (statusLabel != null)
+          Positioned(
+            left: 8,
+            top: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 3,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.45),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                statusLabel!,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// 信息区：标题/副标题 + 评分行（星星 + 占位空条）
+  Widget _buildInfo(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style:  TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: context.colors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style:  TextStyle(
+              fontSize: 11,
+              color: context.colors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              if (rating != null) ...[
+                 Icon(
+                  Icons.star_rounded,
+                  size: 15,
+                  color: context.colors.star,
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  rating!.toStringAsFixed(1),
+                  style:  TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Container(
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: context.colors.outline,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

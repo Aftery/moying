@@ -74,7 +74,14 @@ class BookDetailPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildHeader(context, book),
+                    _BookHeader(
+                      book: book,
+                      onAuthorTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => BooksPage(initialQuery: book.author),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     _buildProgressCard(context, book),
                     // 阅读时间卡（无任何时间记录时隐藏）
@@ -101,162 +108,7 @@ class BookDetailPage extends StatelessWidget {
     );
   }
 
-  // ---------- 头部：封面 + 标题 / 作者 / 评分 / 标签 ----------
 
-  Widget _buildHeader(BuildContext context, Book book) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 封面
-        Container(
-          width: 116,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.45),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: MediaCover(
-              media: book.cover,
-              title: book.title,
-              emoji: book.emoji ?? '',
-              hue: book.coverHue,
-              aspectRatio: 3 / 4,
-              borderRadius: 0,
-              fontSize: 40,
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        // 右侧信息列
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                book.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: context.colors.textPrimary,
-                  fontSize: 21,
-                  fontWeight: FontWeight.w800,
-                  height: 1.25,
-                ),
-              ),
-              const SizedBox(height: 6),
-              // 作者行可点：跳书库列表并带作者 query（复用现有搜索）
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        BooksPage(initialQuery: book.author),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          book.author,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: context.colors.textSecondary,
-                            fontSize: 13.5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Icon(Icons.manage_search_rounded,
-                          size: 14, color: context.colors.textMuted),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildRatingCard(context, book),
-              const SizedBox(height: 12),
-              // 出版社 / 分类标签
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (book.publisher != null &&
-                      book.publisher!.trim().isNotEmpty)
-                    InfoChip(label: book.publisher!.trim()),
-                  if (book.category != null) InfoChip(label: book.category!),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ---------- 我的评分卡 ----------
-
-  Widget _buildRatingCard(BuildContext context, Book book) {
-    final rating = book.rating;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: context.colors.surfaceHigh,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: rating == null
-          ? Row(
-              children: [
-                Icon(Icons.star_border_rounded,
-                    size: 16, color: context.colors.textMuted),
-                const SizedBox(width: 6),
-                Text(
-                  AppStrings.unrated,
-                  style: TextStyle(color: context.colors.textMuted, fontSize: 12.5),
-                ),
-              ],
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppStrings.myRating,
-                  style: TextStyle(
-                    color: context.colors.success,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Row(
-                  children: [
-                    RatingStars(rating: rating, size: 19),
-                    const SizedBox(width: 8),
-                    Text(
-                      rating.toStringAsFixed(1),
-                      style: TextStyle(
-                        color: context.colors.star,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-    );
-  }
 
   // ---------- 阅读进度卡 ----------
 
@@ -531,6 +383,173 @@ class BookDetailPage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 图书详情头部：封面 + 标题 / 作者 / 评分 / 出版社与分类标签。
+class _BookHeader extends StatelessWidget {
+  const _BookHeader({
+    required this.book,
+    required this.onAuthorTap,
+  });
+
+  final Book book;
+  final VoidCallback onAuthorTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildCover(context),
+        const SizedBox(width: 16),
+        Expanded(child: _buildInfo(context)),
+      ],
+    );
+  }
+
+  /// 左侧封面（带阴影圆角裁切）。
+  Widget _buildCover(BuildContext context) {
+    return Container(
+      width: 116,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.45),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: MediaCover(
+          media: book.cover,
+          title: book.title,
+          emoji: book.emoji ?? '',
+          hue: book.coverHue,
+          aspectRatio: 3 / 4,
+          borderRadius: 0,
+          fontSize: 40,
+        ),
+      ),
+    );
+  }
+
+  /// 右侧信息列：标题 / 可点作者 / 评分卡 / 出版社与分类标签。
+  Widget _buildInfo(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          book.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: context.colors.textPrimary,
+            fontSize: 21,
+            fontWeight: FontWeight.w800,
+            height: 1.25,
+          ),
+        ),
+        const SizedBox(height: 6),
+        // 作者行可点：跳书库列表并带作者 query（复用现有搜索）
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onAuthorTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    book.author,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: context.colors.textSecondary,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Icon(Icons.manage_search_rounded,
+                    size: 14, color: context.colors.textMuted),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildRatingCard(context),
+        const SizedBox(height: 12),
+        // 出版社 / 分类标签
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (book.publisher != null &&
+                book.publisher!.trim().isNotEmpty)
+              InfoChip(label: book.publisher!.trim()),
+            if (book.category != null) InfoChip(label: book.category!),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// 我的评分卡（未评分显示占位提示）。
+  Widget _buildRatingCard(BuildContext context) {
+    final rating = book.rating;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: context.colors.surfaceHigh,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: rating == null
+          ? Row(
+              children: [
+                Icon(Icons.star_border_rounded,
+                    size: 16, color: context.colors.textMuted),
+                const SizedBox(width: 6),
+                Text(
+                  AppStrings.unrated,
+                  style: TextStyle(color: context.colors.textMuted, fontSize: 12.5),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppStrings.myRating,
+                  style: TextStyle(
+                    color: context.colors.success,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Row(
+                  children: [
+                    RatingStars(rating: rating, size: 19),
+                    const SizedBox(width: 8),
+                    Text(
+                      rating.toStringAsFixed(1),
+                      style: TextStyle(
+                        color: context.colors.star,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
     );
   }
 }

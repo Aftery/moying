@@ -71,106 +71,135 @@ class _MoviesPageState extends State<MoviesPage> {
       ),
       body: SafeArea(
         top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: _buildContent(context, movies, genreOptions),
+      ),
+      // ---------- 新增电影 FAB ----------
+      floatingActionButton: _buildFab(context),
+    );
+  }
+
+  /// 主内容列：搜索栏 + 筛选排序 + 计数 + 双列网格
+  Widget _buildContent(
+    BuildContext context,
+    List<Movie> movies,
+    List<String> genreOptions,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ..._buildSearchAndFilters(context, movies, genreOptions),
+        const SizedBox(height: 6),
+        _buildGrid(context, movies),
+      ],
+    );
+  }
+
+  /// 搜索栏 + 分类/排序两个下拉 + 结果计数行
+  List<Widget> _buildSearchAndFilters(
+    BuildContext context,
+    List<Movie> movies,
+    List<String> genreOptions,
+  ) {
+    return [
+      // ---------- 搜索栏 ----------
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+        child: SearchBarView(
+          controller: _searchCtrl,
+          hintText: '搜索电影/导演…',
+          onChanged: (v) => setState(() => _query = v),
+        ),
+      ),
+      const SizedBox(height: 12),
+      // ---------- 筛选 + 排序 ----------
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Row(
           children: [
-            // ---------- 搜索栏 ----------
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-              child: SearchBarView(
-                controller: _searchCtrl,
-                hintText: '搜索电影/导演…',
-                onChanged: (v) => setState(() => _query = v),
-              ),
+            FilterDropdown<String?>(
+              icon: Icons.theaters_rounded,
+              value: _genreFilter,
+              items: [
+                const FilterItem(label: '全部类型', value: null),
+                for (final g in genreOptions) FilterItem(label: g, value: g),
+              ],
+              onChanged: (v) => setState(() => _genreFilter = v),
             ),
-            const SizedBox(height: 12),
-            // ---------- 筛选 + 排序 ----------
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  FilterDropdown<String?>(
-                    icon: Icons.theaters_rounded,
-                    value: _genreFilter,
-                    items: [
-                      const FilterItem(label: '全部类型', value: null),
-                      for (final g in genreOptions) FilterItem(label: g, value: g),
-                    ],
-                    onChanged: (v) => setState(() => _genreFilter = v),
-                  ),
-                  const SizedBox(width: 10),
-                  FilterDropdown<MovieSort>(
-                    icon: Icons.swap_vert_rounded,
-                    value: _sort,
-                    items: [
-                      for (final s in MovieSort.values)
-                        FilterItem(label: s.label, value: s),
-                    ],
-                    // 排序项 value 均非空，v 不会为 null，v! 安全
-                    onChanged: (v) => setState(() => _sort = v!),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            // ---------- 结果计数行 ----------
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              child: Text(
-                '共 ${movies.length} 部',
-                style:  TextStyle(
-                  color: context.colors.textMuted,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            // ---------- 双列网格 ----------
-            Expanded(
-              child: movies.isEmpty
-                  ? _buildEmpty()
-                  : GridView.builder(
-                      padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 14,
-                        crossAxisSpacing: 14,
-                        childAspectRatio: 0.56,
-                      ),
-                      itemCount: movies.length,
-                      itemBuilder: (context, i) {
-                        final movie = movies[i];
-                        return GridItemCard(
-                          title: movie.title,
-                          subtitle: movie.director ?? '${movie.year}',
-                          emoji: movie.emoji ?? '',
-                          hue: movie.coverHue,
-                          media: movie.poster,
-                          rating: movie.rating,
-                          statusLabel: movie.status.label,
-                          onTap: () => _openDetail(movie.id),
-                          onLongPress: () => _openEditor(movie.id),
-                        );
-                      },
-                    ),
+            const SizedBox(width: 10),
+            FilterDropdown<MovieSort>(
+              icon: Icons.swap_vert_rounded,
+              value: _sort,
+              items: [
+                for (final s in MovieSort.values)
+                  FilterItem(label: s.label, value: s),
+              ],
+              // 排序项 value 均非空，v 不会为 null，v! 安全
+              onChanged: (v) => setState(() => _sort = v!),
             ),
           ],
         ),
       ),
-      // ---------- 新增电影 FAB ----------
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openCreate,
-        // 唯一 heroTag：避免与书籍列表页 FAB 在 IndexedStack 同一 Hero 子树中默认 tag 冲突
-        heroTag: 'movies-add-fab',
-        backgroundColor: context.colors.movieStart,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text(
-          AppStrings.addMovie,
-          style: TextStyle(fontWeight: FontWeight.w700),
+      const SizedBox(height: 14),
+      // ---------- 结果计数行 ----------
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22),
+        child: Text(
+          '共 ${movies.length} 部',
+          style:  TextStyle(
+            color: context.colors.textMuted,
+            fontSize: 12,
+          ),
         ),
+      ),
+    ];
+  }
+
+  /// 双列网格（空态交由 _buildEmpty 呈现）
+  Widget _buildGrid(BuildContext context, List<Movie> movies) {
+    return Expanded(
+      child: movies.isEmpty
+          ? _buildEmpty()
+          : GridView.builder(
+              padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                childAspectRatio: 0.56,
+              ),
+              itemCount: movies.length,
+              itemBuilder: (context, i) {
+                final movie = movies[i];
+                return GridItemCard(
+                  title: movie.title,
+                  subtitle: movie.director ?? '${movie.year}',
+                  emoji: movie.emoji ?? '',
+                  hue: movie.coverHue,
+                  media: movie.poster,
+                  rating: movie.rating,
+                  statusLabel: movie.status.label,
+                  onTap: () => _openDetail(movie.id),
+                  onLongPress: () => _openEditor(movie.id),
+                );
+              },
+            ),
+    );
+  }
+
+  /// 新增电影 FAB（唯一 heroTag 避免 Hero 冲突）
+  Widget _buildFab(BuildContext context) {
+    return FloatingActionButton.extended(
+      onPressed: _openCreate,
+      // 唯一 heroTag：避免与书籍列表页 FAB 在 IndexedStack 同一 Hero 子树中默认 tag 冲突
+      heroTag: 'movies-add-fab',
+      backgroundColor: context.colors.movieStart,
+      foregroundColor: Colors.white,
+      elevation: 4,
+      icon: const Icon(Icons.add_rounded),
+      label: const Text(
+        AppStrings.addMovie,
+        style: TextStyle(fontWeight: FontWeight.w700),
       ),
     );
   }

@@ -56,97 +56,114 @@ class MediaTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 封面区
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: MediaCover(
-              media: media,
-              title: title,
-              emoji: emoji,
-              hue: hue,
-              aspectRatio: 1 / 1.05,
-              borderRadius: 12,
-              fontSize: 34,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: context.colors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: context.colors.textMuted,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (isBook && progress != null)
-                  Column(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(3),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 5,
-                          backgroundColor: context.colors.outline,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            context.colors.readingStart,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      if (pageText != null)
-                        SizedBox(
-                          width: double.infinity,
-                          child: Text(
-                            pageText!,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: context.colors.textMuted,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                if (!isBook && rating != null)
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.star_rounded,
-                        size: 13,
-                        color: context.colors.star,
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        rating!.toStringAsFixed(1),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: context.colors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
+          _buildCover(context),
+          _buildInfo(context),
         ],
       ),
+    );
+  }
+
+  /// 封面区
+  Widget _buildCover(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: MediaCover(
+        media: media,
+        title: title,
+        emoji: emoji,
+        hue: hue,
+        aspectRatio: 1 / 1.05,
+        borderRadius: 12,
+        fontSize: 34,
+      ),
+    );
+  }
+
+  /// 信息区：标题/副标题 + 书籍进度条或电影评分
+  Widget _buildInfo(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: context.colors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              color: context.colors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (isBook && progress != null) _buildBookProgress(context),
+          if (!isBook && rating != null) _buildMovieRating(context),
+        ],
+      ),
+    );
+  }
+
+  /// 书籍：渐变进度条 + 页码文案
+  Widget _buildBookProgress(BuildContext context) {
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 5,
+            backgroundColor: context.colors.outline,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              context.colors.readingStart,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        if (pageText != null)
+          SizedBox(
+            width: double.infinity,
+            child: Text(
+              pageText!,
+              style: TextStyle(
+                fontSize: 10,
+                color: context.colors.textMuted,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// 电影：星级图标 + 评分数字
+  Widget _buildMovieRating(BuildContext context) {
+    return Row(
+      children: [
+        Icon(
+          Icons.star_rounded,
+          size: 13,
+          color: context.colors.star,
+        ),
+        const SizedBox(width: 2),
+        Text(
+          rating!.toStringAsFixed(1),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: context.colors.textSecondary,
+          ),
+        ),
+      ],
     );
   }
 }

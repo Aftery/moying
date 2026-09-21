@@ -205,126 +205,167 @@ class ActorDetailPage extends StatelessWidget {
             )
           : SafeArea(
               top: false,
-              child: CustomScrollView(
-                slivers: [
-                  // ---------- 头部（头像 / 姓名 / 简介 / 区块标题）----------
-                  // 固定且量小，放 SliverToBoxAdapter 即时构建；
-                  // 真正会长的是下方「参演作品」，单独走懒构建 Sliver（M-3）。
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(24, 4, 24, 40),
-                    sliver: SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 116,
-                              height: 116,
-                              clipBehavior: Clip.antiAlias,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: context.colors.outline, width: 0.8),
-                              ),
-                              child: MediaCover(
-                                circular: true,
-                                media: actor.avatar,
-                                title: actor.name,
-                                hue: _hueOf(actor.name),
-                                fontSize: 44,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            actor.name,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: context.colors.textPrimary,
-                              fontSize: 23,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          // ---------- 简介 ----------
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: context.colors.surfaceHigh,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                  color: context.colors.outline, width: 0.7),
-                            ),
-                            child: actor.bio == null || actor.bio!.isEmpty
-                                ? Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.auto_awesome_outlined,
-                                          size: 15,
-                                          color: context.colors.textMuted),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        '暂无简介，点击右上角补充',
-                                        style: TextStyle(
-                                            color: context.colors.textMuted,
-                                            fontSize: 13),
-                                      ),
-                                    ],
-                                  )
-                                : Text(
-                                    actor.bio!,
-                                    style: TextStyle(
-                                      color: context.colors.textSecondary,
-                                      fontSize: 14,
-                                      height: 1.7,
-                                    ),
-                                  ),
-                          ),
-                          const SizedBox(height: 26),
-                          // ---------- 参演作品标题 ----------
-                          _sectionTitle(context, '参演作品'),
-                          const SizedBox(height: 12),
-                        ],
-                      ),
-                    ),
+              child: _ActorDetailBody(
+                actor: actor,
+                works: works,
+                onTapWork: (movie) => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MovieDetailPage(movieId: movie.id),
                   ),
-                  // ---------- 参演作品：懒构建（作品数可达数十上百）----------
-                  if (works.isEmpty)
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-                      sliver: SliverToBoxAdapter(
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: context.colors.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                                color: context.colors.outline, width: 0.7),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '还没有参演记录',
-                              style: TextStyle(
-                                  color: context.colors.textMuted,
-                                  fontSize: 13),
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-                      sliver: SliverList.builder(
-                        itemCount: works.length,
-                        itemBuilder: (_, i) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _buildWorkTile(context, works[i]),
-                        ),
-                      ),
-                    ),
-                ],
+                ),
+              ),
+            ),
+    );
+  }
+
+}
+
+/// 演员资料编辑弹层的返回值（保存原始文本，由调用方 trim 判定）
+
+/// 演员详情主体：头部（头像 / 姓名 / 简介 / 区块标题）+ 参演作品列表。
+class _ActorDetailBody extends StatelessWidget {
+  const _ActorDetailBody({
+    required this.actor,
+    required this.works,
+    required this.onTapWork,
+  });
+
+  /// 当前展示的演员
+  final Actor actor;
+
+  /// 参演作品（已按 actorIds 反查得出）
+  final List<Movie> works;
+
+  /// 点击某部作品时的跳转回调
+  final void Function(Movie movie) onTapWork;
+
+  @override
+  Widget build(BuildContext context) {
+    // 头部固定且量小，放 SliverToBoxAdapter 即时构建；
+    // 真正会长的是下方「参演作品」，单独走懒构建 Sliver（M-3）。
+    return CustomScrollView(
+      slivers: [
+        _buildHeaderSliver(context),
+        // ---------- 参演作品：懒构建（作品数可达数十上百）----------
+        if (works.isEmpty)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+            sliver: SliverToBoxAdapter(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: context.colors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: context.colors.outline, width: 0.7),
+                ),
+                child: Center(
+                  child: Text(
+                    '还没有参演记录',
+                    style: TextStyle(
+                        color: context.colors.textMuted, fontSize: 13),
+                  ),
+                ),
+              ),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+            sliver: SliverList.builder(
+              itemCount: works.length,
+              itemBuilder: (_, i) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _buildWorkTile(context, works[i]),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ---------- 头部（头像 / 姓名 / 简介 / 区块标题）----------
+
+  Widget _buildHeaderSliver(BuildContext context) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 40),
+      sliver: SliverToBoxAdapter(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(child: _buildAvatar(context)),
+            const SizedBox(height: 16),
+            Text(
+              actor.name,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: context.colors.textPrimary,
+                fontSize: 23,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildBioCard(context),
+            const SizedBox(height: 26),
+            // ---------- 参演作品标题 ----------
+            _sectionTitle(context, '参演作品'),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 头像：圆形占位（无头像时姓名首字占位）
+  Widget _buildAvatar(BuildContext context) {
+    return Container(
+      width: 116,
+      height: 116,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: context.colors.outline, width: 0.8),
+      ),
+        child: MediaCover(
+          circular: true,
+          media: actor.avatar,
+          title: actor.name,
+          hue: ActorDetailPage._hueOf(actor.name),
+          fontSize: 44,
+        ),
+    );
+  }
+
+  /// 简介卡片：无简介时提示补充，有则展示正文
+  Widget _buildBioCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.colors.surfaceHigh,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.colors.outline, width: 0.7),
+      ),
+      child: actor.bio == null || actor.bio!.isEmpty
+          ? Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.auto_awesome_outlined,
+                    size: 15, color: context.colors.textMuted),
+                const SizedBox(width: 6),
+                Text(
+                  '暂无简介，点击右上角补充',
+                  style: TextStyle(
+                      color: context.colors.textMuted, fontSize: 13),
+                ),
+              ],
+            )
+          : Text(
+              actor.bio!,
+              style: TextStyle(
+                color: context.colors.textSecondary,
+                fontSize: 14,
+                height: 1.7,
               ),
             ),
     );
@@ -338,11 +379,7 @@ class ActorDetailPage extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => MovieDetailPage(movieId: movie.id),
-          ),
-        ),
+        onTap: () => onTapWork(movie),
         child: Container(
           padding: const EdgeInsets.all(10),
           child: Row(
@@ -419,5 +456,3 @@ class ActorDetailPage extends StatelessWidget {
     );
   }
 }
-
-/// 演员资料编辑弹层的返回值（保存原始文本，由调用方 trim 判定）

@@ -195,69 +195,15 @@ class _LogTileState extends State<LogTile> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 3,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+              _buildLevelBar(color),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        _LevelChip(level: e.level, color: color),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            e.tag,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: context.colors.textMuted,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          formatLogTime(e.time),
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            color: context.colors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
+                    _buildHeaderRow(context, e, color),
                     const SizedBox(height: 6),
-                    Text(
-                      e.message,
-                      maxLines: _expanded ? null : 3,
-                      overflow: _expanded ? null : TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.45,
-                        color: context.colors.textSecondary,
-                      ),
-                    ),
-                    if (_expanded && e.meta.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      for (final kv in e.meta.entries)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 2),
-                          child: Text(
-                            '${kv.key}: ${kv.value}',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color: context.colors.textMuted,
-                            ),
-                          ),
-                        ),
-                    ],
+                    ..._buildBody(context, e),
                   ],
                 ),
               ),
@@ -266,6 +212,75 @@ class _LogTileState extends State<LogTile> {
         ),
       ),
     );
+  }
+
+  /// 左侧等级色条。
+  Widget _buildLevelBar(Color color) => Container(
+        width: 3,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      );
+
+  /// 头部行：等级标签 + 标签 + 时间。
+  Widget _buildHeaderRow(BuildContext context, LogEntry e, Color color) {
+    return Row(
+      children: [
+        _LevelChip(level: e.level, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            e.tag,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: context.colors.textMuted,
+            ),
+          ),
+        ),
+        Text(
+          formatLogTime(e.time),
+          style: TextStyle(
+            fontSize: 10.5,
+            color: context.colors.textMuted,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 主体：消息文本，展开时附带结构化 meta 信息。
+  List<Widget> _buildBody(BuildContext context, LogEntry e) {
+    return [
+      Text(
+        e.message,
+        maxLines: _expanded ? null : 3,
+        overflow: _expanded ? null : TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 13,
+          height: 1.45,
+          color: context.colors.textSecondary,
+        ),
+      ),
+      if (_expanded && e.meta.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        for (final kv in e.meta.entries)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Text(
+              '${kv.key}: ${kv.value}',
+              style: TextStyle(
+                fontSize: 11.5,
+                color: context.colors.textMuted,
+              ),
+            ),
+          ),
+      ],
+    ];
   }
 }
 

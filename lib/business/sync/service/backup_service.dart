@@ -242,6 +242,41 @@ class BackupService {
     _ensureCompatible(parsed.manifest);
 
     // 1) 现状快照（可容忍部分文件缺失——首次启动后必然齐全，防御外部删改）
+    final preDir = await _snapshotCurrentState();
+
+    // 先完整校验集合，避免写入部分文件后才发现备份损坏。
+    _verifyCollections(parsed);
+
+    try {
+      // 2) 覆盖四集合 JSON（原子写）
+      for (final name in _collectionFiles) {
+        final data = parsed.files[name];
+        if (data == null) {
+          throw BackupException('备份缺少必需文件：$name');
+        }
+        await store.writeFileAtomic(name, data);
+      }
+
+      // 2.5) 数据源配置（可选：备份里没有则保留本地现状）
+      final dsData = parsed.files[_dataSourceFile];
+      if (dsData != null) {
+        await store.writeFileAtomic(_dataSourceFile, dsData);
+      }
+
+      // 不含图片的备份只恢复数据，必须保留设备上的现有图片。
+      if (!parsed.manifest.includeImages) return;
+
+      // 3) 图片：原子替换
+      await _restoreImages(parsed);
+    } catch (e) {
+      // 集合写入或图片替换失败时，回滚已写入的集合，避免留下混合版本。
+      await _rollbackDataFiles(preDir);
+      rethrow;
+    }
+  }
+
+  /// 恢复前现状快照：把当前数据/图片复制到 backup-pre-restore/，失败则拒绝继续。
+  Future<Directory> _snapshotCurrentState() async {
     final preDir = Directory(
       '${store.dataDir.path}${Platform.pathSeparator}$_preRestoreDir',
     );
@@ -274,75 +309,56 @@ class BackupService {
       // 无法保留回滚快照时拒绝继续，避免恢复失败后无法找回现状。
       throw BackupException('恢复前图片快照失败：$e');
     }
+    return preDir;
+  }
 
-    // 先完整校验集合，避免写入部分文件后才发现备份损坏。
+  /// 恢复前完整性校验：三集合均可解码，否则抛出 BackupException。
+  void _verifyCollections(_ParsedBackup parsed) {
     _decodeCollection(parsed.files['books.json'], Book.fromJson, 'books.json');
     _decodeCollection(
         parsed.files['movies.json'], Movie.fromJson, 'movies.json');
     _decodeCollection(
         parsed.files['actors.json'], Actor.fromJson, 'actors.json');
+  }
+
+  /// 图片原子替换：先写临时目录，全部成功后再重命名，中途失败还原旧图。
+  Future<void> _restoreImages(_ParsedBackup parsed) async {
+    final imgDir = store.imagesDir;
+    final tmpDir = Directory(
+        '${imgDir.path}-new-${DateTime.now().millisecondsSinceEpoch}');
+    final oldDir = Directory(
+        '${imgDir.path}-old-${DateTime.now().millisecondsSinceEpoch}');
+    await tmpDir.create(recursive: true);
 
     try {
-      // 2) 覆盖四集合 JSON（原子写）
-      for (final name in _collectionFiles) {
-        final data = parsed.files[name];
-        if (data == null) {
-          throw BackupException('备份缺少必需文件：$name');
-        }
-        await store.writeFileAtomic(name, data);
+      // 写入全部新图片到临时目录
+      for (final entry in parsed.images.entries) {
+        final targetFile =
+            File('${tmpDir.path}${Platform.pathSeparator}${entry.key}');
+        await targetFile.writeAsBytes(entry.value);
       }
 
-      // 2.5) 数据源配置（可选：备份里没有则保留本地现状）
-      final dsData = parsed.files[_dataSourceFile];
-      if (dsData != null) {
-        await store.writeFileAtomic(_dataSourceFile, dsData);
+      // 全部新图写成功，执行原子替换
+      if (await imgDir.exists()) {
+        await imgDir.rename(oldDir.path); // 旧图改名保命
       }
+      await tmpDir.rename(imgDir.path); // 新图上位
 
-      // 不含图片的备份只恢复数据，必须保留设备上的现有图片。
-      if (!parsed.manifest.includeImages) return;
-
-      // 3) 图片：原子替换（先写临时目录，全部成功后再重命名，避免中途失败丢失现有图片）
-      final imgDir = store.imagesDir;
-      final tmpDir = Directory(
-          '${imgDir.path}-new-${DateTime.now().millisecondsSinceEpoch}');
-      final oldDir = Directory(
-          '${imgDir.path}-old-${DateTime.now().millisecondsSinceEpoch}');
-      await tmpDir.create(recursive: true);
-
-      try {
-        // 写入全部新图片到临时目录
-        for (final entry in parsed.images.entries) {
-          final targetFile =
-              File('${tmpDir.path}${Platform.pathSeparator}${entry.key}');
-          await targetFile.writeAsBytes(entry.value);
-        }
-
-        // 全部新图写成功，执行原子替换
-        if (await imgDir.exists()) {
-          await imgDir.rename(oldDir.path); // 旧图改名保命
-        }
-        await tmpDir.rename(imgDir.path); // 新图上位
-
-        // 替换成功，清理旧图
-        if (await oldDir.exists()) {
-          await oldDir.delete(recursive: true);
-        }
-      } catch (e) {
-        // 恢复中途失败：清理临时目录，如果旧图被挪走了则还原旧图
-        if (await tmpDir.exists()) {
-          await tmpDir.delete(recursive: true);
-        }
-        if (await oldDir.exists()) {
-          if (await imgDir.exists()) {
-            await imgDir.delete(recursive: true);
-          }
-          await oldDir.rename(imgDir.path);
-        }
-        rethrow;
+      // 替换成功，清理旧图
+      if (await oldDir.exists()) {
+        await oldDir.delete(recursive: true);
       }
     } catch (e) {
-      // 集合写入或图片替换失败时，回滚已写入的集合，避免留下混合版本。
-      await _rollbackDataFiles(preDir);
+      // 恢复中途失败：清理临时目录，如果旧图被挪走了则还原旧图
+      if (await tmpDir.exists()) {
+        await tmpDir.delete(recursive: true);
+      }
+      if (await oldDir.exists()) {
+        if (await imgDir.exists()) {
+          await imgDir.delete(recursive: true);
+        }
+        await oldDir.rename(imgDir.path);
+      }
       rethrow;
     }
   }

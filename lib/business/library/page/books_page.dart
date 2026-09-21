@@ -80,101 +80,130 @@ class _BooksPageState extends State<BooksPage> {
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openCreate,
-        // 唯一 heroTag：避免与电影列表页 FAB 在 IndexedStack 同一 Hero 子树中默认 tag 冲突
-        heroTag: 'books-add-fab',
-        backgroundColor: context.colors.readingStart,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text(
-          AppStrings.addBook,
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
+      floatingActionButton: _buildFab(context),
       body: SafeArea(
         top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: _buildContent(context, books, categoryOptions),
+      ),
+    );
+  }
+
+  /// 主内容列：搜索栏 + 筛选栏 + 计数 + 双排网格
+  Widget _buildContent(
+    BuildContext context,
+    List<Book> books,
+    List<String> categoryOptions,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ..._buildSearchAndFilters(context, books, categoryOptions),
+        const SizedBox(height: 6),
+        _buildGrid(context, books),
+      ],
+    );
+  }
+
+  /// 搜索栏 + 状态/分类两个下拉 + 结果计数行
+  List<Widget> _buildSearchAndFilters(
+    BuildContext context,
+    List<Book> books,
+    List<String> categoryOptions,
+  ) {
+    return [
+      // ---------- 搜索栏 ----------
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+        child: SearchBarView(
+          controller: _searchCtrl,
+          onChanged: (v) => setState(() => _query = v),
+        ),
+      ),
+      const SizedBox(height: 12),
+      // ---------- 筛选栏 ----------
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Row(
           children: [
-            // ---------- 搜索栏 ----------
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-              child: SearchBarView(
-                controller: _searchCtrl,
-                onChanged: (v) => setState(() => _query = v),
-              ),
+            FilterDropdown<BookStatus?>(
+              icon: Icons.auto_stories_rounded,
+              value: _statusFilter,
+              items: [
+                const FilterItem(label: '全部状态', value: null),
+                for (final s in BookStatus.values)
+                  FilterItem(label: s.label, value: s),
+              ],
+              onChanged: (v) => setState(() => _statusFilter = v),
             ),
-            const SizedBox(height: 12),
-            // ---------- 筛选栏 ----------
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  FilterDropdown<BookStatus?>(
-                    icon: Icons.auto_stories_rounded,
-                    value: _statusFilter,
-                    items: [
-                      const FilterItem(label: '全部状态', value: null),
-                      for (final s in BookStatus.values)
-                        FilterItem(label: s.label, value: s),
-                    ],
-                    onChanged: (v) => setState(() => _statusFilter = v),
-                  ),
-                  const SizedBox(width: 10),
-                  FilterDropdown<String?>(
-                    icon: Icons.category_rounded,
-                    value: _categoryFilter,
-                    items: [
-                      const FilterItem(label: '全部分类', value: null),
-                      for (final c in categoryOptions)
-                        FilterItem(label: c, value: c),
-                    ],
-                    onChanged: (v) => setState(() => _categoryFilter = v),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            // ---------- 结果计数行 ----------
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              child: Text(
-                '共 ${books.length} 本',
-                style:  TextStyle(
-                  color: context.colors.textMuted,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            // ---------- 双排网格 ----------
-            Expanded(
-              child: books.isEmpty
-                  ? _buildEmpty()
-                  : GridView.builder(
-                      padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 14,
-                        crossAxisSpacing: 14,
-                        childAspectRatio: 0.56,
-                      ),
-                      itemCount: books.length,
-                      itemBuilder: (context, i) {
-                        final book = books[i];
-                        return BookListCard(
-                          book: book,
-                          onTap: () => _openDetail(book.id),
-                          onLongPress: () => _openEditor(book.id),
-                        );
-                      },
-                    ),
+            const SizedBox(width: 10),
+            FilterDropdown<String?>(
+              icon: Icons.category_rounded,
+              value: _categoryFilter,
+              items: [
+                const FilterItem(label: '全部分类', value: null),
+                for (final c in categoryOptions)
+                  FilterItem(label: c, value: c),
+              ],
+              onChanged: (v) => setState(() => _categoryFilter = v),
             ),
           ],
         ),
+      ),
+      const SizedBox(height: 14),
+      // ---------- 结果计数行 ----------
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22),
+        child: Text(
+          '共 ${books.length} 本',
+          style:  TextStyle(
+            color: context.colors.textMuted,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    ];
+  }
+
+  /// 双排网格（空态交由 _buildEmpty 呈现）
+  Widget _buildGrid(BuildContext context, List<Book> books) {
+    return Expanded(
+      child: books.isEmpty
+          ? _buildEmpty()
+          : GridView.builder(
+              padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                childAspectRatio: 0.56,
+              ),
+              itemCount: books.length,
+              itemBuilder: (context, i) {
+                final book = books[i];
+                return BookListCard(
+                  book: book,
+                  onTap: () => _openDetail(book.id),
+                  onLongPress: () => _openEditor(book.id),
+                );
+              },
+            ),
+    );
+  }
+
+  /// 新增图书 FAB（唯一 heroTag 避免 Hero 冲突）
+  Widget _buildFab(BuildContext context) {
+    return FloatingActionButton.extended(
+      onPressed: _openCreate,
+      // 唯一 heroTag：避免与电影列表页 FAB 在 IndexedStack 同一 Hero 子树中默认 tag 冲突
+      heroTag: 'books-add-fab',
+      backgroundColor: context.colors.readingStart,
+      foregroundColor: Colors.white,
+      elevation: 4,
+      icon: const Icon(Icons.add_rounded),
+      label: const Text(
+        AppStrings.addBook,
+        style: TextStyle(fontWeight: FontWeight.w700),
       ),
     );
   }

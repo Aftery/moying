@@ -41,101 +41,109 @@ class BookListCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ---------- 封面区 ----------
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  MediaCover(
-                    media: book.cover,
-                    title: book.title,
-                    emoji: book.emoji ?? '',
-                    hue: book.coverHue,
-                    aspectRatio: 3 / 4,
-                    borderRadius: 0,
-                    fontSize: 40,
-                  ),
-                  // 左上角状态徽标
-                  Positioned(
-                    left: 8,
-                    top: 8,
-                    child: _StatusBadge(status: book.status),
-                  ),
-                  // 右下角进度角标（未读完才显示，读完有独立进度条状态）
-                  if (!finished)
-                    Positioned(
-                      right: 8,
-                      bottom: 8,
-                      child: _PercentBadge(percent: book.progressPercent),
-                    ),
-                ],
-              ),
-            ),
-            // ---------- 信息区 ----------
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    book.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:  TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: context.colors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    book.author,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:  TextStyle(
-                      fontSize: 11,
-                      color: context.colors.textMuted,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // 星级 + 百分比进度
-                  Row(
-                    children: [
-                      if (book.rating != null)
-                        RatingStars(rating: book.rating!, size: 14)
-                      else
-                         Text(
-                          AppStrings.unrated,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: context.colors.textMuted,
-                          ),
-                        ),
-                      const Spacer(),
-                      Text(
-                        '${book.progressPercent}%',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: finished
-                              ? context.colors.success
-                              : context.colors.readingStart,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  // 渐变进度条
-                  _GradientBar(
-                    progress: book.progress,
-                    color:
-                        finished ? context.colors.success : context.colors.readingStart,
-                  ),
-                ],
-              ),
-            ),
+            _buildCover(context, finished),
+            _buildInfo(context, finished),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 封面区：封面图 + 左上状态徽标 + 右下进度角标
+  Widget _buildCover(BuildContext context, bool finished) {
+    return Expanded(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          MediaCover(
+            media: book.cover,
+            title: book.title,
+            emoji: book.emoji ?? '',
+            hue: book.coverHue,
+            aspectRatio: 3 / 4,
+            borderRadius: 0,
+            fontSize: 40,
+          ),
+          // 左上角状态徽标
+          Positioned(
+            left: 8,
+            top: 8,
+            child: _StatusBadge(status: book.status),
+          ),
+          // 右下角进度角标（未读完才显示，读完有独立进度条状态）
+          if (!finished)
+            Positioned(
+              right: 8,
+              bottom: 8,
+              child: _PercentBadge(percent: book.progressPercent),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 信息区：标题/作者/星级 + 百分比 + 渐变进度条
+  Widget _buildInfo(BuildContext context, bool finished) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            book.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style:  TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: context.colors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            book.author,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style:  TextStyle(
+              fontSize: 11,
+              color: context.colors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // 星级 + 百分比进度
+          Row(
+            children: [
+              if (book.rating != null)
+                RatingStars(rating: book.rating!, size: 14)
+              else
+                 Text(
+                  AppStrings.unrated,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: context.colors.textMuted,
+                  ),
+                ),
+              const Spacer(),
+              Text(
+                '${book.progressPercent}%',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: finished
+                      ? context.colors.success
+                      : context.colors.readingStart,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // 渐变进度条
+          _GradientBar(
+            progress: book.progress,
+            color:
+                finished ? context.colors.success : context.colors.readingStart,
+          ),
+        ],
       ),
     );
   }

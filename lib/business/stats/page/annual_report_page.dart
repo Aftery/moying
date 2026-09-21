@@ -33,43 +33,7 @@ class AnnualReportPage extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
           // ==================== 年度总览 ====================
-          Container(
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              gradient: context.colors.readingGradient,
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('READING $year',
-                    style: const TextStyle(
-                        fontSize: 11,
-                        letterSpacing: 2.2,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white70)),
-                const SizedBox(height: 6),
-                Text('今年读完了 ${h.totalBooksRead} 本书',
-                    style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white)),
-                const SizedBox(height: 4),
-                Text(
-                  '累计 ${h.totalPagesRead} 页 · 看了 ${h.totalMoviesWatched} 部电影'
-                  '${h.totalMinutesWatched > 0 ? '（约 ${h.totalMinutesWatched ~/ 60} 小时）' : ''}',
-                  style: const TextStyle(
-                      fontSize: 12.5, color: Colors.white),
-                ),
-                if (h.topCategory != null) ...[
-                  const SizedBox(height: 10),
-                  Text('你的年度偏好是「${h.topCategory}」',
-                      style: const TextStyle(
-                          fontSize: 12.5, color: Colors.white)),
-                ],
-              ],
-            ),
-          ),
+          _OverviewHeader(h: h, year: year),
           const SizedBox(height: 20),
 
           // ==================== 最晚读完的一本书 ====================
@@ -115,6 +79,54 @@ class AnnualReportPage extends StatelessWidget {
             style: TextStyle(
                 fontSize: 11, color: context.colors.textMuted),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 年度总览头部：渐变卡片展示今年的整体阅读与观影数据。
+class _OverviewHeader extends StatelessWidget {
+  const _OverviewHeader({required this.h, required this.year});
+
+  final AnnualHighlights h;
+  final int year;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: context.colors.readingGradient,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('READING $year',
+              style: const TextStyle(
+                  fontSize: 11,
+                  letterSpacing: 2.2,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white70)),
+          const SizedBox(height: 6),
+          Text('今年读完了 ${h.totalBooksRead} 本书',
+              style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white)),
+          const SizedBox(height: 4),
+          Text(
+            '累计 ${h.totalPagesRead} 页 · 看了 ${h.totalMoviesWatched} 部电影'
+            '${h.totalMinutesWatched > 0 ? '（约 ${h.totalMinutesWatched ~/ 60} 小时）' : ''}',
+            style: const TextStyle(fontSize: 12.5, color: Colors.white),
+          ),
+          if (h.topCategory != null) ...[
+            const SizedBox(height: 10),
+            Text('你的年度偏好是「${h.topCategory}」',
+                style: const TextStyle(
+                    fontSize: 12.5, color: Colors.white)),
+          ],
         ],
       ),
     );

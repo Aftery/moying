@@ -15,7 +15,6 @@ class SourceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final ds = context.read<DataSourceProvider>();
     final testing = context.select<DataSourceProvider, bool>(
       (p) => p.testingId == config.id,
     );
@@ -27,88 +26,10 @@ class SourceTile extends StatelessWidget {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        // 单选：设为该类别默认源
-        leading: Radio<String>(
-          value: config.id,
-          groupValue: ds.sourcesOf(config.category).any((s) => s.isDefault)
-              ? ds.sourcesOf(config.category).firstWhere((s) => s.isDefault).id
-              : null,
-          activeColor: c.accent,
-          onChanged: (_) async {
-            final messenger = ScaffoldMessenger.of(context);
-            try {
-              await ds.setDefault(config.id);
-              messenger.showSnackBar(
-                SnackBar(content: Text('已将「${config.name}」设为默认')),
-              );
-            } on Object catch (e) {
-              messenger.showSnackBar(
-                SnackBar(content: Text('设置默认源失败：$e')),
-              );
-            }
-          },
-        ),
-        title: Row(
-          children: [
-            Flexible(
-              child: Text(
-                config.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: c.textPrimary,
-                ),
-              ),
-            ),
-            if (config.isDefault) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: c.accent.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '默认',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: c.accent,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 3),
-          child: Row(
-            children: [
-              _StatusDot(status: config.status),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  config.displaySummary,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: c.textMuted),
-                ),
-              ),
-            ],
-          ),
-        ),
-        trailing: testing
-            ? SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: c.accent,
-                ),
-              )
-            : Icon(Icons.chevron_right_rounded, size: 20, color: c.textMuted),
+        leading: _buildLeading(context),
+        title: _buildTitle(context),
+        subtitle: _buildSubtitle(context),
+        trailing: _buildTrailing(context, testing),
         onTap: () => _openEditor(context),
       ),
     );
@@ -137,6 +58,109 @@ class SourceTile extends StatelessWidget {
       await ds.updateSource(saved);
     }
   }
+
+  /// 单选：设为该类别默认源。
+  Widget _buildLeading(BuildContext context) {
+    final c = context.colors;
+    final ds = context.read<DataSourceProvider>();
+    return Radio<String>(
+      value: config.id,
+      groupValue: ds.sourcesOf(config.category).any((s) => s.isDefault)
+          ? ds.sourcesOf(config.category).firstWhere((s) => s.isDefault).id
+          : null,
+      activeColor: c.accent,
+      onChanged: (_) async {
+        final messenger = ScaffoldMessenger.of(context);
+        try {
+          await ds.setDefault(config.id);
+          messenger.showSnackBar(
+            SnackBar(content: Text('已将「${config.name}」设为默认')),
+          );
+        } on Object catch (e) {
+          messenger.showSnackBar(
+            SnackBar(content: Text('设置默认源失败：$e')),
+          );
+        }
+      },
+    );
+  }
+
+  /// 名称（默认源附「默认」徽标）。
+  Widget _buildTitle(BuildContext context) {
+    final c = context.colors;
+    return Row(
+      children: [
+        Flexible(
+          child: Text(
+            config.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: c.textPrimary,
+            ),
+          ),
+        ),
+        if (config.isDefault) ...[
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: c.accent.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '默认',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: c.accent,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// 状态圆点 + 摘要文案。
+  Widget _buildSubtitle(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(top: 3),
+      child: Row(
+        children: [
+          _StatusDot(status: config.status),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              config.displaySummary,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, color: c.textMuted),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 测试连接中的转圈 / 常态右箭头。
+  Widget _buildTrailing(BuildContext context, bool testing) {
+    final c = context.colors;
+    return testing
+        ? SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: c.accent,
+            ),
+          )
+        : Icon(Icons.chevron_right_rounded, size: 20, color: c.textMuted);
+  }
+
 }
 
 /// 状态圆点 + 文字徽标
@@ -456,7 +480,6 @@ class _SourceEditSheetState extends State<SourceEditSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -468,123 +491,159 @@ class _SourceEditSheetState extends State<SourceEditSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 拖拽指示条（与编辑资料/查看资料统一风格）
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: c.outline,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Text(
-                widget.isNew ? '配置数据源' : '编辑数据源',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: c.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _config.type.displayName,
-                style: TextStyle(fontSize: 12.5, color: c.textMuted),
-              ),
+              _buildDragHandle(context),
+              ..._buildTitleSection(context),
               const SizedBox(height: 14),
-              TextField(
-                controller: _nameCtrl,
-                style: TextStyle(color: c.textPrimary, fontSize: 14),
-                cursorColor: c.accent,
-                decoration: _dec(const ConfigField(
-                  key: '__name',
-                  label: '显示名称',
-                )),
-              ),
+              _buildNameField(context),
               const SizedBox(height: 10),
-              for (final f in _fields) ...[
-                if (!f.isSecret)
-                  TextField(
-                    controller: _plainCtrls[f.key],
-                    style: TextStyle(color: c.textPrimary, fontSize: 14),
-                    cursorColor: c.accent,
-                    decoration: _dec(f),
-                  )
-                else
-                  TextField(
-                    controller: _secretCtrls[f.key],
-                    obscureText: !(_secretVisible[f.key] ?? false),
-                    style: TextStyle(color: c.textPrimary, fontSize: 14),
-                    cursorColor: c.accent,
-                    decoration: _dec(f).copyWith(
-                      helperText: (_secretFilled[f.key] ?? false)
-                          ? '已保存（重新输入可覆盖）'
-                          : null,
-                    ),
-                  ),
-                const SizedBox(height: 10),
-              ],
+              ..._buildFields(context),
               const SizedBox(height: 6),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _busy ? null : _testConnection,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: c.accent,
-                        side: BorderSide(color: c.accent, width: 1),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      icon: const Icon(Icons.wifi_tethering_rounded, size: 17),
-                      label: const Text('测试连接',
-                          style: TextStyle(
-                              fontSize: 13.5, fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _busy ? null : _save,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: c.accent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      child: Text(
-                        widget.isNew ? '添加' : '保存',
-                        style: const TextStyle(
-                            fontSize: 13.5, fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              _buildActionButtons(context),
               if (!widget.isNew) ...[
                 const SizedBox(height: 10),
-                Center(
-                  child: TextButton.icon(
-                    onPressed: _busy ? null : _delete,
-                    style: TextButton.styleFrom(
-                      foregroundColor: context.colors.danger,
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                    ),
-                    icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                    label: const Text('删除此数据源',
-                        style: TextStyle(
-                            fontSize: 12.5, fontWeight: FontWeight.w600)),
-                  ),
-                ),
+                _buildDeleteButton(context),
               ],
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // 拖拽指示条（与编辑资料/查看资料统一风格）
+  Widget _buildDragHandle(BuildContext context) {
+    final c = context.colors;
+    return Center(
+      child: Container(
+        width: 36,
+        height: 4,
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: c.outline,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+    );
+  }
+
+  /// 标题 + 数据源类型名。
+  List<Widget> _buildTitleSection(BuildContext context) {
+    final c = context.colors;
+    return [
+      Text(
+        widget.isNew ? '配置数据源' : '编辑数据源',
+        style: TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w800,
+          color: c.textPrimary,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        _config.type.displayName,
+        style: TextStyle(fontSize: 12.5, color: c.textMuted),
+      ),
+    ];
+  }
+
+  /// 名称输入框。
+  Widget _buildNameField(BuildContext context) {
+    final c = context.colors;
+    return TextField(
+      controller: _nameCtrl,
+      style: TextStyle(color: c.textPrimary, fontSize: 14),
+      cursorColor: c.accent,
+      decoration: _dec(const ConfigField(
+        key: '__name',
+        label: '显示名称',
+      )),
+    );
+  }
+
+  /// 动态字段列表（普通字段明文 / secret 字段掩码态）。
+  List<Widget> _buildFields(BuildContext context) {
+    final c = context.colors;
+    return [
+      for (final f in _fields) ...[
+        if (!f.isSecret)
+          TextField(
+            controller: _plainCtrls[f.key],
+            style: TextStyle(color: c.textPrimary, fontSize: 14),
+            cursorColor: c.accent,
+            decoration: _dec(f),
+          )
+        else
+          TextField(
+            controller: _secretCtrls[f.key],
+            obscureText: !(_secretVisible[f.key] ?? false),
+            style: TextStyle(color: c.textPrimary, fontSize: 14),
+            cursorColor: c.accent,
+            decoration: _dec(f).copyWith(
+              helperText: (_secretFilled[f.key] ?? false)
+                  ? '已保存（重新输入可覆盖）'
+                  : null,
+            ),
+          ),
+        const SizedBox(height: 10),
+      ],
+    ];
+  }
+
+  /// 底部操作区：测试连接 / 保存（新增为添加）。
+  Widget _buildActionButtons(BuildContext context) {
+    final c = context.colors;
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: _busy ? null : _testConnection,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: c.accent,
+              side: BorderSide(color: c.accent, width: 1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            icon: const Icon(Icons.wifi_tethering_rounded, size: 17),
+            label: const Text('测试连接',
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: FilledButton(
+            onPressed: _busy ? null : _save,
+            style: FilledButton.styleFrom(
+              backgroundColor: c.accent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: Text(
+              widget.isNew ? '添加' : '保存',
+              style: const TextStyle(
+                  fontSize: 13.5, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 删除入口（仅编辑态显示）。
+  Widget _buildDeleteButton(BuildContext context) {
+    return Center(
+      child: TextButton.icon(
+        onPressed: _busy ? null : _delete,
+        style: TextButton.styleFrom(
+          foregroundColor: context.colors.danger,
+          padding: const EdgeInsets.symmetric(vertical: 6),
+        ),
+        icon: const Icon(Icons.delete_outline_rounded, size: 16),
+        label: const Text('删除此数据源',
+            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
       ),
     );
   }

@@ -81,29 +81,7 @@ class QuickSearchPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.travel_explore_rounded, size: 18, color: c.accent),
-              const SizedBox(width: 6),
-              Text(
-                '快速检索',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: c.textPrimary,
-                ),
-              ),
-              const Spacer(),
-              Flexible(
-                child: Text(
-                  '数据源：$sourceName',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, color: c.textMuted),
-                ),
-              ),
-            ],
-          ),
+          _buildHeader(context),
           const SizedBox(height: 10),
           ValueListenableBuilder<TextEditingValue>(
             valueListenable: controller,
@@ -148,6 +126,34 @@ class QuickSearchPanel extends StatelessWidget {
           _body(context),
         ],
       ),
+    );
+  }
+
+  /// 标题行：图标 + 「快速检索」+ 数据源名
+  Widget _buildHeader(BuildContext context) {
+    final c = context.colors;
+    return Row(
+      children: [
+        Icon(Icons.travel_explore_rounded, size: 18, color: c.accent),
+        const SizedBox(width: 6),
+        Text(
+          '快速检索',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: c.textPrimary,
+          ),
+        ),
+        const Spacer(),
+        Flexible(
+          child: Text(
+            '数据源：$sourceName',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11, color: c.textMuted),
+          ),
+        ),
+      ],
     );
   }
 

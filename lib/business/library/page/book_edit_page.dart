@@ -243,68 +243,7 @@ class _BookEditPageState extends State<BookEditPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.colors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        centerTitle: true,
-        title: Text(
-          _c.isAddMode ? AppStrings.addBook : '修改书籍记录',
-          style: TextStyle(
-            color: context.colors.textPrimary,
-            fontSize: 16.5,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        leadingWidth: 68,
-        leading: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => Navigator.of(context).pop(),
-          child: Center(
-            child: Text(
-              '取消',
-              style: TextStyle(
-                color: context.colors.textSecondary,
-                fontSize: 15,
-              ),
-            ),
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Material(
-              color: _c.saving
-                  ? context.colors.accent.withOpacity(0.5)
-                  : context.colors.accent,
-              borderRadius: BorderRadius.circular(18),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: _c.saving ? null : _save,
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                  child: _c.saving
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          '保存',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(),
       body: !_c.isAddMode && _c.notFound
           ? Center(
               child: Text('未找到该书',
@@ -344,6 +283,70 @@ class _BookEditPageState extends State<BookEditPage> {
     );
   }
 
+  /// 顶部导航栏：标题 + 取消（左）与保存（右，含加载态）。
+  AppBar _buildAppBar() {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      centerTitle: true,
+      title: Text(
+        _c.isAddMode ? AppStrings.addBook : '修改书籍记录',
+        style: TextStyle(
+          color: context.colors.textPrimary,
+          fontSize: 16.5,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      leadingWidth: 68,
+      leading: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => Navigator.of(context).pop(),
+        child: Center(
+          child: Text(
+            '取消',
+            style: TextStyle(
+              color: context.colors.textSecondary,
+              fontSize: 15,
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: Material(
+            color: _c.saving
+                ? context.colors.accent.withOpacity(0.5)
+                : context.colors.accent,
+            borderRadius: BorderRadius.circular(18),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: _c.saving ? null : _save,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                child: _c.saving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        '保存',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
   // ---------- 通用卡片容器 ----------
 
   Widget _card({required Widget child}) {
@@ -367,90 +370,97 @@ class _BookEditPageState extends State<BookEditPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 封面（点按更换）
-          Tooltip(
-            message: '更换封面',
-            child: GestureDetector(
-              onTap: _openCoverMenu,
-              child: SizedBox(
-                width: 88,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  // H4：封面预览实时跟随书名输入，但只重建封面本身
-                  child: ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _c.titleCtrl,
-                    builder: (_, value, __) {
-                      final title = value.text.trim();
-                      return MediaCover(
-                        media: _c.previewCoverMedia,
-                        pendingFile: _c.pendingCoverFile,
-                        title: title.isEmpty ? '书籍' : title,
-                        emoji: emoji,
-                        hue: hue,
-                        aspectRatio: 3 / 4,
-                        borderRadius: 0,
-                        fontSize: 26,
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ),
+          _buildCoverTile(hue, emoji),
           const SizedBox(width: 14),
-          // 书名 / 作者 / 标签
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _c.titleCtrl,
-                  style: TextStyle(
-                    color: context.colors.textPrimary,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  cursorColor: context.colors.accent,
-                  decoration: _borderless('输入书名', 16),
-                ),
-                const SizedBox(height: 2),
-                TextField(
-                  controller: _c.authorCtrl,
-                  style: TextStyle(
-                    color: context.colors.textSecondary,
-                    fontSize: 13.5,
-                  ),
-                  cursorColor: context.colors.accent,
-                  decoration: _borderless('输入作者', 13),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    // 出版社标签（检索回填或「出版社」行编辑后展示）
-                    ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _c.publisherCtrl,
-                      builder: (_, value, __) {
-                        final p = value.text.trim();
-                        return p.isEmpty
-                            ? const SizedBox.shrink()
-                            : _MetaChip(label: p);
-                      },
-                    ),
-                    _buildCategoryChipField(),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          _buildTitleAuthorColumn(),
         ],
       ),
     );
   }
 
+  /// 封面缩略图（点按更换，实时跟随书名）。
+  Widget _buildCoverTile(double hue, String emoji) {
+    return Tooltip(
+      message: '更换封面',
+      child: GestureDetector(
+        onTap: _openCoverMenu,
+        child: SizedBox(
+          width: 88,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            // H4：封面预览实时跟随书名输入，但只重建封面本身
+            child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _c.titleCtrl,
+              builder: (_, value, __) {
+                final title = value.text.trim();
+                return MediaCover(
+                  media: _c.previewCoverMedia,
+                  pendingFile: _c.pendingCoverFile,
+                  title: title.isEmpty ? '书籍' : title,
+                  emoji: emoji,
+                  hue: hue,
+                  aspectRatio: 3 / 4,
+                  borderRadius: 0,
+                  fontSize: 26,
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 书名 / 作者 / 出版社 / 分类标签列。
+  Widget _buildTitleAuthorColumn() {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _c.titleCtrl,
+            style: TextStyle(
+              color: context.colors.textPrimary,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+            ),
+            cursorColor: context.colors.accent,
+            decoration: _borderless('输入书名', 16),
+          ),
+          const SizedBox(height: 2),
+          TextField(
+            controller: _c.authorCtrl,
+            style: TextStyle(
+              color: context.colors.textSecondary,
+              fontSize: 13.5,
+            ),
+            cursorColor: context.colors.accent,
+            decoration: _borderless('输入作者', 13),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              // 出版社标签（检索回填或「出版社」行编辑后展示）
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _c.publisherCtrl,
+                builder: (_, value, __) {
+                  final p = value.text.trim();
+                  return p.isEmpty
+                      ? const SizedBox.shrink()
+                      : _MetaChip(label: p);
+                },
+              ),
+              _buildCategoryChipField(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
   /// 无边框输入装饰（卡片内书名 / 作者行）
   InputDecoration _borderless(String hint, double hintFontSize) {
     return InputDecoration(
@@ -484,76 +494,90 @@ class _BookEditPageState extends State<BookEditPage> {
       onSelected: (_) => _c.categoryFocus.unfocus(),
       // 注意：fieldViewBuilder 第 4 参数是 onFieldSubmitted（回车确认选中项），
       // 不是 onChanged！文本变化由 RawAutocomplete 通过 controller 监听自行响应。
-      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-          decoration: BoxDecoration(
-            color: context.colors.surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: context.colors.outline, width: 0.8),
-          ),
-          child: SizedBox(
-            width: 110,
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              onSubmitted: (_) => onFieldSubmitted(),
-              style: TextStyle(
-                color: context.colors.textPrimary,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-              ),
-              cursorColor: context.colors.accent,
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: '分类',
-                hintStyle: TextStyle(
-                    color: context.colors.textMuted,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-        );
-      },
-      optionsViewBuilder: (context, onSelected, options) {
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            color: context.colors.surface,
-            elevation: 6,
-            borderRadius: BorderRadius.circular(14),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 220, maxWidth: 340),
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                shrinkWrap: true,
-                itemCount: options.length,
-                itemBuilder: (context, i) {
-                  final option = options.elementAt(i);
-                  return InkWell(
-                    onTap: () => onSelected(option),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      child: Text(
-                        option,
-                        style: TextStyle(
-                            color: context.colors.textPrimary, fontSize: 14),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-      },
+      fieldViewBuilder: _buildCategoryFieldView,
+      optionsViewBuilder: _buildCategoryOptionsView,
     );
   }
 
+  /// 分类输入框（RawAutocomplete 的 fieldViewBuilder）。
+  Widget _buildCategoryFieldView(
+    BuildContext context,
+    TextEditingController controller,
+    FocusNode focusNode,
+    void Function() onFieldSubmitted,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.colors.outline, width: 0.8),
+      ),
+      child: SizedBox(
+        width: 110,
+        child: TextField(
+          controller: controller,
+          focusNode: focusNode,
+          onSubmitted: (_) => onFieldSubmitted(),
+          style: TextStyle(
+            color: context.colors.textPrimary,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+          ),
+          cursorColor: context.colors.accent,
+          decoration: InputDecoration(
+            isDense: true,
+            hintText: '分类',
+            hintStyle: TextStyle(
+                color: context.colors.textMuted,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600),
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 分类联想下拉（RawAutocomplete 的 optionsViewBuilder）。
+  Widget _buildCategoryOptionsView(
+    BuildContext context,
+    AutocompleteOnSelected<String> onSelected,
+    Iterable<String> options,
+  ) {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Material(
+        color: context.colors.surface,
+        elevation: 6,
+        borderRadius: BorderRadius.circular(14),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 220, maxWidth: 340),
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            shrinkWrap: true,
+            itemCount: options.length,
+            itemBuilder: (context, i) {
+              final option = options.elementAt(i);
+              return InkWell(
+                onTap: () => onSelected(option),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Text(
+                    option,
+                    style: TextStyle(
+                        color: context.colors.textPrimary, fontSize: 14),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
   // ---------- 卡片 2：我的评分 ----------
 
   Widget _buildRatingCard() {

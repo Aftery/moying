@@ -93,217 +93,77 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                 style: TextStyle(color: context.colors.textMuted),
               ),
             )
-          : SafeArea(
-              top: false,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 4, 24, 40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildHeaderCard(movie),
-                    const SizedBox(height: 26),
-                    // ---------- 电影简介 ----------
-                    if (movie.description != null &&
-                        movie.description!.isNotEmpty) ...[
-                      _sectionTitle(context, '电影简介'),
-                      const SizedBox(height: 10),
-                      ExpandableSynopsis(
-                        text: movie.description!,
-                        boxed: true,
-                      ),
-                      const SizedBox(height: 26),
-                    ],
-                    // ---------- 补充元数据卡（紧接简介下方，4 项）----------
-                    _buildMetaCard(movie),
-                    const SizedBox(height: 26),
-                    // ---------- 主创 / 演员（横滑 + 全部入口）----------
-                    if (castItems.isNotEmpty) ...[
-                      _sectionTitle(
-                        context,
-                        '主创 / 演员',
-                        actionLabel: '全部 ${castItems.length}',
-                        onAction: () => _openCastSheet(context, movie, castItems),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildCastRow(castItems),
-                      const SizedBox(height: 26),
-                    ],
-                    // ---------- 我的影评 ----------
-                    _sectionTitle(context, AppStrings.myReview),
-                    const SizedBox(height: 10),
-                    _buildReviewCard(movie),
-                    const SizedBox(height: 26),
-                    // ---------- 剧照（横滑 + 全部入口）----------
-                    _sectionTitle(
-                      context,
-                      '剧照',
-                      actionLabel: stills.isEmpty ? null : '全部 ${stills.length}',
-                      onAction:
-                          stills.isEmpty ? null : () => _openStillsPage(movie),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildStillsRow(stills),
-                  ],
-                ),
+          : _buildBody(movie, castItems, stills),
+    );
+  }
+
+  // ---------- 页面主体（SafeArea + 滚动列）----------
+
+  Widget _buildBody(
+    Movie movie,
+    List<CastItem> castItems,
+    List<MediaRef> stills,
+  ) {
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 4, 24, 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _MovieHeaderCard(movie: movie),
+            const SizedBox(height: 26),
+            // ---------- 电影简介 ----------
+            if (movie.description != null &&
+                movie.description!.isNotEmpty) ...[
+              _sectionTitle(context, '电影简介'),
+              const SizedBox(height: 10),
+              ExpandableSynopsis(
+                text: movie.description!,
+                boxed: true,
               ),
-            ),
-    );
-  }
-
-  // ---------- 头部：海报 + 标题 / 英文名 / 导演 / 我的评分 / 类型标签 ----------
-
-  Widget _buildHeaderCard(Movie movie) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: context.colors.surfaceHigh,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 海报
-          Container(
-            width: 116,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.45),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: MediaCover(
-                media: movie.poster,
-                title: movie.title,
-                emoji: movie.emoji ?? '',
-                hue: movie.coverHue,
-                aspectRatio: 3 / 4,
-                borderRadius: 0,
-                fontSize: 44,
+              const SizedBox(height: 26),
+            ],
+            // ---------- 补充元数据卡（紧接简介下方，4 项）----------
+            _buildMetaCard(movie),
+            const SizedBox(height: 26),
+            // ---------- 主创 / 演员（横滑 + 全部入口）----------
+            if (castItems.isNotEmpty) ...[
+              _sectionTitle(
+                context,
+                '主创 / 演员',
+                actionLabel: '全部 ${castItems.length}',
+                onAction: () => _openCastSheet(context, movie, castItems),
               ),
+              const SizedBox(height: 12),
+              _buildCastRow(castItems),
+              const SizedBox(height: 26),
+            ],
+            // ---------- 我的影评 ----------
+            _sectionTitle(context, AppStrings.myReview),
+            const SizedBox(height: 10),
+            _MovieReviewCard(
+              movie: movie,
+              onEdit: () => _openEditor(context),
             ),
-          ),
-          const SizedBox(width: 16),
-          // 右侧信息列
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  movie.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: context.colors.textPrimary,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
-                    height: 1.25,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                if (movie.englishTitle != null &&
-                    movie.englishTitle!.isNotEmpty)
-                  Text(
-                    movie.englishTitle!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: context.colors.textSecondary,
-                      fontSize: 13,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                if (movie.director != null && movie.director!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    movie.director!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: context.colors.textMuted,
-                      fontSize: 12.5,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                _buildRatingCard(movie),
-                const SizedBox(height: 12),
-                // 类型标签
-                if (movie.genres != null && movie.genres!.isNotEmpty)
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final g in movie.genres!) InfoChip(label: g),
-                    ],
-                  ),
-              ],
+            const SizedBox(height: 26),
+            // ---------- 剧照（横滑 + 全部入口）----------
+            _sectionTitle(
+              context,
+              '剧照',
+              actionLabel: stills.isEmpty ? null : '全部 ${stills.length}',
+              onAction:
+                  stills.isEmpty ? null : () => _openStillsPage(movie),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            _buildStillsRow(stills),
+          ],
+        ),
       ),
     );
   }
 
-  // ---------- 我的评分卡 ----------
 
-  Widget _buildRatingCard(Movie movie) {
-    final rating = movie.rating;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: context.colors.surface,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: rating == null
-          ? Row(
-              children: [
-                Icon(Icons.star_border_rounded,
-                    size: 16, color: context.colors.textMuted),
-                const SizedBox(width: 6),
-                Text(
-                  AppStrings.unrated,
-                  style: TextStyle(
-                      color: context.colors.textMuted, fontSize: 12.5),
-                ),
-              ],
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppStrings.myRating,
-                  style: TextStyle(
-                    color: context.colors.success,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Row(
-                  children: [
-                    RatingStars(rating: rating, size: 19),
-                    const SizedBox(width: 8),
-                    Text(
-                      rating.toStringAsFixed(1),
-                      style: TextStyle(
-                        color: context.colors.star,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-    );
-  }
 
   // ---------- 补充元数据卡（3 列单行）----------
   // 三项：看过日期 / 上映时间 / 片长（剧情类型已上移至头部标签）
@@ -471,94 +331,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     return null;
   }
 
-  // ---------- 我的影评卡 ----------
-
-  Widget _buildReviewCard(Movie movie) {
-    final review = movie.review;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.colors.surfaceHigh,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.colors.outline, width: 0.7),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 顶部行：评分星星 + 编辑影评按钮
-          Row(
-            children: [
-              Expanded(
-                child: movie.hasRating
-                    ? Row(
-                        children: [
-                          RatingStars(rating: movie.rating!, size: 18),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${movie.rating!.toStringAsFixed(1)}/5',
-                            style:  TextStyle(
-                              color: context.colors.textSecondary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      )
-                    :  Text(
-                        '尚未评分',
-                        style: TextStyle(
-                            color: context.colors.textMuted, fontSize: 13),
-                      ),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => _openEditor(context),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: context.colors.accent,
-                  side:  BorderSide(
-                      color: context.colors.accent, width: 1),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
-                  minimumSize: const Size(0, 32),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                icon: const Icon(Icons.edit_outlined, size: 15),
-                label: const Text('编辑影评',
-                    style: TextStyle(
-                        fontSize: 12.5, fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          // 影评文本
-          if (review == null || review.isEmpty)
-             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.edit_note_rounded,
-                    size: 16, color: context.colors.textMuted),
-                const SizedBox(width: 6),
-                Text(
-                  '还没有写下影评',
-                  style: TextStyle(color: context.colors.textMuted, fontSize: 13),
-                ),
-              ],
-            )
-          else
-            Text(
-              review,
-              style:  TextStyle(
-                color: context.colors.textSecondary,
-                fontSize: 14,
-                height: 1.7,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 
   // ---------- 剧照（横向滚动；真实 TMDB 剧照，无数据时显示空态）----------
 
@@ -676,6 +448,271 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// 电影详情头部卡：海报 + 标题 / 英文名 / 导演 / 我的评分 / 类型标签。
+class _MovieHeaderCard extends StatelessWidget {
+  const _MovieHeaderCard({required this.movie});
+
+  final Movie movie;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: context.colors.surfaceHigh,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildPoster(context),
+          const SizedBox(width: 16),
+          Expanded(child: _buildInfo(context)),
+        ],
+      ),
+    );
+  }
+
+  /// 左侧海报（带阴影圆角裁切）。
+  Widget _buildPoster(BuildContext context) {
+    return Container(
+      width: 116,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.45),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: MediaCover(
+          media: movie.poster,
+          title: movie.title,
+          emoji: movie.emoji ?? '',
+          hue: movie.coverHue,
+          aspectRatio: 3 / 4,
+          borderRadius: 0,
+          fontSize: 44,
+        ),
+      ),
+    );
+  }
+
+  /// 右侧信息列：标题 / 英文名 / 导演 / 评分卡 / 类型标签。
+  Widget _buildInfo(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          movie.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: context.colors.textPrimary,
+            fontSize: 21,
+            fontWeight: FontWeight.w800,
+            height: 1.25,
+          ),
+        ),
+        const SizedBox(height: 5),
+        if (movie.englishTitle != null && movie.englishTitle!.isNotEmpty)
+          Text(
+            movie.englishTitle!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: context.colors.textSecondary,
+              fontSize: 13,
+              letterSpacing: 0.3,
+            ),
+          ),
+        if (movie.director != null && movie.director!.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            movie.director!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: context.colors.textMuted,
+              fontSize: 12.5,
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        _buildRatingCard(context),
+        const SizedBox(height: 12),
+        // 类型标签
+        if (movie.genres != null && movie.genres!.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final g in movie.genres!) InfoChip(label: g),
+            ],
+          ),
+      ],
+    );
+  }
+
+  /// 我的评分卡（未评分显示占位提示）。
+  Widget _buildRatingCard(BuildContext context) {
+    final rating = movie.rating;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: rating == null
+          ? Row(
+              children: [
+                Icon(Icons.star_border_rounded,
+                    size: 16, color: context.colors.textMuted),
+                const SizedBox(width: 6),
+                Text(
+                  AppStrings.unrated,
+                  style: TextStyle(
+                      color: context.colors.textMuted, fontSize: 12.5),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppStrings.myRating,
+                  style: TextStyle(
+                    color: context.colors.success,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Row(
+                  children: [
+                    RatingStars(rating: rating, size: 19),
+                    const SizedBox(width: 8),
+                    Text(
+                      rating.toStringAsFixed(1),
+                      style: TextStyle(
+                        color: context.colors.star,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+/// 我的影评卡：评分概览 + 编辑入口 + 影评正文。
+class _MovieReviewCard extends StatelessWidget {
+  const _MovieReviewCard({
+    required this.movie,
+    required this.onEdit,
+  });
+
+  final Movie movie;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final review = movie.review;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.colors.surfaceHigh,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.colors.outline, width: 0.7),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTopRow(context),
+          const SizedBox(height: 14),
+          // 影评文本
+          if (review == null || review.isEmpty)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.edit_note_rounded,
+                    size: 16, color: context.colors.textMuted),
+                const SizedBox(width: 6),
+                Text(
+                  '还没有写下影评',
+                  style: TextStyle(color: context.colors.textMuted, fontSize: 13),
+                ),
+              ],
+            )
+          else
+            Text(
+              review,
+              style: TextStyle(
+                color: context.colors.textSecondary,
+                fontSize: 14,
+                height: 1.7,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 顶部行：评分星星 + 「编辑影评」按钮。
+  Widget _buildTopRow(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: movie.hasRating
+              ? Row(
+                  children: [
+                    RatingStars(rating: movie.rating!, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${movie.rating!.toStringAsFixed(1)}/5',
+                      style: TextStyle(
+                        color: context.colors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                )
+              : Text(
+                  '尚未评分',
+                  style: TextStyle(
+                      color: context.colors.textMuted, fontSize: 13),
+                ),
+        ),
+        OutlinedButton.icon(
+          onPressed: onEdit,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: context.colors.accent,
+            side: BorderSide(color: context.colors.accent, width: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            minimumSize: const Size(0, 32),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          icon: const Icon(Icons.edit_outlined, size: 15),
+          label: const Text('编辑影评',
+              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+        ),
       ],
     );
   }
