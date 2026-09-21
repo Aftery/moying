@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../component/theme/app_palette.dart';
+import '../../../foundation/constants/app_strings.dart';
 import '../model/book.dart';
 import '../../../component/media/media_cover.dart';
 import 'rating_stars.dart';
@@ -104,7 +105,7 @@ class BookListCard extends StatelessWidget {
                         RatingStars(rating: book.rating!, size: 14)
                       else
                          Text(
-                          '未评分',
+                          AppStrings.unrated,
                           style: TextStyle(
                             fontSize: 11,
                             color: context.colors.textMuted,

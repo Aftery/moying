@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../../../foundation/constants/app_strings.dart';
 import '../../model/data_source.dart';
 import '../data_source_interface.dart';
 import '../../../../foundation/network/http_retry.dart';
@@ -74,12 +75,12 @@ class OpenLibraryDataSource implements BookDataSource {
       resp = await getWithRetry(_client, uri);
     } on TimeoutException {
       throw const DataSourceException(
-        '请求超时，请检查网络连接后重试',
+        AppStrings.requestTimeout,
         kind: DataSourceErrorKind.timeout,
       );
     } on Exception catch (_) {
       throw const DataSourceException(
-        '网络请求失败，请检查网络连接',
+        AppStrings.networkError,
         kind: DataSourceErrorKind.network,
       );
     }

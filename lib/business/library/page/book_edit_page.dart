@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../component/media/media_cover.dart';
 import '../../../component/theme/app_palette.dart';
+import '../../../foundation/constants/app_strings.dart';
 import '../../../foundation/utils/date_format.dart';
 import '../../data_source/model/data_source.dart';
 import '../../data_source/service/book_category_mapper.dart';
@@ -102,7 +103,7 @@ class _BookEditPageState extends State<BookEditPage> {
     } on Object catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('保存失败：$e')),
+        SnackBar(content: Text(AppStrings.saveFailed(e))),
       );
     } finally {
       if (mounted) setState(() => _c.saving = false);
@@ -246,7 +247,7 @@ class _BookEditPageState extends State<BookEditPage> {
         backgroundColor: Colors.transparent,
         centerTitle: true,
         title: Text(
-          _c.isAddMode ? '添加图书' : '修改书籍记录',
+          _c.isAddMode ? AppStrings.addBook : '修改书籍记录',
           style: TextStyle(
             color: context.colors.textPrimary,
             fontSize: 16.5,
@@ -563,7 +564,7 @@ class _BookEditPageState extends State<BookEditPage> {
           Row(
             children: [
               Text(
-                '我的评分',
+                AppStrings.myRating,
                 style: TextStyle(
                   color: context.colors.textPrimary,
                   fontSize: 15,
@@ -572,7 +573,7 @@ class _BookEditPageState extends State<BookEditPage> {
               ),
               const Spacer(),
               Text(
-                _c.rating > 0 ? '${_c.rating.toStringAsFixed(1)} 分' : '未评分',
+                _c.rating > 0 ? '${_c.rating.toStringAsFixed(1)} 分' : AppStrings.unrated,
                 style: TextStyle(
                   color: _c.rating > 0
                       ? context.colors.star
@@ -753,7 +754,7 @@ class _BookEditPageState extends State<BookEditPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _dateField(
-              label: '开始阅读',
+              label: AppStrings.readingStart,
               date: _c.startedAt,
               hint: '默认添加时间，点击选择',
               onTap: () => _pickDate(isFinished: false),
@@ -764,7 +765,7 @@ class _BookEditPageState extends State<BookEditPage> {
             if (_c.progressAtLeastFull || _c.finishedAt != null) ...[
               const SizedBox(height: 10),
               _dateField(
-                label: '阅读完成',
+                label: AppStrings.readingFinished,
                 date: _c.finishedAt,
                 hint: '填满总页数时自动记录，点击修改',
                 onTap: () => _pickDate(isFinished: true),
@@ -869,14 +870,14 @@ class _BookEditPageState extends State<BookEditPage> {
           _metaDivider(),
           _metaRow(
             icon: Icons.calendar_today_rounded,
-            label: '出版年份',
+            label: AppStrings.publishYear,
             controller: _c.yearCtrl,
             onTap: _editYear,
           ),
           _metaDivider(),
           _metaRow(
             icon: Icons.tag_rounded,
-            label: 'ISBN / 标识',
+            label: AppStrings.isbnLabel,
             controller: _c.isbnCtrl,
             onTap: _editIsbn,
           ),
@@ -985,7 +986,7 @@ class _BookEditPageState extends State<BookEditPage> {
 
   Future<void> _editYear() async {
     final r = await _promptTextDialog(
-      title: '出版年份',
+      title: AppStrings.publishYear,
       initial: _c.yearCtrl.text,
       hint: '如 2011',
       keyboardType: TextInputType.number,
@@ -1004,7 +1005,7 @@ class _BookEditPageState extends State<BookEditPage> {
 
   Future<void> _editIsbn() async {
     final r = await _promptTextDialog(
-      title: 'ISBN / 标识',
+      title: AppStrings.isbnLabel,
       initial: _c.isbnCtrl.text,
       hint: 'ISBN-13 / ISBN-10',
       allowClear: true,
@@ -1021,7 +1022,7 @@ class _BookEditPageState extends State<BookEditPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '内容简介',
+            AppStrings.synopsis,
             style: TextStyle(
               color: context.colors.textPrimary,
               fontSize: 15,
@@ -1046,7 +1047,7 @@ class _BookEditPageState extends State<BookEditPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '阅读感悟 & 划线',
+            AppStrings.bookNotes,
             style: TextStyle(
               color: context.colors.textPrimary,
               fontSize: 15,
@@ -1353,7 +1354,7 @@ class _BookEditPageState extends State<BookEditPage> {
     final isbn = _c.isbnCtrl.text.trim();
     if (ds == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('未配置书籍数据源，无法联网查找封面')),
+        const SnackBar(content: Text(AppStrings.noBookSourceForCover)),
       );
       return;
     }
@@ -1413,7 +1414,7 @@ class _BookEditPageState extends State<BookEditPage> {
   /// 弹出 URL 输入框；非空则设为网络封面
   Future<void> _promptCoverUrl() async {
     final result = await _promptTextDialog(
-      title: '网络图片链接',
+      title: AppStrings.networkImageUrl,
       initial: _c.coverUrlCtrl.text,
       hint: 'https://…',
       keyboardType: TextInputType.url,

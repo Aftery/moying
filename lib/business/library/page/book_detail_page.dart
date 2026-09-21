@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../component/theme/app_palette.dart';
+import '../../../foundation/constants/app_strings.dart';
 import '../model/edit_result.dart';
 import '../model/book.dart';
 import '../view_model/library_provider.dart';
@@ -84,13 +85,13 @@ class BookDetailPage extends StatelessWidget {
                     // ---------- 内容简介 ----------
                     if (book.description != null &&
                         book.description!.isNotEmpty) ...[
-                      _sectionTitle(context, '内容简介'),
+                      _sectionTitle(context, AppStrings.synopsis),
                       const SizedBox(height: 10),
                       ExpandableSynopsis(text: book.description!),
                       const SizedBox(height: 24),
                     ],
                     // ---------- 阅读感悟 & 划线 ----------
-                    _sectionTitle(context, '阅读感悟 & 划线'),
+                    _sectionTitle(context, AppStrings.bookNotes),
                     const SizedBox(height: 10),
                     _buildNotesCard(context, book),
                   ],
@@ -221,7 +222,7 @@ class BookDetailPage extends StatelessWidget {
                     size: 16, color: context.colors.textMuted),
                 const SizedBox(width: 6),
                 Text(
-                  '未评分',
+                  AppStrings.unrated,
                   style: TextStyle(color: context.colors.textMuted, fontSize: 12.5),
                 ),
               ],
@@ -230,7 +231,7 @@ class BookDetailPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '我的评分',
+                  AppStrings.myRating,
                   style: TextStyle(
                     color: context.colors.success,
                     fontSize: 11.5,
@@ -358,7 +359,7 @@ class BookDetailPage extends StatelessWidget {
           context: context,
           icon: Icons.calendar_today_rounded,
           color: context.colors.accent,
-          label: '出版年份',
+          label: AppStrings.publishYear,
           value: book.year == null ? '—' : '${book.year}',
         ),
         InfoCell(
@@ -372,7 +373,7 @@ class BookDetailPage extends StatelessWidget {
           context: context,
           icon: Icons.tag_rounded,
           color: context.colors.accent,
-          label: 'ISBN / 标识',
+          label: AppStrings.isbnLabel,
           value: (book.isbn == null || book.isbn!.isEmpty) ? '—' : book.isbn!,
         ),
       ],
@@ -390,14 +391,14 @@ class BookDetailPage extends StatelessWidget {
     if (start != null) {
       rows.add(_timeRow(context,
         icon: Icons.play_circle_outline_rounded,
-        label: '开始阅读',
+        label: AppStrings.readingStart,
         value: _fmtYmd(start),
       ));
     }
     if (finish != null) {
       rows.add(_timeRow(context,
         icon: Icons.check_circle_outline_rounded,
-        label: '阅读完成',
+        label: AppStrings.readingFinished,
         value: _fmtYmd(finish),
         trailing: start != null ? '历时 ${book.readingDays} 天' : null,
       ));

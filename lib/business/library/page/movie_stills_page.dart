@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../component/theme/app_palette.dart';
 import '../../../component/media/model/media_ref.dart';
 import '../../../component/media/media_cover.dart';
+import '../../../foundation/constants/app_strings.dart';
 
 /// 剧照与海报全量页（详情页「剧照 → 全部」入口）
 ///
@@ -108,7 +109,7 @@ class _MovieStillsPageState extends State<MovieStillsPage>
               controller: _tab,
               children: [
                 _buildGrid(_all, aspect: 16 / 10),
-                _buildGrid(widget.backdrops, aspect: 16 / 10, empty: '暂无剧照'),
+                _buildGrid(widget.backdrops, aspect: 16 / 10, empty: AppStrings.noStills),
                 _buildGrid(widget.posters, aspect: 2 / 3, empty: '暂无海报'),
               ],
             ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../component/theme/app_palette.dart';
+import '../../../foundation/constants/app_strings.dart';
 import '../model/actor.dart';
 import '../../../component/media/model/media_ref.dart';
 import '../model/movie.dart';
@@ -181,7 +182,7 @@ class ActorDetailPage extends StatelessWidget {
             ? null
             : [
                 IconButton(
-                  tooltip: '编辑资料',
+                  tooltip: AppStrings.editProfile,
                   icon:  Icon(Icons.edit_rounded,
                       color: context.colors.textPrimary),
                   onPressed: () => _openEditor(context, lib, actor),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../component/theme/app_palette.dart';
+import '../../../foundation/constants/app_strings.dart';
 import '../model/edit_result.dart';
 import '../model/book.dart';
 import '../view_model/library_provider.dart';
@@ -88,7 +89,7 @@ class _BooksPageState extends State<BooksPage> {
         elevation: 4,
         icon: const Icon(Icons.add_rounded),
         label: const Text(
-          '添加图书',
+          AppStrings.addBook,
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
@@ -240,7 +241,7 @@ class _BooksPageState extends State<BooksPage> {
                 _statusFilter = null;
                 _categoryFilter = null;
               }),
-              child: const Text('清除筛选条件'),
+              child: const Text(AppStrings.clearFilters),
             ),
           ],
         ],

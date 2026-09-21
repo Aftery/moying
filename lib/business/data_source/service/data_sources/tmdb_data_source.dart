@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../../../foundation/constants/app_strings.dart';
 import '../../model/data_source.dart';
 import '../data_source_interface.dart';
 
@@ -30,7 +31,7 @@ class TmdbDataSource implements MovieDataSource {
   /// 请求超时（H3：弱网下不设超时会让 UI 永久转圈，无任何恢复路径）
   static const Duration _kTimeout = Duration(seconds: 15);
   static Never _onTimeout() => throw const DataSourceException(
-        '请求超时，请检查网络连接后重试',
+        AppStrings.requestTimeout,
         kind: DataSourceErrorKind.timeout,
       );
 
@@ -104,7 +105,7 @@ class TmdbDataSource implements MovieDataSource {
     } on DataSourceException {
       rethrow;
     } on Exception catch (_) {
-      throw const DataSourceException('网络请求失败，请检查网络连接');
+      throw const DataSourceException(AppStrings.networkError);
     }
     if (resp.statusCode == 401) {
       throw const DataSourceException(

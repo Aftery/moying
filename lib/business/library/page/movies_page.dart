@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../component/theme/app_palette.dart';
+import '../../../foundation/constants/app_strings.dart';
 import '../model/edit_result.dart';
 import '../model/movie.dart';
 import '../view_model/library_provider.dart';
@@ -167,7 +168,7 @@ class _MoviesPageState extends State<MoviesPage> {
         elevation: 4,
         icon: const Icon(Icons.add_rounded),
         label: const Text(
-          '添加电影',
+          AppStrings.addMovie,
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
@@ -233,7 +234,7 @@ class _MoviesPageState extends State<MoviesPage> {
                 _searchCtrl.clear();
                 _genreFilter = null;
               }),
-              child: const Text('清除筛选条件'),
+              child: const Text(AppStrings.clearFilters),
             ),
           ],
         ],

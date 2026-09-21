@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../component/theme/app_palette.dart';
+import '../../../foundation/constants/app_strings.dart';
 import '../model/sync_settings.dart';
 import '../../data_source/view_model/data_source_provider.dart';
 import '../view_model/sync_provider.dart';
@@ -157,7 +158,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
       }
       // 用户取消选位置：不提示
     } on Object catch (e) {
-      _toast('导出失败：$e', error: true);
+      _toast(AppStrings.exportFailed(e), error: true);
     }
   }
 

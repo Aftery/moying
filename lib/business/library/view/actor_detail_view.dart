@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../component/theme/app_palette.dart';
 import '../../../component/media/model/media_ref.dart';
+import '../../../foundation/constants/app_strings.dart';
 import '../view_model/library_provider.dart';
 import '../../../component/media/media_cover.dart';
 
@@ -229,7 +230,7 @@ class _ActorEditDialogState extends State<ActorEditDialog> {
               style:
                    TextStyle(color: context.colors.textPrimary, fontSize: 13),
               cursorColor: context.colors.accent,
-              decoration: _dec('网络头像链接', 'https://…（可选）'),
+              decoration: _dec(AppStrings.networkAvatarUrl, 'https://…（可选）'),
             ),
             const SizedBox(height: 10),
             TextField(

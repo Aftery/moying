@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../component/media/media_cover.dart';
 import '../../../component/theme/app_palette.dart';
+import '../../../foundation/constants/app_strings.dart';
 import '../../../foundation/utils/date_format.dart';
 import '../../data_source/model/data_source.dart';
 import '../../data_source/view_model/data_source_provider.dart';
@@ -159,7 +160,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
     } on Object catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('保存失败：$e')),
+        SnackBar(content: Text(AppStrings.saveFailed(e))),
       );
     } finally {
       if (mounted) setState(() => _c.saving = false);
@@ -235,7 +236,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
-        title: Text(_c.isEditMode ? '修改电影' : '添加电影'),
+        title: Text(_c.isEditMode ? '修改电影' : AppStrings.addMovie),
         backgroundColor: Colors.transparent,
       ),
       body: _c.isEditMode && _c.notFound
@@ -279,7 +280,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
               const EditSectionTitle('上映与观影'),
               const SizedBox(height: 10),
               _buildDateField(
-                label: '上映时间',
+                label: AppStrings.releaseDate,
                 icon: Icons.calendar_month_rounded,
                 value: _fmtDate(_c.releaseDate),
                 onTap: () => _pickDate(
@@ -331,7 +332,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
               const SizedBox(height: 10),
               _buildCastEditor(),
               const SizedBox(height: 26),
-              const EditSectionTitle('我的影评'),
+              const EditSectionTitle(AppStrings.myReview),
               const SizedBox(height: 8),
               _buildReviewField(),
               const SizedBox(height: 32),
@@ -521,7 +522,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.colors.surfaceHigh,
-        title: Text('网络图片链接',
+        title: Text(AppStrings.networkImageUrl,
             style: TextStyle(
                 color: context.colors.textPrimary,
                 fontSize: 17,
@@ -854,13 +855,13 @@ class _MovieEditPageState extends State<MovieEditPage> {
           Row(
             children: [
               Text(
-                '我的评分',
+                AppStrings.myRating,
                 style: TextStyle(
                     color: context.colors.textSecondary, fontSize: 13),
               ),
               const Spacer(),
               Text(
-                _c.rating > 0 ? '${_c.rating.toStringAsFixed(1)} 分' : '未评分',
+                _c.rating > 0 ? '${_c.rating.toStringAsFixed(1)} 分' : AppStrings.unrated,
                 style: TextStyle(
                   color: _c.rating > 0
                       ? context.colors.star

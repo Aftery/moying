@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../component/theme/app_palette.dart';
 import '../../../component/media/model/media_ref.dart';
+import '../../../foundation/constants/app_strings.dart';
 import '../../stats/model/stats.dart';
 import '../model/user_profile.dart';
 import '../../library/view_model/library_provider.dart';
@@ -351,7 +352,7 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
               ),
               // 标题
               Text(
-                '编辑资料',
+                AppStrings.editProfile,
                 style: TextStyle(
                   color: context.colors.textPrimary,
                   fontSize: 17,
@@ -433,7 +434,7 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
                 style:
                     TextStyle(color: context.colors.textPrimary, fontSize: 13),
                 cursorColor: context.colors.accent,
-                decoration: _dec('网络头像链接', 'https://…（可选）'),
+                decoration: _dec(AppStrings.networkAvatarUrl, 'https://…（可选）'),
               ),
               const SizedBox(height: 10),
               TextField(

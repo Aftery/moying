@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../component/theme/app_palette.dart';
+import '../../../foundation/constants/app_strings.dart';
 import '../../../foundation/logger/app_logger.dart';
 import '../../../foundation/logger/log_exporter.dart';
 import '../view/error_log_view.dart';
@@ -35,7 +36,7 @@ class _ErrorLogPageState extends State<ErrorLogPage> {
       messenger.showSnackBar(SnackBar(content: Text('已生成日志文件：$saved')));
     } on Object catch (e) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text('导出失败：$e')));
+      messenger.showSnackBar(SnackBar(content: Text(AppStrings.exportFailed(e))));
     }
   }
 

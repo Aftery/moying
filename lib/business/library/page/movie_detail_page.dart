@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../component/theme/app_palette.dart';
+import '../../../foundation/constants/app_strings.dart';
 import '../model/edit_result.dart';
 import '../model/actor.dart';
 import '../model/cast_item.dart';
@@ -128,7 +129,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       const SizedBox(height: 26),
                     ],
                     // ---------- 我的影评 ----------
-                    _sectionTitle(context, '我的影评'),
+                    _sectionTitle(context, AppStrings.myReview),
                     const SizedBox(height: 10),
                     _buildReviewCard(movie),
                     const SizedBox(height: 26),
@@ -267,7 +268,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                     size: 16, color: context.colors.textMuted),
                 const SizedBox(width: 6),
                 Text(
-                  '未评分',
+                  AppStrings.unrated,
                   style: TextStyle(
                       color: context.colors.textMuted, fontSize: 12.5),
                 ),
@@ -277,7 +278,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '我的评分',
+                  AppStrings.myRating,
                   style: TextStyle(
                     color: context.colors.success,
                     fontSize: 11.5,
@@ -330,7 +331,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
           Expanded(
             child: MetaCell(
               icon: Icons.calendar_month_rounded,
-              label: '上映时间',
+              label: AppStrings.releaseDate,
               value: movie.releaseDateText.isEmpty
                   ? '${movie.year}'
                   : movie.releaseDateText,
@@ -572,7 +573,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
         ),
         child:  Center(
           child: Text(
-            '暂无剧照',
+            AppStrings.noStills,
             style: TextStyle(color: context.colors.textMuted, fontSize: 13),
           ),
         ),
