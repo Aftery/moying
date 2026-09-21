@@ -1,23 +1,22 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../component/media/media_cover.dart';
 import '../../../component/theme/app_palette.dart';
-import '../model/edit_result.dart';
-import '../model/book.dart';
+import '../../../foundation/utils/date_format.dart';
 import '../../data_source/model/data_source.dart';
-import '../../../component/media/model/media_ref.dart';
-import '../../data_source/view_model/data_source_provider.dart';
-import '../view_model/library_provider.dart';
 import '../../data_source/service/book_category_mapper.dart';
+import '../../data_source/view_model/data_source_provider.dart';
+import '../model/book.dart';
+import '../model/edit_result.dart';
 import '../view/edit_form_view.dart'
     show TextPromptDialog, showCoverActionSheet;
-import '../../../component/media/media_cover.dart';
 import '../view/quick_search_panel.dart';
 import '../view/star_rating_picker.dart';
+import '../view_model/book_edit_controller.dart';
+import '../view_model/library_provider.dart';
 
 /// 图书编辑 / 新增界面（双模式，v2 卡片式布局）
 ///
@@ -41,51 +40,11 @@ class BookEditPage extends StatefulWidget {
 }
 
 class _BookEditPageState extends State<BookEditPage> {
-  bool get _isAddMode => widget.bookId == null;
+  /// 表单状态与业务逻辑（M-5）：校验、页数 / 状态推导、封面解析、保存组装。
+  /// 放在控制器里，可脱离 Widget 树直接单测。
+  late final BookEditController _c;
 
-  /// 编辑模式下按 id 查找失败（书已被删除等）
-  bool _notFound = false;
-
-  /// 新增模式下随机生成的封面色相（仅生成一次，避免 rebuild 变色）
-  late final double _addCoverHue;
-
-  late final TextEditingController _titleCtrl;
-  late final TextEditingController _authorCtrl;
-  late final TextEditingController _isbnCtrl;
-  late final TextEditingController _pagesCtrl;
-
-  /// 已读页数（替代旧滑杆；0 = 想读，填满总页数 = 完成）
-  late final TextEditingController _currentPagesCtrl;
-
-  late final TextEditingController _publisherCtrl;
-  late final TextEditingController _yearCtrl;
-  late final TextEditingController _descCtrl;
-  late final TextEditingController _notesCtrl;
-  late double _rating;
-  late final TextEditingController _categoryCtrl;
-  late final FocusNode _categoryFocus;
-
-  /// 添加时间：编辑 = 原书值；新增 = 当前时刻（开始阅读时间的默认值来源）
-  late final DateTime _createdAt;
-
-  /// 开始阅读时间（想读状态隐藏字段，进入在读时默认为 [_createdAt]）
-  DateTime? _startedAt;
-
-  /// 阅读完成时间（填满总页数自动填今天；回退需保存时二次确认）
-  DateTime? _finishedAt;
-
-  /// 从相册选中、尚未复制进 images/ 的封面（保存时 attach）
-  File? _pendingCoverFile;
-
-  /// 网络封面地址输入（粘贴图片链接）
-  final TextEditingController _coverUrlCtrl = TextEditingController();
-
-  /// 封面是否被用户动过（选图/填 URL/移除）——决定保存时沿用原图还是覆盖
-  bool _coverEdited = false;
-
-  Book? _book;
-
-  // ---------- 快速检索（联网信息补全）状态 ----------
+  // ---------- 快速检索（联网信息补全）状态：与 Provider / BuildContext 强耦合，留在页面 ----------
 
   /// 搜索词输入
   final TextEditingController _searchCtrl = TextEditingController();
@@ -96,128 +55,48 @@ class _BookEditPageState extends State<BookEditPage> {
   /// 最近一次选中回填的搜索结果（收起态「已填充《书名》」标记）
   BookSearchResult? _filledResult;
 
-  /// 数据溯源标记（保存时写入 Book.source，如 'googleBooks:xyz'）
-  String? _sourceTag;
-
-  /// 防止双击重复提交
-  bool _saving = false;
-
   @override
   void initState() {
     super.initState();
-    _addCoverHue = Random().nextDouble() * 360;
-
-    if (_isAddMode) {
-      _notFound = false;
-      _book = null;
-      _createdAt = DateTime.now();
-    } else {
-      final provider = context.read<LibraryProvider>();
+    final String? bookId = widget.bookId;
+    Book? initial;
+    if (bookId != null) {
       final matches =
-          provider.books.where((b) => b.id == widget.bookId).toList();
-      _book = matches.isEmpty ? null : matches.first;
-      _notFound = _book == null;
-      _createdAt = _book?.createdAt ?? DateTime.now();
+          context.read<LibraryProvider>().books.where((b) => b.id == bookId);
+      initial = matches.isEmpty ? null : matches.first;
     }
-    _startedAt = _book?.startedAt;
-    _finishedAt = _book?.finishedAt;
-
-    _titleCtrl = TextEditingController(text: _book?.title ?? '');
-    _authorCtrl = TextEditingController(text: _book?.author ?? '');
-    _isbnCtrl = TextEditingController(text: _book?.isbn ?? '');
-    _pagesCtrl = TextEditingController(
-        text: _book == null ? '300' : '${_book!.totalPages}');
-    _currentPagesCtrl =
-        TextEditingController(text: '${_book?.currentPage ?? 0}');
-    _publisherCtrl = TextEditingController(text: _book?.publisher ?? '');
-    _yearCtrl = TextEditingController(
-        text: _book?.year == null ? '' : '${_book!.year}');
-    _descCtrl = TextEditingController(text: _book?.description ?? '');
-    _notesCtrl = TextEditingController(text: _book?.notes ?? '');
-    _rating = _book?.rating ?? 0;
-    _categoryCtrl = TextEditingController(text: _book?.category ?? '');
-    _categoryFocus = FocusNode();
+    _c = BookEditController(bookId: bookId, initialBook: initial);
+    // 控制器**内部推导**的变化（如页数变化自动补开始 / 完成时间）→ 重建页面；
+    // 用户在 UI 上的直接编辑仍由 setState 驱动，避免同一次改动重建两次。
+    _c.addListener(_onControllerChanged);
     // 快速检索框：listener 驱动搜索（可读 IME composing，见 _onSearchCtrlChanged）
     _searchCtrl.addListener(_onSearchCtrlChanged);
-    // 已读页数变化 → 自动补开始/完成时间（见 _onCurrentPagesChanged）
-    _currentPagesCtrl.addListener(_onCurrentPagesChanged);
+  }
+
+  /// 控制器内部推导引起的变化 → 重建页面
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    _titleCtrl.dispose();
-    _authorCtrl.dispose();
-    _isbnCtrl.dispose();
-    _pagesCtrl.dispose();
-    _currentPagesCtrl.dispose();
-    _publisherCtrl.dispose();
-    _yearCtrl.dispose();
-    _categoryCtrl.dispose();
-    _categoryFocus.dispose();
-    _descCtrl.dispose();
-    _notesCtrl.dispose();
-    _coverUrlCtrl.dispose();
+    _c.removeListener(_onControllerChanged);
+    _c.dispose();
     _searchCtrl.dispose();
     _searchDebounce?.cancel();
     super.dispose();
   }
 
-  // ---------- 页数与状态 ----------
-
-  /// 表单当前生效的总页数（输入非法时回退：编辑 = 原书值，新增 = 300）
-  int get _effectiveTotalPages =>
-      max(1, int.tryParse(_pagesCtrl.text.trim()) ?? _book?.totalPages ?? 300);
-
-  /// 表单当前生效的已读页数（非法输入按 0；超出总页数截断——填满即完成）
-  int get _effectiveCurrentPages {
-    final v = int.tryParse(_currentPagesCtrl.text.trim()) ?? 0;
-    return v.clamp(0, _effectiveTotalPages);
-  }
-
-  BookStatus get _statusFromProgress {
-    if (_effectiveCurrentPages >= _effectiveTotalPages) {
-      return BookStatus.finished;
-    }
-    if (_effectiveCurrentPages > 0) return BookStatus.reading;
-    return BookStatus.planToRead;
-  }
-
-  /// 已读页数变化的自动联动：
-  /// - >0 且无开始记录 → 默认开始时间 = 添加时间
-  /// - 填满总页数且无完成记录 → 自动补今天
-  void _onCurrentPagesChanged() {
-    final cur = _effectiveCurrentPages;
-    final total = _effectiveTotalPages;
-    DateTime? start = _startedAt;
-    DateTime? fin = _finishedAt;
-    if (cur > 0 && start == null) start = _dateOnly(_createdAt);
-    if (total > 0 && cur >= total && fin == null) {
-      fin = _dateOnly(DateTime.now());
-    }
-    if (start != _startedAt || fin != _finishedAt) {
-      setState(() {
-        _startedAt = start;
-        _finishedAt = fin;
-      });
-    }
-  }
-
-  /// ISBN 输入归一（空串 → null）
-  String? get _isbnValue {
-    final v = _isbnCtrl.text.trim();
-    return v.isEmpty ? null : v;
-  }
-
   // ---------- 保存 ----------
 
   Future<void> _save() async {
-    if (_saving) return;
+    if (_c.saving) return;
     // 校验与二次确认必须在进 loading 之前完成：确认框弹出时保存按钮若已转圈，
     // 会呈现「用户尚未确认却在保存」的错误状态（且 loading 是无限动画，
     // 会让 pumpAndSettle 无法收敛）。
     if (!await _confirmBeforeSave()) return;
     if (!mounted) return;
-    setState(() => _saving = true);
+    setState(() => _c.saving = true);
     try {
       await _doSave();
     } on Object catch (e) {
@@ -226,107 +105,37 @@ class _BookEditPageState extends State<BookEditPage> {
         SnackBar(content: Text('保存失败：$e')),
       );
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) setState(() => _c.saving = false);
     }
   }
 
   /// 保存前的校验与二次确认。返回 false = 中断保存（已提示或用户取消）。
+  ///
+  /// 判断逻辑在 [BookEditController.validate] / `needsFinishedClearConfirm`；
+  /// 这里只负责提示、弹窗与取消。
   Future<bool> _confirmBeforeSave() async {
-    final title = _titleCtrl.text.trim();
-    final author = _authorCtrl.text.trim();
-    if (title.isEmpty || author.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('书名与作者不能为空')),
-      );
-      return false;
-    }
-    final finished = _finishedAt;
-    final started = _startedAt;
-    if (finished != null && started != null && finished.isBefore(started)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('完成时间不能早于开始时间')),
-      );
+    final error = _c.validate();
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
       return false;
     }
     // 已读页数未填满但仍有完成记录 → 回退需二次确认（对应旧滑杆回退确认）
-    if (_effectiveCurrentPages < _effectiveTotalPages && finished != null) {
-      final confirmed = await _confirmClearFinished(finished);
+    if (_c.needsFinishedClearConfirm) {
+      final confirmed = await _confirmClearFinished(_c.finishedAt!);
       if (!confirmed) return false;
-      _finishedAt = null;
+      _c.finishedAt = null;
     }
     return true;
   }
 
   Future<void> _doSave() async {
-    final title = _titleCtrl.text.trim();
-    final author = _authorCtrl.text.trim();
-    final started = _startedAt;
-    final totalPages = _effectiveTotalPages;
-    final currentPage = _effectiveCurrentPages;
-
     final provider = context.read<LibraryProvider>();
-
-    final rating = _rating > 0 ? _rating : null;
-    final categoryText = _categoryCtrl.text.trim();
-    final category = categoryText.isEmpty ? null : categoryText;
-    final publisherText = _publisherCtrl.text.trim();
-    final publisher = publisherText.isEmpty ? null : publisherText;
-    final year = int.tryParse(_yearCtrl.text.trim());
-    final description =
-        _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim();
-    final notes =
-        _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim();
-
-    // 新增/编辑统一先在保存时刻确定 id（新增 = 微秒时间戳），供封面复制落盘
-    final id =
-        _isAddMode ? 'b_${DateTime.now().microsecondsSinceEpoch}' : _book!.id;
-    final cover = await _resolveDraftCover(provider, id);
-
-    if (_isAddMode) {
-      provider.addBook(Book(
-        id: id,
-        title: title,
-        author: author,
-        totalPages: totalPages,
-        currentPage: currentPage,
-        status: _statusFromProgress,
-        coverHue: _addCoverHue,
-        cover: cover,
-        rating: rating,
-        category: category,
-        publisher: publisher,
-        year: year,
-        description: description,
-        notes: notes,
-        isbn: _isbnValue,
-        source: _sourceTag,
-        createdAt: _createdAt,
-        startedAt: started,
-        finishedAt: _completeWithDefault(started, _finishedAt),
-      ));
+    final book = await _c.composeBook(provider);
+    if (book == null) return;
+    if (_c.isAddMode) {
+      provider.addBook(book);
     } else {
-      final original = _book;
-      if (original == null) return;
-      provider.updateBook(original.copyWith(
-        title: title,
-        author: author,
-        totalPages: totalPages,
-        currentPage: currentPage,
-        status: _statusFromProgress,
-        cover: cover,
-        rating: rating,
-        category: category,
-        // publisher/year 为 sentinel 参数：显式传值（含 null 清空）均生效
-        publisher: publisher,
-        year: year,
-        description: description,
-        notes: notes,
-        isbn: _isbnValue,
-        // 未重新检索时保留原溯源标记（copyWith 传 null 会清字段）
-        source: _sourceTag ?? original.source,
-        startedAt: started,
-        finishedAt: _completeWithDefault(started, _finishedAt),
-      ));
+      provider.updateBook(book);
     }
     if (!mounted) return;
     Navigator.of(context).pop(kEditResultSaved);
@@ -343,7 +152,7 @@ class _BookEditPageState extends State<BookEditPage> {
           style: TextStyle(color: context.colors.textPrimary, fontSize: 18),
         ),
         content: Text(
-          '该书已有完成记录（${_fmtDate(finished)}），保存后将清除完成记录并回到「在读」。',
+          '该书已有完成记录（${formatDateYmd(finished)}），保存后将清除完成记录并回到「在读」。',
           style: TextStyle(color: context.colors.textSecondary, fontSize: 14),
         ),
         actions: [
@@ -365,68 +174,31 @@ class _BookEditPageState extends State<BookEditPage> {
     return confirmed == true;
   }
 
-  /// 计算保存时的封面引用：
-  /// - 选中了本地图 → 先复制进 images/<id><ext> 再返回 local 引用；
-  /// - 没动过封面 → 沿用原图（含 null）；
-  /// - 动过：填了 URL → **先缓存到本地**（成功 = local+remote 双引用，
-  ///   展示优先读本地、离线回退 URL；缓存失败 = 纯网络引用）；URL 空 → 移除。
-  Future<MediaRef?> _resolveDraftCover(
-    LibraryProvider provider,
-    String id,
-  ) async {
-    final pending = _pendingCoverFile;
-    if (pending != null) {
-      final rel = await provider.attachImage(pending, id);
-      return rel == null ? null : MediaRef.local(rel);
-    }
-    if (!_coverEdited) return _book?.cover;
-    final url = _coverUrlCtrl.text.trim();
-    if (url.isEmpty) return null;
-    final cached = await provider.cacheRemoteImage(url, 'book_cover');
-    if (cached != null) return MediaRef(localFile: cached, remoteUrl: url);
-    return MediaRef.network(url);
-  }
-
-  /// 完成时间兜底：进度 100% 却无完成记录时补今天（如旧数据/直接填满场景）。
-  /// 传参会覆盖 copyWith 保留语义——因此仅在有值或需补全时返回非 null。
-  DateTime? _completeWithDefault(DateTime? started, DateTime? finished) {
-    if (_effectiveCurrentPages < _effectiveTotalPages) return finished;
-    return finished ?? _dateOnly(DateTime.now());
-  }
-
   /// 弹出日期选择器并回写（完成时间选择 = 读完 → 已读页数拉满）
   Future<void> _pickDate({required bool isFinished}) async {
     final initial = isFinished
-        ? (_finishedAt ?? DateTime.now())
-        : (_startedAt ?? _createdAt);
+        ? (_c.finishedAt ?? DateTime.now())
+        : (_c.startedAt ?? _c.createdAt);
     final picked = await showDatePicker(
       context: context,
-      initialDate: _dateOnly(initial),
+      initialDate: dateOnly(initial),
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
       helpText: isFinished ? '选择阅读完成时间' : '选择开始阅读时间',
     );
     if (picked == null || !mounted) return;
-    setState(() {
-      if (isFinished) {
-        _finishedAt = _dateOnly(picked);
-        _currentPagesCtrl.text = '$_effectiveTotalPages';
-      } else {
-        _startedAt = _dateOnly(picked);
-      }
-    });
+    if (isFinished) {
+      _c.applyFinishedDate(picked);
+    } else {
+      _c.applyStartedDate(picked);
+    }
+    if (!mounted) return;
+    setState(() {});
   }
 
-  /// 归一到日（忽略时分秒）
-  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
-
-  /// yyyy-MM-dd
-  static String _fmtDate(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
   Future<void> _confirmDelete() async {
-    if (_saving) return;
-    final book = _book;
+    if (_c.saving) return;
+    final book = _c.book;
     if (book == null) return;
 
     final confirmed = await showDialog<bool>(
@@ -474,7 +246,7 @@ class _BookEditPageState extends State<BookEditPage> {
         backgroundColor: Colors.transparent,
         centerTitle: true,
         title: Text(
-          _isAddMode ? '添加图书' : '修改书籍记录',
+          _c.isAddMode ? '添加图书' : '修改书籍记录',
           style: TextStyle(
             color: context.colors.textPrimary,
             fontSize: 16.5,
@@ -499,17 +271,17 @@ class _BookEditPageState extends State<BookEditPage> {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Material(
-              color: _saving
+              color: _c.saving
                   ? context.colors.accent.withOpacity(0.5)
                   : context.colors.accent,
               borderRadius: BorderRadius.circular(18),
               child: InkWell(
                 borderRadius: BorderRadius.circular(18),
-                onTap: _saving ? null : _save,
+                onTap: _c.saving ? null : _save,
                 child: Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                  child: _saving
+                  child: _c.saving
                       ? const SizedBox(
                           width: 16,
                           height: 16,
@@ -532,7 +304,7 @@ class _BookEditPageState extends State<BookEditPage> {
           ),
         ],
       ),
-      body: !_isAddMode && _notFound
+      body: !_c.isAddMode && _c.notFound
           ? Center(
               child: Text('未找到该书',
                   style: TextStyle(color: context.colors.textMuted)),
@@ -560,7 +332,7 @@ class _BookEditPageState extends State<BookEditPage> {
                     const SizedBox(height: 16),
                     _buildNotesCard(),
                     // 底部删除（仅编辑模式；新增模式无删除入口）
-                    if (!_isAddMode) ...[
+                    if (!_c.isAddMode) ...[
                       const SizedBox(height: 28),
                       _buildDeleteButton(),
                     ],
@@ -586,20 +358,10 @@ class _BookEditPageState extends State<BookEditPage> {
 
   // ---------- 卡片 1：封面 + 书名 / 作者 / 标签 ----------
 
-  /// 封面预览输入：编辑态未改动 → 原图；动过后 → URL 文本（网络）或空（占位）；
-  /// 选中本地图时由 [MediaCover.pendingFile] 优先展示，[media] 归位 null。
-  MediaRef? get _previewCoverMedia {
-    if (_coverEdited) {
-      final url = _coverUrlCtrl.text.trim();
-      return url.isEmpty ? null : MediaRef.network(url);
-    }
-    return _book?.cover;
-  }
-
   Widget _buildHeaderCard() {
     // 色相为 initState 生成的随机值
-    final hue = _book?.coverHue ?? _addCoverHue;
-    final emoji = _book?.emoji ?? '';
+    final hue = _c.book?.coverHue ?? _c.addCoverHue;
+    final emoji = _c.book?.emoji ?? '';
     return _card(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -615,12 +377,12 @@ class _BookEditPageState extends State<BookEditPage> {
                   borderRadius: BorderRadius.circular(10),
                   // H4：封面预览实时跟随书名输入，但只重建封面本身
                   child: ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _titleCtrl,
+                    valueListenable: _c.titleCtrl,
                     builder: (_, value, __) {
                       final title = value.text.trim();
                       return MediaCover(
-                        media: _previewCoverMedia,
-                        pendingFile: _pendingCoverFile,
+                        media: _c.previewCoverMedia,
+                        pendingFile: _c.pendingCoverFile,
                         title: title.isEmpty ? '书籍' : title,
                         emoji: emoji,
                         hue: hue,
@@ -642,7 +404,7 @@ class _BookEditPageState extends State<BookEditPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  controller: _titleCtrl,
+                  controller: _c.titleCtrl,
                   style: TextStyle(
                     color: context.colors.textPrimary,
                     fontSize: 17,
@@ -653,7 +415,7 @@ class _BookEditPageState extends State<BookEditPage> {
                 ),
                 const SizedBox(height: 2),
                 TextField(
-                  controller: _authorCtrl,
+                  controller: _c.authorCtrl,
                   style: TextStyle(
                     color: context.colors.textSecondary,
                     fontSize: 13.5,
@@ -669,7 +431,7 @@ class _BookEditPageState extends State<BookEditPage> {
                   children: [
                     // 出版社标签（检索回填或「出版社」行编辑后展示）
                     ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _publisherCtrl,
+                      valueListenable: _c.publisherCtrl,
                       builder: (_, value, __) {
                         final p = value.text.trim();
                         return p.isEmpty
@@ -704,25 +466,21 @@ class _BookEditPageState extends State<BookEditPage> {
 
   // ---------- 分类标签输入（联想 + 自定义）----------
 
-  /// 分类联想候选：预设分类 ∪ 书库实际使用过的分类（去重，预设在前）
-  List<String> get _categoryOptions {
-    final used = context.read<LibraryProvider>().usedCategories;
-    return <String>{...kBookCategories, ...used}.toList(growable: false);
-  }
-
   /// 分类输入：胶囊样式 + Autocomplete 联想（包含匹配），可直接输入自定义分类。
   Widget _buildCategoryChipField() {
     return RawAutocomplete<String>(
-      textEditingController: _categoryCtrl,
-      focusNode: _categoryFocus,
+      textEditingController: _c.categoryCtrl,
+      focusNode: _c.categoryFocus,
       optionsBuilder: (value) {
         final query = value.text.trim();
-        final options = _categoryOptions;
+        final options = _c.categoryOptions(
+          context.read<LibraryProvider>().usedCategories,
+        );
         if (query.isEmpty) return options;
         return options.where((c) => c.contains(query)).toList(growable: false);
       },
       displayStringForOption: (c) => c,
-      onSelected: (_) => _categoryFocus.unfocus(),
+      onSelected: (_) => _c.categoryFocus.unfocus(),
       // 注意：fieldViewBuilder 第 4 参数是 onFieldSubmitted（回车确认选中项），
       // 不是 onChanged！文本变化由 RawAutocomplete 通过 controller 监听自行响应。
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
@@ -814,9 +572,9 @@ class _BookEditPageState extends State<BookEditPage> {
               ),
               const Spacer(),
               Text(
-                _rating > 0 ? '${_rating.toStringAsFixed(1)} 分' : '未评分',
+                _c.rating > 0 ? '${_c.rating.toStringAsFixed(1)} 分' : '未评分',
                 style: TextStyle(
-                  color: _rating > 0
+                  color: _c.rating > 0
                       ? context.colors.star
                       : context.colors.textMuted,
                   fontSize: 16,
@@ -830,9 +588,9 @@ class _BookEditPageState extends State<BookEditPage> {
             children: [
               Expanded(
                 child: StarRatingPicker(
-                  rating: _rating,
+                  rating: _c.rating,
                   size: 30,
-                  onChanged: (v) => setState(() => _rating = v),
+                  onChanged: (v) => setState(() => _c.rating = v),
                 ),
               ),
               const SizedBox(width: 8),
@@ -876,8 +634,8 @@ class _BookEditPageState extends State<BookEditPage> {
               const Spacer(),
               // H4：状态胶囊只随两个页数输入重建
               ListenableBuilder(
-                listenable: Listenable.merge([_pagesCtrl, _currentPagesCtrl]),
-                builder: (_, __) => _statusPill(context, _statusFromProgress),
+                listenable: Listenable.merge([_c.pagesCtrl, _c.currentPagesCtrl]),
+                builder: (_, __) => _statusPill(context, _c.statusFromProgress),
               ),
             ],
           ),
@@ -890,7 +648,7 @@ class _BookEditPageState extends State<BookEditPage> {
                 style: TextStyle(
                     color: context.colors.textSecondary, fontSize: 13.5),
               ),
-              _numBox(_currentPagesCtrl, '0'),
+              _numBox(_c.currentPagesCtrl, '0'),
               const SizedBox(width: 10),
               Text('/',
                   style:
@@ -901,15 +659,15 @@ class _BookEditPageState extends State<BookEditPage> {
                 style: TextStyle(
                     color: context.colors.textSecondary, fontSize: 13.5),
               ),
-              _numBox(_pagesCtrl, '300'),
+              _numBox(_c.pagesCtrl, '300'),
             ],
           ),
           const SizedBox(height: 10),
           // 自动状态说明（总页数实时带入）
           ListenableBuilder(
-            listenable: _pagesCtrl,
+            listenable: _c.pagesCtrl,
             builder: (_, __) => Text(
-              '* 填 0 页自动为「想读」，填满 $_effectiveTotalPages 页自动为「完成」',
+              '* 填 0 页自动为「想读」，填满 $_c.effectiveTotalPages 页自动为「完成」',
               style: TextStyle(
                 color: context.colors.textMuted,
                 fontSize: 11.5,
@@ -985,7 +743,7 @@ class _BookEditPageState extends State<BookEditPage> {
   /// 阅读时间区块（想读且无任何记录时返回空，整块隐藏）
   List<Widget> _readingTimeBlocks() {
     final inReading =
-        _effectiveCurrentPages > 0 || _startedAt != null || _finishedAt != null;
+        _c.effectiveCurrentPages > 0 || _c.startedAt != null || _c.finishedAt != null;
     if (!inReading) return const [];
 
     final blocks = <Widget>[
@@ -996,18 +754,18 @@ class _BookEditPageState extends State<BookEditPage> {
           children: [
             _dateField(
               label: '开始阅读',
-              date: _startedAt,
+              date: _c.startedAt,
               hint: '默认添加时间，点击选择',
               onTap: () => _pickDate(isFinished: false),
-              onClear: _startedAt == null
+              onClear: _c.startedAt == null
                   ? null
-                  : () => setState(() => _startedAt = null),
+                  : () => setState(() => _c.startedAt = null),
             ),
-            if (_progressAtLeastFull || _finishedAt != null) ...[
+            if (_c.progressAtLeastFull || _c.finishedAt != null) ...[
               const SizedBox(height: 10),
               _dateField(
                 label: '阅读完成',
-                date: _finishedAt,
+                date: _c.finishedAt,
                 hint: '填满总页数时自动记录，点击修改',
                 onTap: () => _pickDate(isFinished: true),
                 // 完成时间无独立清除入口：改小已读页数保存时二次确认清除
@@ -1020,9 +778,6 @@ class _BookEditPageState extends State<BookEditPage> {
     ];
     return blocks;
   }
-
-  bool get _progressAtLeastFull =>
-      _effectiveCurrentPages >= _effectiveTotalPages;
 
   /// 日期字段行：点击弹日期选择器；有值时可显示清除入口
   Widget _dateField({
@@ -1062,7 +817,7 @@ class _BookEditPageState extends State<BookEditPage> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      date != null ? _fmtDate(date) : hint,
+                      date != null ? formatDateYmd(date) : hint,
                       style: TextStyle(
                         color: hasValue
                             ? context.colors.textPrimary
@@ -1108,21 +863,21 @@ class _BookEditPageState extends State<BookEditPage> {
           _metaRow(
             icon: Icons.business_outlined,
             label: '出版社',
-            controller: _publisherCtrl,
+            controller: _c.publisherCtrl,
             onTap: _editPublisher,
           ),
           _metaDivider(),
           _metaRow(
             icon: Icons.calendar_today_rounded,
             label: '出版年份',
-            controller: _yearCtrl,
+            controller: _c.yearCtrl,
             onTap: _editYear,
           ),
           _metaDivider(),
           _metaRow(
             icon: Icons.tag_rounded,
             label: 'ISBN / 标识',
-            controller: _isbnCtrl,
+            controller: _c.isbnCtrl,
             onTap: _editIsbn,
           ),
         ],
@@ -1220,18 +975,18 @@ class _BookEditPageState extends State<BookEditPage> {
   Future<void> _editPublisher() async {
     final r = await _promptTextDialog(
       title: '出版社',
-      initial: _publisherCtrl.text,
+      initial: _c.publisherCtrl.text,
       hint: '如 南海出版公司',
       allowClear: true,
     );
     if (r == null || !mounted) return;
-    setState(() => _publisherCtrl.text = r.trim());
+    setState(() => _c.publisherCtrl.text = r.trim());
   }
 
   Future<void> _editYear() async {
     final r = await _promptTextDialog(
       title: '出版年份',
-      initial: _yearCtrl.text,
+      initial: _c.yearCtrl.text,
       hint: '如 2011',
       keyboardType: TextInputType.number,
       allowClear: true,
@@ -1244,18 +999,18 @@ class _BookEditPageState extends State<BookEditPage> {
       );
       return;
     }
-    setState(() => _yearCtrl.text = trimmed);
+    setState(() => _c.yearCtrl.text = trimmed);
   }
 
   Future<void> _editIsbn() async {
     final r = await _promptTextDialog(
       title: 'ISBN / 标识',
-      initial: _isbnCtrl.text,
+      initial: _c.isbnCtrl.text,
       hint: 'ISBN-13 / ISBN-10',
       allowClear: true,
     );
     if (r == null || !mounted) return;
-    setState(() => _isbnCtrl.text = r.trim());
+    setState(() => _c.isbnCtrl.text = r.trim());
   }
 
   // ---------- 卡片 5/6：内容简介 / 阅读感悟 & 划线 ----------
@@ -1275,7 +1030,7 @@ class _BookEditPageState extends State<BookEditPage> {
           ),
           const SizedBox(height: 10),
           _buildMultilineInCard(
-            controller: _descCtrl,
+            controller: _c.descCtrl,
             hint: '用几句话介绍这本书讲什么…',
             minLines: 3,
             maxLines: 5,
@@ -1300,7 +1055,7 @@ class _BookEditPageState extends State<BookEditPage> {
           ),
           const SizedBox(height: 10),
           _buildMultilineInCard(
-            controller: _notesCtrl,
+            controller: _c.notesCtrl,
             hint: '写下你的阅读感悟与划线摘录…',
             minLines: 3,
             maxLines: 8,
@@ -1514,34 +1269,34 @@ class _BookEditPageState extends State<BookEditPage> {
   }) {
     final source = ds.defaultBookSource;
     setState(() {
-      _titleCtrl.text = r.title;
-      _authorCtrl.text = r.authorsText;
+      _c.titleCtrl.text = r.title;
+      _c.authorCtrl.text = r.authorsText;
       if (r.pageCount != null && r.pageCount! > 0) {
-        _pagesCtrl.text = '${r.pageCount}';
+        _c.pagesCtrl.text = '${r.pageCount}';
       }
-      if (r.isbn != null && r.isbn!.isNotEmpty) _isbnCtrl.text = r.isbn!;
+      if (r.isbn != null && r.isbn!.isNotEmpty) _c.isbnCtrl.text = r.isbn!;
       if (r.publisher != null && r.publisher!.trim().isNotEmpty) {
-        _publisherCtrl.text = r.publisher!.trim();
+        _c.publisherCtrl.text = r.publisher!.trim();
       }
-      if (r.year != null) _yearCtrl.text = '${r.year}';
+      if (r.year != null) _c.yearCtrl.text = '${r.year}';
       if (r.description != null && r.description!.isNotEmpty) {
-        _descCtrl.text = r.description!;
+        _c.descCtrl.text = r.description!;
       }
       // 分类：数据源给的是英文主题词（Fiction / Science fiction…），
       // 经 BookCategoryMapper 映射成本地中文分类（未命中则保留原文）。
       // 换选新书时一律覆盖——否则会残留上一本书的分类。
       final mapped = BookCategoryMapper.map(r.categories);
-      if (mapped != null) _categoryCtrl.text = mapped;
+      if (mapped != null) _c.categoryCtrl.text = mapped;
       // 评分**刻意不自动填充**：数据源给的是豆瓣 / OpenLibrary 的「大众平均分」，
       // 与用户自己的打分不是一回事——混进来会让「我的评分」变成别人的均分。
       // 评分只由用户在上方星级里自己打。
       if (r.coverUrl != null && r.coverUrl!.isNotEmpty) {
-        _coverEdited = true;
-        _pendingCoverFile = null;
-        _coverUrlCtrl.text = r.coverUrl!;
+        _c.coverEdited = true;
+        _c.pendingCoverFile = null;
+        _c.coverUrlCtrl.text = r.coverUrl!;
       }
       _filledResult = r;
-      _sourceTag =
+      _c.sourceTag =
           source == null ? null : '${source.type.name}:${r.externalId}';
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1580,9 +1335,9 @@ class _BookEditPageState extends State<BookEditPage> {
         await _lookupCoverOnline();
       case 'remove':
         setState(() {
-          _coverEdited = true;
-          _pendingCoverFile = null;
-          _coverUrlCtrl.clear();
+          _c.coverEdited = true;
+          _c.pendingCoverFile = null;
+          _c.coverUrlCtrl.clear();
         });
     }
   }
@@ -1594,8 +1349,8 @@ class _BookEditPageState extends State<BookEditPage> {
   /// 同一条通道；保存时由 [_resolveDraftCover] 缓存到本地。
   Future<void> _lookupCoverOnline() async {
     final ds = _tryReadDataSource(context, listen: false);
-    final title = _titleCtrl.text.trim();
-    final isbn = _isbnCtrl.text.trim();
+    final title = _c.titleCtrl.text.trim();
+    final isbn = _c.isbnCtrl.text.trim();
     if (ds == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('未配置书籍数据源，无法联网查找封面')),
@@ -1636,9 +1391,9 @@ class _BookEditPageState extends State<BookEditPage> {
       return;
     }
     setState(() {
-      _coverEdited = true;
-      _pendingCoverFile = null;
-      _coverUrlCtrl.text = url!;
+      _c.coverEdited = true;
+      _c.pendingCoverFile = null;
+      _c.coverUrlCtrl.text = url!;
     });
     messenger.showSnackBar(const SnackBar(content: Text('已找到封面，保存后生效')));
   }
@@ -1649,9 +1404,9 @@ class _BookEditPageState extends State<BookEditPage> {
     final picked = await lib.pickImageFile();
     if (picked == null || !mounted) return; // 用户取消
     setState(() {
-      _coverEdited = true;
-      _pendingCoverFile = picked;
-      _coverUrlCtrl.clear();
+      _c.coverEdited = true;
+      _c.pendingCoverFile = picked;
+      _c.coverUrlCtrl.clear();
     });
   }
 
@@ -1659,16 +1414,16 @@ class _BookEditPageState extends State<BookEditPage> {
   Future<void> _promptCoverUrl() async {
     final result = await _promptTextDialog(
       title: '网络图片链接',
-      initial: _coverUrlCtrl.text,
+      initial: _c.coverUrlCtrl.text,
       hint: 'https://…',
       keyboardType: TextInputType.url,
     );
     if (result == null || !mounted) return;
     final trimmed = result.trim();
     setState(() {
-      _coverEdited = true;
-      _pendingCoverFile = null;
-      _coverUrlCtrl.text = trimmed;
+      _c.coverEdited = true;
+      _c.pendingCoverFile = null;
+      _c.coverUrlCtrl.text = trimmed;
     });
   }
 }
