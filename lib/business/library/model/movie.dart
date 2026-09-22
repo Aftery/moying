@@ -202,7 +202,11 @@ class Movie {
     MovieStatus? status,
     double? rating,
     double? coverHue,
-    String? emoji,
+    // emoji 与其余可空字段同为哨兵语义：省略保留原值，显式 null 清空。
+    // 曾误用 `String? emoji` 默认 null——「未传」被当成「显式清空」，
+    // 编辑页保存时从未传过 emoji，导致每次编辑都丢占位符（见
+    // movie_edit_controller_test 的「emoji 得以保留」用例）。
+    Object? emoji = _unset,
     int? year,
     Object? releaseDate = _unset,
     Object? watchDate = _unset,
@@ -283,46 +287,45 @@ class Movie {
         ? null
         : DateTime.parse(json['watchDate'] as String);
     return Movie(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        year: (json['year'] as num).toInt(),
-        status: json['status'] == null
-            ? MovieStatus.watchlist
-            : MovieStatus.values.byName(json['status'] as String),
-        coverHue: (json['coverHue'] as num?)?.toDouble() ?? 165,
-        englishTitle: json['englishTitle'] as String?,
-        director: json['director'] as String?,
-        rating: (json['rating'] as num?)?.toDouble(),
-        emoji: json['emoji'] as String?,
-        releaseDate: json['releaseDate'] == null
-            ? null
-            : DateTime.parse(json['releaseDate'] as String),
-        watchDate: watchDate,
-        duration: (json['duration'] as num?)?.toInt(),
-        genres: (json['genres'] as List<dynamic>?)
-            ?.map((e) => e as String)
-            .toList(),
-        description: json['description'] as String?,
-        review: json['review'] as String?,
-        actorIds: (json['actorIds'] as List<dynamic>?)
-            ?.map((e) => e as String)
-            .toList(),
-        poster: json['poster'] == null
-            ? null
-            : MediaRef.fromJson(json['poster'] as Map<String, dynamic>),
-        cast: (json['cast'] as List<dynamic>?)
-            ?.whereType<Map<String, dynamic>>()
-            .map(CastMember.fromJson)
-            .toList(),
-        stills: (json['stills'] as List<dynamic>?)
-            ?.whereType<Map<String, dynamic>>()
-            .map(MediaRef.fromJson)
-            .toList(),
-        source: json['source'] as String?,
-        updatedAt: json['updatedAt'] == null
-            ? null // 旧数据兜底：无 updatedAt = 从未修改，合并时视为最旧
-            : DateTime.parse(json['updatedAt'] as String),
-      );
+      id: json['id'] as String,
+      title: json['title'] as String,
+      year: (json['year'] as num).toInt(),
+      status: json['status'] == null
+          ? MovieStatus.watchlist
+          : MovieStatus.values.byName(json['status'] as String),
+      coverHue: (json['coverHue'] as num?)?.toDouble() ?? 165,
+      englishTitle: json['englishTitle'] as String?,
+      director: json['director'] as String?,
+      rating: (json['rating'] as num?)?.toDouble(),
+      emoji: json['emoji'] as String?,
+      releaseDate: json['releaseDate'] == null
+          ? null
+          : DateTime.parse(json['releaseDate'] as String),
+      watchDate: watchDate,
+      duration: (json['duration'] as num?)?.toInt(),
+      genres:
+          (json['genres'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      description: json['description'] as String?,
+      review: json['review'] as String?,
+      actorIds: (json['actorIds'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      poster: json['poster'] == null
+          ? null
+          : MediaRef.fromJson(json['poster'] as Map<String, dynamic>),
+      cast: (json['cast'] as List<dynamic>?)
+          ?.whereType<Map<String, dynamic>>()
+          .map(CastMember.fromJson)
+          .toList(),
+      stills: (json['stills'] as List<dynamic>?)
+          ?.whereType<Map<String, dynamic>>()
+          .map(MediaRef.fromJson)
+          .toList(),
+      source: json['source'] as String?,
+      updatedAt: json['updatedAt'] == null
+          ? null // 旧数据兜底：无 updatedAt = 从未修改，合并时视为最旧
+          : DateTime.parse(json['updatedAt'] as String),
+    );
   }
 
   // ==================== 值相等（round-trip 测试与数据保持断言用）====================

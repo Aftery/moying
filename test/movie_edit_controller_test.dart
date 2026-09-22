@@ -9,7 +9,8 @@ import 'package:moying/business/library/model/actor.dart';
 import 'package:moying/business/library/model/movie.dart';
 import 'package:moying/business/library/view_model/library_provider.dart';
 import 'package:moying/business/library/view_model/movie_edit_controller.dart';
-import 'package:moying/business/data_source/model/data_source.dart' show CastMember;
+import 'package:moying/business/data_source/model/data_source.dart'
+    show CastMember;
 import 'package:moying/component/media/model/media_ref.dart';
 
 Movie sampleMovie({
@@ -142,8 +143,8 @@ void main() {
       c.titleCtrl.text = '片名';
       c.rating = 4;
 
-      expect((await c.composeMovie(LibraryProvider()))!.status,
-          MovieStatus.rated);
+      expect(
+          (await c.composeMovie(LibraryProvider()))!.status, MovieStatus.rated);
     });
   });
 
@@ -206,7 +207,8 @@ void main() {
     });
 
     test('composeMovie：保留色相 / 年份 / 未在表单出现的字段', () async {
-      final c = MovieEditController(movieId: 'm_1', initialMovie: sampleMovie());
+      final c =
+          MovieEditController(movieId: 'm_1', initialMovie: sampleMovie());
       addTearDown(c.dispose);
       c.titleCtrl.text = '星际穿越（重看）';
 
@@ -219,25 +221,31 @@ void main() {
       expect(m.duration, 169);
     });
 
-    test('composeMovie：emoji 被清空（Movie.copyWith 的 sentinel 缺陷，此处固化现状）',
-        () async {
-      final c = MovieEditController(movieId: 'm_1', initialMovie: sampleMovie());
+    test('composeMovie：emoji 得以保留（编辑页不传 emoji，哨兵语义保留原值）', () async {
+      final c =
+          MovieEditController(movieId: 'm_1', initialMovie: sampleMovie());
       addTearDown(c.dispose);
 
       final m = await c.composeMovie(LibraryProvider());
 
-      // Movie.copyWith 里只有 emoji 是「String? emoji」却用 _take 取值——
-      // 参数默认值是 null（不是 _unset），于是「不传」被当成「显式清空」。
-      // 编辑页从未传过 emoji，所以这条路一直是丢 emoji 的。
-      // M-5 只做搬迁、不掺行为变更，先用本用例把现状钉住：修 copyWith 的
-      // 默认值（改成 Object? emoji = _unset）后，这里会失败，改成
-      // expect(m.emoji, '🎬') 即完成修复。
-      expect(m!.emoji, isNull);
-      expect(c.movie!.emoji, '🎬'); // 原片未被破坏，丢的只是保存结果
+      // Movie.copyWith 的 emoji 已改为 `Object? emoji = _unset`——省略参数
+      // 保留原值。修复前默认值是 null，「未传」被当成「显式清空」，
+      // 编辑页保存会静默丢掉占位符。
+      expect(m!.emoji, '🎬');
+      expect(c.movie!.emoji, '🎬');
+    });
+
+    test('copyWith：显式传 null 清空 emoji（哨兵语义的另一半）', () {
+      final m = sampleMovie();
+
+      expect(m.copyWith(emoji: null).emoji, isNull);
+      expect(m.copyWith(emoji: '🌌').emoji, '🌌');
+      expect(m.copyWith().emoji, '🎬'); // 省略 → 保留
     });
 
     test('composeMovie：评分被清空时从「已评分」降级为「已看」', () async {
-      final c = MovieEditController(movieId: 'm_1', initialMovie: sampleMovie());
+      final c =
+          MovieEditController(movieId: 'm_1', initialMovie: sampleMovie());
       addTearDown(c.dispose);
       c.rating = 0;
 
@@ -249,14 +257,16 @@ void main() {
     });
 
     test('composeMovie：未重新检索时保留原溯源标记', () async {
-      final c = MovieEditController(movieId: 'm_1', initialMovie: sampleMovie());
+      final c =
+          MovieEditController(movieId: 'm_1', initialMovie: sampleMovie());
       addTearDown(c.dispose);
 
       expect((await c.composeMovie(LibraryProvider()))!.source, 'tmdb:157336');
     });
 
     test('composeMovie：清空全部类型标签会写入 null（sentinel 语义）', () async {
-      final c = MovieEditController(movieId: 'm_1', initialMovie: sampleMovie());
+      final c =
+          MovieEditController(movieId: 'm_1', initialMovie: sampleMovie());
       addTearDown(c.dispose);
       c.selectedGenres.clear();
 
@@ -476,8 +486,9 @@ void main() {
 
       // 空查询不追加哨兵
       expect(
-        c.actorOptions(slotB, '  ', lib).any(
-            (a) => a.id == MovieEditController.actorCreateId),
+        c
+            .actorOptions(slotB, '  ', lib)
+            .any((a) => a.id == MovieEditController.actorCreateId),
         isFalse,
       );
     });
