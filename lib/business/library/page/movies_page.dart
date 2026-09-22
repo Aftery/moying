@@ -145,7 +145,7 @@ class _MoviesPageState extends State<MoviesPage> {
         padding: const EdgeInsets.symmetric(horizontal: 22),
         child: Text(
           '共 ${movies.length} 部',
-          style:  TextStyle(
+          style: TextStyle(
             color: context.colors.textMuted,
             fontSize: 12,
           ),
@@ -161,8 +161,7 @@ class _MoviesPageState extends State<MoviesPage> {
           ? _buildEmpty()
           : GridView.builder(
               padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 mainAxisSpacing: 14,
                 crossAxisSpacing: 14,
@@ -181,6 +180,7 @@ class _MoviesPageState extends State<MoviesPage> {
                   statusLabel: movie.status.label,
                   onTap: () => _openDetail(movie.id),
                   onLongPress: () => _openEditor(movie.id),
+                  heroTag: 'movie_poster_${movie.id}',
                 );
               },
             ),
@@ -249,7 +249,7 @@ class _MoviesPageState extends State<MoviesPage> {
           const SizedBox(height: 14),
           Text(
             hasFilter ? '没有找到匹配的电影' : '电影库空空如也',
-            style:  TextStyle(
+            style: TextStyle(
               color: context.colors.textSecondary,
               fontSize: 15,
               fontWeight: FontWeight.w600,

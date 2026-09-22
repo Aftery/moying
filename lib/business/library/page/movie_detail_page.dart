@@ -67,9 +67,8 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
             ? const <Actor>[]
             : library.actorsByIds(movie.actorIds!, source: actors));
     // 展示用条目：优先 cast 快照（带角色名与 TMDB 头像），回退本地实体
-    final castItems = movie == null
-        ? const <CastItem>[]
-        : _buildCastItems(movie, castActors);
+    final castItems =
+        movie == null ? const <CastItem>[] : _buildCastItems(movie, castActors);
     // 剧照缓存（TMDB images.backdrops 落盘；为空时横滑区显示空态）
     final stills = movie?.stills ?? const <MediaRef>[];
 
@@ -80,14 +79,14 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
         actions: [
           IconButton(
             tooltip: '编辑',
-            icon:  Icon(Icons.edit_rounded, color: context.colors.textPrimary),
+            icon: Icon(Icons.edit_rounded, color: context.colors.textPrimary),
             onPressed: movie == null ? null : () => _openEditor(context),
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: movie == null
-          ?  Center(
+          ? Center(
               child: Text(
                 '这部电影已从电影库移除',
                 style: TextStyle(color: context.colors.textMuted),
@@ -114,8 +113,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
             _MovieHeaderCard(movie: movie),
             const SizedBox(height: 26),
             // ---------- 电影简介 ----------
-            if (movie.description != null &&
-                movie.description!.isNotEmpty) ...[
+            if (movie.description != null && movie.description!.isNotEmpty) ...[
               _sectionTitle(context, '电影简介'),
               const SizedBox(height: 10),
               ExpandableSynopsis(
@@ -152,8 +150,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
               context,
               '剧照',
               actionLabel: stills.isEmpty ? null : '全部 ${stills.length}',
-              onAction:
-                  stills.isEmpty ? null : () => _openStillsPage(movie),
+              onAction: stills.isEmpty ? null : () => _openStillsPage(movie),
             ),
             const SizedBox(height: 12),
             _buildStillsRow(stills),
@@ -162,8 +159,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
       ),
     );
   }
-
-
 
   // ---------- 补充元数据卡（3 列单行）----------
   // 三项：看过日期 / 上映时间 / 片长（剧情类型已上移至头部标签）
@@ -182,9 +177,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
             child: MetaCell(
               icon: Icons.visibility_rounded,
               label: '看过日期',
-              value: movie.watchDateText.isEmpty
-                  ? '—'
-                  : movie.watchDateText,
+              value: movie.watchDateText.isEmpty ? '—' : movie.watchDateText,
             ),
           ),
           const SizedBox(width: 12),
@@ -244,7 +237,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    style:  TextStyle(
+                    style: TextStyle(
                       color: context.colors.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -260,7 +253,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
-                      style:  TextStyle(
+                      style: TextStyle(
                         color: context.colors.textMuted,
                         fontSize: 10.5,
                       ),
@@ -331,7 +324,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     return null;
   }
 
-
   // ---------- 剧照（横向滚动；真实 TMDB 剧照，无数据时显示空态）----------
 
   Widget _buildStillsRow(List<MediaRef> stills) {
@@ -343,7 +335,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: context.colors.outline, width: 0.7),
         ),
-        child:  Center(
+        child: Center(
           child: Text(
             AppStrings.noStills,
             style: TextStyle(color: context.colors.textMuted, fontSize: 13),
@@ -420,7 +412,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
         const SizedBox(width: 8),
         Text(
           text,
-          style:  TextStyle(
+          style: TextStyle(
             color: context.colors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w700,
@@ -436,13 +428,13 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
               children: [
                 Text(
                   actionLabel,
-                  style:  TextStyle(
+                  style: TextStyle(
                     color: context.colors.textMuted,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                 Icon(Icons.chevron_right_rounded,
+                Icon(Icons.chevron_right_rounded,
                     size: 18, color: context.colors.textMuted),
               ],
             ),
@@ -502,6 +494,8 @@ class _MovieHeaderCard extends StatelessWidget {
           aspectRatio: 3 / 4,
           borderRadius: 0,
           fontSize: 44,
+          // 目的地 Hero：与 Movies Tab 网格卡片同 tag，形成封面展开飞行
+          heroTag: 'movie_poster_${movie.id}',
         ),
       ),
     );
@@ -654,7 +648,8 @@ class _MovieReviewCard extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text(
                   '还没有写下影评',
-                  style: TextStyle(color: context.colors.textMuted, fontSize: 13),
+                  style:
+                      TextStyle(color: context.colors.textMuted, fontSize: 13),
                 ),
               ],
             )
@@ -694,8 +689,8 @@ class _MovieReviewCard extends StatelessWidget {
                 )
               : Text(
                   '尚未评分',
-                  style: TextStyle(
-                      color: context.colors.textMuted, fontSize: 13),
+                  style:
+                      TextStyle(color: context.colors.textMuted, fontSize: 13),
                 ),
         ),
         OutlinedButton.icon(

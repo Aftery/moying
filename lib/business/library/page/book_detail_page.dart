@@ -108,8 +108,6 @@ class BookDetailPage extends StatelessWidget {
     );
   }
 
-
-
   // ---------- 阅读进度卡 ----------
 
   Widget _buildProgressCard(BuildContext context, Book book) {
@@ -241,14 +239,16 @@ class BookDetailPage extends StatelessWidget {
 
     final rows = <Widget>[];
     if (start != null) {
-      rows.add(_timeRow(context,
+      rows.add(_timeRow(
+        context,
         icon: Icons.play_circle_outline_rounded,
         label: AppStrings.readingStart,
         value: _fmtYmd(start),
       ));
     }
     if (finish != null) {
-      rows.add(_timeRow(context,
+      rows.add(_timeRow(
+        context,
         icon: Icons.check_circle_outline_rounded,
         label: AppStrings.readingFinished,
         value: _fmtYmd(finish),
@@ -276,7 +276,8 @@ class BookDetailPage extends StatelessWidget {
     ];
   }
 
-  Widget _timeRow(BuildContext context, {
+  Widget _timeRow(
+    BuildContext context, {
     required IconData icon,
     required String label,
     required String value,
@@ -433,6 +434,8 @@ class _BookHeader extends StatelessWidget {
           aspectRatio: 3 / 4,
           borderRadius: 0,
           fontSize: 40,
+          // 目的地 Hero：与 Books Tab 列表卡片同 tag，形成封面展开飞行
+          heroTag: 'book_cover_${book.id}',
         ),
       ),
     );
@@ -490,8 +493,7 @@ class _BookHeader extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            if (book.publisher != null &&
-                book.publisher!.trim().isNotEmpty)
+            if (book.publisher != null && book.publisher!.trim().isNotEmpty)
               InfoChip(label: book.publisher!.trim()),
             if (book.category != null) InfoChip(label: book.category!),
           ],
@@ -518,7 +520,8 @@ class _BookHeader extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text(
                   AppStrings.unrated,
-                  style: TextStyle(color: context.colors.textMuted, fontSize: 12.5),
+                  style: TextStyle(
+                      color: context.colors.textMuted, fontSize: 12.5),
                 ),
               ],
             )

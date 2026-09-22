@@ -63,6 +63,9 @@ class BookListCard extends StatelessWidget {
             aspectRatio: 3 / 4,
             borderRadius: 0,
             fontSize: 40,
+            // 列表 → 详情封面展开动画；tag 仅存在于 Books Tab 与详情路由，
+            // 详见 MediaCover.heroTag 的跨 Tab 约束
+            heroTag: 'book_cover_${book.id}',
           ),
           // 左上角状态徽标
           Positioned(
@@ -93,7 +96,7 @@ class BookListCard extends StatelessWidget {
             book.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style:  TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: context.colors.textPrimary,
@@ -104,7 +107,7 @@ class BookListCard extends StatelessWidget {
             book.author,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style:  TextStyle(
+            style: TextStyle(
               fontSize: 11,
               color: context.colors.textMuted,
             ),
@@ -116,7 +119,7 @@ class BookListCard extends StatelessWidget {
               if (book.rating != null)
                 RatingStars(rating: book.rating!, size: 14)
               else
-                 Text(
+                Text(
                   AppStrings.unrated,
                   style: TextStyle(
                     fontSize: 11,

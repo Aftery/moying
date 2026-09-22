@@ -19,6 +19,7 @@ class GridItemCard extends StatelessWidget {
     this.statusLabel,
     this.onTap,
     this.onLongPress,
+    this.heroTag,
   });
 
   /// 主标题
@@ -47,6 +48,10 @@ class GridItemCard extends StatelessWidget {
 
   /// 长按回调（仪表盘/网格卡片：长按进编辑，与书籍模块 BookListCard 语义一致）
   final VoidCallback? onLongPress;
+
+  /// Hero 飞行标签（详情页封面展开动画）；null = 不参与飞行。
+  /// 详见 [MediaCover.heroTag] 的跨 Tab 唯一性约束。
+  final String? heroTag;
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +88,7 @@ class GridItemCard extends StatelessWidget {
           aspectRatio: 3 / 4,
           borderRadius: 0,
           fontSize: 40,
+          heroTag: heroTag,
         ),
         // 左上角状态徽标
         if (statusLabel != null)
@@ -123,7 +129,7 @@ class GridItemCard extends StatelessWidget {
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style:  TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: context.colors.textPrimary,
@@ -134,7 +140,7 @@ class GridItemCard extends StatelessWidget {
             subtitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style:  TextStyle(
+            style: TextStyle(
               fontSize: 11,
               color: context.colors.textMuted,
             ),
@@ -143,7 +149,7 @@ class GridItemCard extends StatelessWidget {
           Row(
             children: [
               if (rating != null) ...[
-                 Icon(
+                Icon(
                   Icons.star_rounded,
                   size: 15,
                   color: context.colors.star,
@@ -151,7 +157,7 @@ class GridItemCard extends StatelessWidget {
                 const SizedBox(width: 3),
                 Text(
                   rating!.toStringAsFixed(1),
-                  style:  TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: context.colors.textPrimary,

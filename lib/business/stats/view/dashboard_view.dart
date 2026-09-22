@@ -213,6 +213,9 @@ class BookGrid extends StatelessWidget {
             media: b.cover,
             rating: b.rating,
             statusLabel: b.status.label,
+            // 刻意不传 heroTag：Dashboard 与 Books Tab 同属 root 路由
+            // （IndexedStack），同 id 卡片若都挂 Hero 会触发
+            // multiple-heroes 断言崩溃；Hero 飞行只保 Books/Movies Tab 主链路。
             // 与书籍模块一致：单击进详情、长按进编辑
             onTap: () => Navigator.of(context)
                 .pushNamed(AppRoutes.bookDetail, arguments: b.id),

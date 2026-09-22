@@ -33,6 +33,7 @@ class MediaCover extends StatelessWidget {
     this.fontSize = 26,
     this.showTitle = false,
     this.circular = false,
+    this.heroTag,
   });
 
   /// 已保存的图片引用（本地/网络），null 或双空 = 占位
@@ -65,6 +66,16 @@ class MediaCover extends StatelessWidget {
   /// 圆形模式（演员头像）；需父级正方形约束
   final bool circular;
 
+  /// Hero 飞行标签：非 null 时整个封面参与「列表 → 详情」的展开动画。
+  ///
+  /// 同一个 tag 会同时存在于**两个路由**（来源页与目标页）——但必须保证
+  /// **单一路由内 tag 唯一**（IndexedStack 的 4 个 Tab 同属 root 路由，
+  /// 跨 Tab 用同 tag 会触发 multiple-heroes 断言崩溃）。
+  /// 因此约定：书籍用 `book_cover_<id>`（仅 Books Tab + 详情页），
+  /// 电影用 `movie_poster_<id>`（仅 Movies Tab + 详情页），
+  /// Dashboard 网格**不传**（避免与 Books/Movies Tab 同路由重复）。
+  final String? heroTag;
+
   @override
   Widget build(BuildContext context) {
     // ---------- 确定图片来源 ----------
@@ -78,7 +89,8 @@ class MediaCover extends StatelessWidget {
         if (m.isLocal) {
           // 本地图解析规则属业务（images/ 目录），由 app 层经 LocalMediaScope 注入；
           // 未接入时（孤立预览 / 组件测试）取到 null，静默降级为网络图或占位。
-          final resolved = LocalMediaScope.of(context)?.call(context, m.localFile);
+          final resolved =
+              LocalMediaScope.of(context)?.call(context, m.localFile);
           if (resolved != null) local = File(resolved);
         }
         if (m.isNetwork) {
@@ -113,17 +125,27 @@ class MediaCover extends StatelessWidget {
     } else if (network != null) {
       img = buildNetworkImage();
     }
-    if (img == null) return fallback;
+    if (img == null) return _maybeHero(fallback);
 
-    return circular
-        ? ClipOval(child: SizedBox.expand(child: img))
-        : AspectRatio(
-            aspectRatio: aspectRatio,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(borderRadius),
-              child: SizedBox.expand(child: img),
+    return _maybeHero(
+      circular
+          ? ClipOval(child: SizedBox.expand(child: img))
+          : AspectRatio(
+              aspectRatio: aspectRatio,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(borderRadius),
+                child: SizedBox.expand(child: img),
+              ),
             ),
-          );
+    );
+  }
+
+  /// 有 [heroTag] 时包裹 Hero，无则原样返回（占位与真图统一处理，
+  /// 保证飞行 shuttle 的子树几何在两侧一致）。
+  Widget _maybeHero(Widget child) {
+    final tag = heroTag;
+    if (tag == null) return child;
+    return Hero(tag: tag, child: child);
   }
 
   /// 矩形占位（直接透出 CoverPlaceholder，与替换前像素一致）
