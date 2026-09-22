@@ -306,4 +306,4 @@ lib/（106 个 .dart 文件，约 25,000 行）
 
 ## 开源许可
 
-本项目基于 [MIT License](./LICENSE) 开源，Copyright (c) 2026 Afyery。
+本项目基于 [MIT License](./LICENSE) 开源，Copyright (c) 2026 Aftery。

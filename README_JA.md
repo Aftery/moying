@@ -385,4 +385,4 @@ lib/（.dart ファイル 106 個、約 25,000 行）
 
 ## ライセンス
 
-本プロジェクトは [MIT License](./LICENSE) のもとで公開されています。Copyright (c) 2026 Afyery。
+本プロジェクトは [MIT License](./LICENSE) のもとで公開されています。Copyright (c) 2026 Aftery。

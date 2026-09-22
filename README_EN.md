@@ -392,4 +392,4 @@ lib/ (106 .dart files, ~25,000 lines)
 
 ## License
 
-Released under the [MIT License](./LICENSE), Copyright (c) 2026 Afyery.
+Released under the [MIT License](./LICENSE), Copyright (c) 2026 Aftery.
