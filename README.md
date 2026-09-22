@@ -1,5 +1,7 @@
 # 墨影 MoYing 🎬📚
 
+**简体中文** | [English](./README_EN.md) | [日本語](./README_JA.md)
+
 一个**深浅双主题**的书籍与电影记录应用（Flutter 跨平台，数据本地持久化，离线优先——联网检索为可选增强）。
 
 底部四标签导航：**仪表盘 / 书籍 / 电影 / 个人**。
@@ -36,7 +38,7 @@ flutter build apk --release
 
 ```bash
 flutter analyze       # 静态分析（CI 以 --fatal-infos 运行，期望 0 issue）
-flutter test          # 单元与 widget 测试（当前 420 个用例）
+flutter test          # 单元与 widget 测试（当前 35 个文件、490 个用例）
 ```
 
 CI（`.github/workflows/ci.yml`）在 `main` 的 push / PR 上依次执行
@@ -52,7 +54,7 @@ CI（`.github/workflows/ci.yml`）在 `main` 的 push / PR 上依次执行
 ## 版本历史
 
 - **v0.9.3**（当前开发版，尚未打 tag）：
-  - **架构重构**：按四层组件化 + MVVM 规范重整工程——96 个文件归入
+  - **架构重构**：按四层组件化 + MVVM 规范重整工程——文件归入
     `app / business / component / foundation`，`XxxScreen` → `XxxPage`、`*_screen.dart` → `*_page.dart`，
     消除 9 组 `part` 与全部 `widget` 关键字命名，**反向依赖 61 → 0 处**。纯结构迁移，无行为变化。
   - **错误日志**：新增应用日志中枢 `AppLogger`（info/warn/error/fatal 分级、内存环形缓冲 500 条、
@@ -66,12 +68,30 @@ CI（`.github/workflows/ci.yml`）在 `main` 的 push / PR 上依次执行
     （`pubdate` / 嵌套 `rating` / HTML 剥离）；封面请求补 Referer、镜像回退、两级缓存、
     分层超时 + 一次重试（弱网下首跳建连单独设超时）。
   - **同步**：新增记录级 **LWW 合并引擎**（按 id 并集、`updatedAt` 新者胜）与**同步前本地快照兜底**
-    （滚动保留最近数份，合并出问题可回退）。
+    （滚动保留最近数份，合并出问题可回退）；同步 / 恢复 / 导出全链路互斥 + 恢复前冲刷待写数据；
+    JSON 云备份可见性修复（`.zip` / `.json` 双扩展名均可列出与恢复）。
   - **图片**：新增单图压缩与上限（magic bytes 探活 → 等比缩放到长边上限 → 重编码，控制在 5MB 内落盘）。
   - **编辑页**：评分只由用户手动打（取消自动填充）；星级选择器支持拖动打分 + 跨档触感反馈；
     手动录入的书支持「联网自动找封面」；电影详情头部改水平卡片布局，个人模块弹窗高度统一。
   - **性能**：演职员表与演员作品年表由 eager 全量构建改 `CustomScrollView` + `SliverList.builder`
     懒构建；`prefer_const_constructors` 系列 lint 全量落地。
+  - **v0.9.3 后续开发批次**（同 tag 前追加）：
+    - **模块解耦收口**：业务模块间同级引用 **49 → 0**——共享内核下沉 `business/shared/`
+      （7 个跨模块 DTO + `LibraryStore` 共享仓储 + 分类映射器）、新增 `LibraryFacade` /
+      `DataSourceFacade` 门面接口（其他模块只依赖接口、app 层注册同一实例）、
+      跨模块跳页改集中路由（`AppRoutes` + `app/router.dart`）。
+    - **编辑页抽 Controller**：`BookEditController` / `MovieEditController`（ChangeNotifier），
+      编辑逻辑可在无 Widget 树前提下单测，新增 69 个单元测试。
+    - **超长函数清零**：30 个 ≥80 行函数全部拆分（最长 194 → 44 行）。
+    - **文案常量层**：`foundation/constants/app_strings.dart` 收敛 53 处跨页复用文案。
+    - **排版层级**：`app/config/app_typography.dart` 定义 `AppType` 字号常量（新代码约定）。
+    - **健壮性**：`Movie.copyWith` 的 emoji 改用哨兵（修复编辑保存丢占位符）；
+      数据源异常语义结构化（`DataSourceErrorKind`，状态判定不再匹配中文文案）；
+      备份解析边界归一（类型错误统一转 `BackupException`）；损坏的 settings / data_sources
+      配置隔离并回退默认值。
+    - **杂项**：6 处弹层拖拽指示条收敛为 `SheetGrabber`；渐变卡透明度语义化（`_OnGradient`）；
+      封面查找失败提示按 ISBN 是否为空分流；延迟 seed（生产启动不再复制演示数据）；
+      AppLogger 增量计数 + 日志页订阅。
 - **v0.9.2**：图书详情/编辑页 UI 重构——详情页改为封面 + 评分卡 + 双列信息卡 + 简介/感悟的卡片式布局；编辑页改为顶栏取消/保存胶囊 + 分组卡片表单，阅读进度由滑杆改为「已读页数 / 总页数」输入（0 页自动想读、填满自动完成），底部删除按钮仅编辑模式显示。新增 `publisher`（出版社）字段并接入联网检索回填。修复保存时序缺陷：回退阅读进度的二次确认原在 loading 态之后触发，导致按钮先转圈再弹确认框，已前置到 loading 之前。
 - **v0.9.1**：修复图书/影视删除后返回列表页不刷新的 bug（UnmodifiableListView 动态视图导致 context.select 误判无变化）；个人资料编辑弹窗统一为 BottomSheet 风格；图书数据源联网补全增强：新增 BookDataSource.getBookDetail 详情接口，Google Books/OpenLibrary 支持分类/页数/简介回填，搜索结果填充后自动收起列表并显示「已填充」状态，自定义数据源支持 detailUrlTemplate 配置（未填时优雅降级）；自定义影视数据源同步支持详情接口配置。
 - **v0.9.0**：个人统计页三段式仪表盘重构——年度指标栏 + GitHub 风格打卡热力图（30 天/季度/年度切换）、类型偏好环形图 + 评分分布柱状图（纯 CustomPainter）、在读进度条 + 年度五星封面墙；年度报告页（最晚读完 / 最快阅读周 / 打破偏好的那本）。移除内置演示种子数据：首启为空库，由用户自行录入（测试与 Web 预览仍用 mock 数据）。
@@ -84,187 +104,117 @@ CI（`.github/workflows/ci.yml`）在 `main` 的 push / PR 上依次执行
 采用**四层组件化 + MVVM**。依赖方向严格单向——**上层可依赖下层，反之禁止**：
 
 ```
-app (3)  →  business (2)  →  component (1)  →  foundation (0)
+app (5)  →  business {shared 内核} (75)  →  component (9)  →  foundation (16)
 ```
 
 | 层 | 职责 | 可依赖 |
 |---|---|---|
-| `app/` | 主工程层：全局配置（主题 / 转场）与根容器 | 以下各层 |
-| `business/` | 业务层：按**业务模块**拆分，模块内 MVVM 分层 | `component` / `foundation` |
+| `app/` | 主工程层：全局配置（主题 / 转场 / 排版）、根容器、**全局路由表** | 以下各层 |
+| `business/` | 业务层：按**业务模块**拆分，模块内 MVVM 分层；`shared/` 为模块间共享内核 | `shared` / `component` / `foundation` |
 | `component/` | 功能组件层：跨模块复用的 UI 组件与设计令牌 | `foundation` |
-| `foundation/` | 基础层：日志 / 网络 / 存储 / 工具，**不认识任何业务模型** | 无 |
+| `foundation/` | 基础层：日志 / 网络 / 存储 / 工具 / **路由名与文案常量**，不认识任何业务模型 | 无 |
 
 **硬规则**：
 
 1. **page 命名**：固定 `xxx_page.dart` → 类 `XxxPage`。
 2. **view 命名**：按功能命名（`xxx_card.dart` / `xxx_sheet.dart` / `xxx_picker.dart`），
    **禁止用 `widget` 关键字**命名文件或类。
-3. **设计令牌**位于 `component/theme/app_palette.dart`——它被 40+ 个下层文件引用，
-   放 `app/` 会造成大面积反向依赖。
-4. `foundation/` 不得 import 任何 `business/` 符号（含 model）。若某文件需要业务模型，
-   说明它是业务仓储 / 服务，应移入对应 business 模块。
+3. **设计令牌**位于 `component/theme/app_palette.dart`；字号层级位于
+   `app/config/app_typography.dart`（`AppType`，新代码用、旧代码随触碰替换）。
+4. `foundation/` 不得 import 任何 `business/` 符号（含 model）。
 5. `component/` 不得 import `business/`。需要业务能力时，在组件层声明**契约 + InheritedWidget**，
    由 app 层在 `MaterialApp` 之上注入（参考 `component/media/local_media_scope.dart`）。
-6. business 模块之间应尽量解耦。当前仍有跨模块引用（根因：`LibraryProvider` + `LibraryStore`
-   承担了 ViewModel + Repository + Store 三重职责），**新代码不要再增加跨模块引用**。
+6. **业务模块之间零直接引用**（v0.9.3 达成）：模块间协作只允许两条路——
+   - 依赖 `business/shared/` 共享内核：纯 DTO（`model/`）、共享仓储（`repository/library_store.dart`）、
+     门面接口（`library_facade.dart` / `data_source_facade.dart`）与纯工具；
+   - 跨模块跳页走 `Navigator.pushNamed(AppRoutes.xxx)`（路由名常量在
+     `foundation/constants/app_routes.dart`），**页面构建集中在 `app/router.dart`**，
+     禁止 import 兄弟模块的 Page 类。
+7. **门面注册**：`LibraryProvider` / `DataSourceProvider` 分别实现 `LibraryFacade` /
+   `DataSourceFacade`；app 层以 `ListenableProvider<门面>.value` 注册**同一实例**
+   （用 `ListenableProvider` 而非 `Provider`，才会订阅通知、`context.select` 才会重建）。
 
 ## 目录结构
 
 ```
-lib/（96 个 .dart 文件）
+lib/（106 个 .dart 文件，约 25,000 行）
 
-├── main.dart                          # 入口：Provider 装配 + 全局异常兜底 + 主题与转场接线
+├── main.dart                          # 入口：Provider 装配（含门面双注册）+ 全局异常兜底 + 主题与转场接线
 │
-├── app/                               # ① 主工程层
+├── app/                               # ① 主工程层（5 文件）
 │   ├── config/
-│   │   ├── app_theme.dart             # 由色板生成 ThemeData（Material 3）
+│   │   ├── app_theme.dart             # 色板 → ThemeData（Material 3）
+│   │   ├── app_typography.dart        # AppType 字号层级常量（排版唯一来源）
 │   │   └── fade_slide_transitions.dart # 全局页面转场：淡入 + 微上浮
-│   └── pages/
-│       └── root_page.dart             # 根容器：底部导航（仪表盘 / 书籍 / 电影 / 个人）
+│   ├── pages/
+│   │   └── root_page.dart             # 根容器：底部导航（仪表盘 / 书籍 / 电影 / 个人）
+│   └── router.dart                    # 全局路由表：AppRoutes 各路由的页面构建集中于此
 │
-├── business/                          # ② 业务层 —— 按模块拆分
-│   ├── library/                       # 书影库（31 文件）
-│   │   ├── model/
-│   │   │   ├── book.dart              # Book + BookStatus + kBookCategories（含 isbn）
-│   │   │   ├── movie.dart             # Movie + MovieStatus + kMovieCategories（含片长 / 剧照 / 演员）
-│   │   │   ├── actor.dart             # Actor 实体（独立集合 actors.json）
-│   │   │   ├── cast_item.dart         # 演员展示条目（统一「Movie.cast 快照」与「本地 Actor 实体」）
-│   │   │   ├── edit_result.dart       # 编辑页返回结果标识
-│   │   │   └── mock_data.dart         # 演示种子（12 书 / 8 影）：仅测试与预览使用，生产首启为空库
+├── business/                          # ② 业务层 —— 按模块拆分 + 共享内核（75 文件）
+│   ├── shared/                        # 共享内核（11 文件）：模块间唯一依赖点
+│   │   ├── model/                     # 跨模块共享 DTO（7）：book / movie / actor / stats /
+│   │   │                              #   user_profile / sync_settings / data_source
 │   │   ├── repository/
-│   │   │   ├── library_store.dart     # JSON 存储：原子写 / 合并写 / schemaVersion / 图片管理
-│   │   │   ├── persistence.dart       # 启动装配门面（条件导入）
-│   │   │   ├── persistence_io.dart    # 手机 / 桌面实现（dart:io + path_provider）
-│   │   │   └── persistence_stub.dart  # Web 回退（内存存储）
-│   │   ├── page/
-│   │   │   ├── books_page.dart        # 图书库列表（搜索 + 分类 / 状态筛选，列表 / 网格切换）
-│   │   │   ├── movies_page.dart       # 电影库列表
-│   │   │   ├── book_detail_page.dart  # 图书详情（封面 + 评分卡 + 信息卡 + 简介 / 感悟）
-│   │   │   ├── book_edit_page.dart    # 图书新增 / 编辑（快速检索回填、ISBN、分类联想、阅读进度）
-│   │   │   ├── movie_detail_page.dart # 电影详情（头部水平卡 + 演职员 + 剧照）
-│   │   │   ├── movie_edit_page.dart   # 电影新增 / 编辑（检索回填、演员 / 类型联想、评分、海报）
-│   │   │   ├── movie_stills_page.dart # 剧照与海报全量页（Tab：全部 / 剧照 / 海报）
-│   │   │   └── actor_detail_page.dart # 演员详情（简介 + 参演作品反查）
-│   │   ├── view/
-│   │   │   ├── book_detail_view.dart  # 详情页组件（EditPill / 评分卡 / 简介感悟折叠）
-│   │   │   ├── movie_detail_view.dart # 详情页组件（CastAvatar / 剧照横滑条 / 信息卡）
-│   │   │   ├── actor_detail_view.dart # 演员页组件（头像编辑 / 作品条目）
-│   │   │   ├── cast_bottom_sheet.dart # 演职员表弹层（分组 + 搜索，Sliver 懒构建）
-│   │   │   ├── detail_common.dart     # 详情页公共组件（InfoChip / ExpandableSynopsis）
-│   │   │   ├── edit_form_view.dart    # 编辑页公共表单（分组标题 / 文本框 / 文本提示弹层）
-│   │   │   ├── quick_search_panel.dart # 编辑页「快速检索」结果列表
-│   │   │   ├── filter_dropdown.dart   # 通用筛选下拉（候选动态取自已有数据）
-│   │   │   ├── book_list_card.dart    # 图书列表卡（竖版封面 + 状态徽标 + 进度角标）
-│   │   │   ├── search_bar_view.dart   # 暗色圆角搜索栏
-│   │   │   ├── rating_stars.dart      # 五星评分展示（支持小数）
-│   │   │   └── star_rating_picker.dart # 交互式评分选择器（拖动打分 + 跨档触感）
-│   │   └── view_model/
-│   │       └── library_provider.dart  # 全局书影库状态（ChangeNotifier 单一数据源）
+│   │   │   └── library_store.dart     # JSON 存储：原子写 / 合并写 / schemaVersion / 图片管理
+│   │   ├── library_facade.dart        # 书影库门面契约（stats / profile / sync 消费）
+│   │   ├── data_source_facade.dart    # 数据源门面契约（library 编辑页 / sync 消费）
+│   │   └── book_category_mapper.dart  # 书籍分类中文化映射（纯函数，零依赖）
 │   │
-│   ├── data_source/                   # 联网信息补全（15 文件）
-│   │   ├── model/
-│   │   │   ├── data_source.dart       # 数据源配置 / 搜索结果 / 详情模型（JSON 往返）
-│   │   │   └── deploy_guide.dart      # 「自建部署指南」Markdown 文案常量
-│   │   ├── page/
-│   │   │   └── data_source_page.dart  # 数据源管理（影视 / 图书两区，默认源单选、连接测试）
-│   │   ├── service/
-│   │   │   ├── data_source_interface.dart       # BookDataSource / MovieDataSource 抽象 + ConfigField
-│   │   │   ├── data_source_manager.dart         # 数据源注册表（预设 / 默认源 / 配置与凭据存取）
-│   │   │   ├── data_source_secure_credentials.dart # 数据源凭据安全存储
-│   │   │   ├── book_result_merger.dart          # 多源聚合的搜索结果去重 / 合并
-│   │   │   ├── book_category_mapper.dart        # 书籍分类中文化映射
-│   │   │   └── data_sources/
-│   │   │       ├── tmdb_data_source.dart        # TMDB 影视源（搜索 / 详情 / 演职员 / 剧照）
-│   │   │       ├── open_library_data_source.dart # OpenLibrary 图书源（免 Key 无速率限制，默认）
-│   │   │       ├── google_books_data_source.dart # Google Books 图书源
-│   │   │       └── custom_data_source.dart      # 自定义数据源（用户接口配置 + 智能解析）
-│   │   ├── view/
-│   │   │   ├── data_source_view.dart  # 源列表项 / 配置弹层
-│   │   │   └── data_source_guide_sheet.dart # 自建部署指南弹层（Markdown 渲染）
-│   │   └── view_model/
-│   │       └── data_source_provider.dart # 联网检索状态（防抖 / 结果缓存 / TTL+LRU / 错误兜底）
+│   ├── library/                       # 书影库（29 文件）
+│   │   ├── model/                     # 模块内模型（3）：cast_item / edit_result / mock_data
+│   │   ├── repository/                # 启动装配（3）：persistence{,_io,_stub}（条件导入，Web 回退内存）
+│   │   ├── page/                      # 8 个页面：books / movies / book_detail / book_edit /
+│   │   │                              #   movie_detail / movie_edit / movie_stills / actor_detail
+│   │   ├── view/                      # 12 个视图组件：详情 / 编辑表单 / 弹层 / 卡片 / 评分等
+│   │   └── view_model/                # library_provider（全局状态）+ book/movie_edit_controller
 │   │
-│   ├── stats/                         # 统计与图表（11 文件）
-│   │   ├── model/
-│   │   │   ├── stats.dart             # BookStats / MovieStats（聚合指标，无 mock 默认值）
-│   │   │   └── statistics.dart        # 三段式仪表盘聚合：热力图 / 类型占比 / 评分分布 / 年度指标与年报亮点
-│   │   ├── page/
-│   │   │   ├── dashboard_page.dart    # 仪表盘主页（统计 + 当前任务 + 阅读 / 观影网格）
-│   │   │   ├── personal_stats_page.dart # 个人统计（三段式仪表盘）
-│   │   │   └── annual_report_page.dart  # 年度报告（最晚读完 / 最快阅读周 / 打破偏好）
-│   │   ├── view/
-│   │   │   ├── stats_card.dart        # 统计双卡（阅读渐变环 / 观影均分徽章，等高对齐）
-│   │   │   ├── heatmap_calendar.dart  # GitHub 风格打卡热力图（周列 × 星期行，四级着色）
-│   │   │   ├── chart_view.dart        # DonutChart 环形图 + RatingBarChart 柱状图（纯 CustomPainter）
-│   │   │   ├── personal_stats_view.dart # 统计页组件（年度指标栏 / 在读进度 / 封面墙）
-│   │   │   ├── dashboard_view.dart    # 仪表盘组件（区块标题 / 空态卡 / 网格）
-│   │   │   └── section_header.dart    # 区块标题（trailing 支持点击跳转）
+│   ├── data_source/                   # 联网信息补全（13 文件）
+│   │   ├── model/deploy_guide.dart    # 「自建部署指南」Markdown 文案常量
+│   │   ├── page/data_source_page.dart # 数据源管理（影视 / 图书两区，默认源单选、连接测试）
+│   │   ├── service/                   # 接口抽象 / 注册表 / 凭据存储 / 结果合并 + 4 个实现
+│   │   │                              #   （TMDB / OpenLibrary / Google Books / 自定义智能解析）
+│   │   ├── view/                      # 源列表与配置弹层 / 部署指南弹层
+│   │   └── view_model/                # data_source_provider：实现 DataSourceFacade 门面
 │   │
-│   ├── sync/                          # 云同步与备份（9 文件）
-│   │   ├── model/
-│   │   │   └── sync_settings.dart     # SyncSettings（WebDAV 地址 / 自动同步偏好，不含密码）
-│   │   ├── page/
-│   │   │   └── data_sync_page.dart    # 数据同步（WebDAV 云同步 + 本地导出导入）
-│   │   ├── service/
-│   │   │   ├── webdav_client.dart     # WebDAV 最小客户端（PROPFIND / MKCOL / PUT / GET，可注入 fake）
-│   │   │   ├── backup_service.dart    # 备份打包 / 还原（JSON 单文件 / 含图 ZIP；含 data_sources.json）
-│   │   │   ├── merge_engine.dart      # 记录级 LWW 合并引擎（纯函数，可单测）
-│   │   │   ├── snapshot_service.dart  # 同步前本地快照兜底（滚动保留最近数份）
-│   │   │   └── secure_storage_service.dart # WebDAV 凭据安全存储（Keystore / Keychain）
-│   │   ├── view/
-│   │   │   └── data_sync_view.dart    # 同步页组件（配置卡 / 操作卡 / 合并摘要）
-│   │   └── view_model/
-│   │       └── sync_provider.dart     # 同步状态与动作（上传 / 恢复 / 自动同步）
+│   ├── stats/                         # 统计与图表（10 文件）
+│   │   ├── model/statistics.dart      # 三段式仪表盘聚合（热力图 / 类型占比 / 评分分布 / 年报）
+│   │   ├── page/                      # dashboard / personal_stats / annual_report
+│   │   └── view/                      # stats_card / heatmap_calendar / chart_view 等图表组件
 │   │
-│   └── profile/                       # 个人中心与日志（5 文件）
-│       ├── model/
-│       │   └── user_profile.dart      # UserProfile（昵称 / 签名 / 头像 / 主题偏好）
-│       ├── page/
-│       │   ├── profile_page.dart      # 个人中心（档案 / 主题三选 / 统计·数据源·同步·日志入口）
-│       │   └── error_log_page.dart    # 错误日志（分级统计 / 列表 / 导出 / 复制 / 清空）
-│       └── view/
-│           ├── profile_view.dart      # 个人页组件（ProfileCard / StatSummary / SettingItem）
-│           └── error_log_view.dart    # 日志页组件（SummaryHeader / HintBar / LogTile / ActionBar）
+│   ├── sync/                          # 云同步与备份（8 文件）
+│   │   ├── page/data_sync_page.dart   # 数据同步（WebDAV 云同步 + 本地导出导入）
+│   │   ├── service/                   # webdav_client（PROPFIND/MKCOL/PUT/GET）/ backup /
+│   │   │                              #   merge_engine（LWW）/ snapshot / secure_storage
+│   │   ├── view/data_sync_view.dart   # 同步页组件（配置卡 / 操作卡 / 合并摘要）
+│   │   └── view_model/sync_provider.dart # 同步动作互斥执行（上传 / 恢复 / 自动同步）
+│   │
+│   └── profile/                       # 个人中心与日志（4 文件）
+│       ├── page/                      # profile_page / error_log_page
+│       └── view/                      # profile_view / error_log_view
 │
-├── component/                         # ③ 功能组件层 —— 跨模块复用
-│   ├── common/
-│   │   ├── grid_item_card.dart        # 网格媒体卡（支持 onTap / onLongPress）
-│   │   └── progress_ring.dart         # CustomPainter 圆形进度环（动画）
-│   ├── media/
-│   │   ├── model/media_ref.dart       # MediaRef（本地文件 / 网络图引用，双空即占位）
-│   │   ├── media_cover.dart           # 媒体图三态展示（本地 / 网络 / 占位）
-│   │   ├── media_tile.dart            # 当前任务横向卡片
-│   │   ├── cover_placeholder.dart     # 离线封面（渐变 + 字标，无网络依赖）
-│   │   └── local_media_scope.dart     # 本地图解析契约（组件层定义、app 层注入实现）
-│   └── theme/
-│       └── app_palette.dart           # 全局色板 ThemeExtension（dark / light）+ context.colors
+├── component/                         # ③ 功能组件层 —— 跨模块复用（9 文件）
+│   ├── common/                        # grid_item_card / progress_ring / sheet_grabber
+│   ├── media/                         # media_cover / media_tile / cover_placeholder /
+│   │                                  #   local_media_scope（契约注入）/ model/media_ref
+│   └── theme/app_palette.dart         # 全局色板 ThemeExtension（dark / light）+ context.colors
 │
-└── foundation/                        # ④ 基础层 —— 不认识任何业务
-    ├── logger/
-    │   ├── app_logger.dart            # 日志中枢：分级 + 内存环形缓冲 + 增量计数 + 可订阅（ChangeNotifier）
-    │   ├── log_sink.dart              # 落盘后端契约（按平台接线）
-    │   ├── log_sink_io.dart           # 手机 / 桌面：写 logs/moying.log，写链串行化 + 2MB 滚动
-    │   ├── log_sink_stub.dart         # Web：no-op（仅内存缓冲）
-    │   ├── log_exporter.dart          # 导出契约（写本地 .txt 后交系统分享面板）
-    │   ├── log_exporter_io.dart       # 手机 / 桌面实现
-    │   └── log_exporter_stub.dart     # Web 实现（不落盘，直接交平台分享）
-    ├── network/
-    │   ├── cover_headers.dart         # 封面图请求的 Host 判定与 Referer 头生成
-    │   └── http_retry.dart            # 分层超时（建连 / 首字节 / 整体）+ 一次重试
-    ├── storage/
-    │   └── secure_store.dart          # 凭据读写最小接口 + Keychain / Keystore 实现 + 内存 fake
-    └── utils/
-        ├── image_pick_service.dart    # 选图服务抽象（image_picker）
-        ├── image_compress_service.dart # 单图压缩 / 上限（magic bytes 探活 → 缩放 → 重编码）
-        └── ttl_cache.dart             # 进程内 TTL + LRU 缓存（检索结果复用）
+└── foundation/                        # ④ 基础层 —— 不认识任何业务（16 文件）
+    ├── constants/                     # app_routes（路由名）/ app_strings（跨页文案）
+    ├── logger/                        # 日志中枢：分级 + 环形缓冲 + 写链串行化 + 滚动 2MB
+    │                                  #   （io / stub 按平台接线）+ 导出（io / stub）
+    ├── network/                       # cover_headers（Referer）/ http_retry（分层超时 + 重试）
+    ├── storage/secure_store.dart      # 凭据读写最小接口 + Keychain / Keystore 实现
+    └── utils/                         # date_format / image_pick / image_compress / ttl_cache
 ```
 
 ## 测试
 
-`test/` 下 **33 个测试文件、共 420 个用例**，覆盖：
+`test/` 下 **35 个测试文件、共 490 个用例**，覆盖：
 
 - **模型与存储**：JSON 序列化往返、`LibraryStore` 原子写 / 合并写 / schemaVersion、图片管线与压缩上限
 - **状态层**：`Provider` 持久化与并发写、日志中枢的环形缓冲 / 递增计数 / 写链并发 / 截断对齐
+- **编辑控制器**：`BookEditController` / `MovieEditController` 无 Widget 树单测
+  （表单归一 / 导演↔演员联动 / 检索回填 / 哨兵语义）
 - **联网检索**：数据源配置与凭据、结果缓存（TTL+LRU）、多源聚合去重、自定义源智能解析、
   字段回填回归、弱网分层超时与重试、封面 Host 判定
 - **同步**：备份往返（JSON / 含图 ZIP）、WebDAV PROPFIND、LWW 合并引擎、快照兜底
@@ -279,7 +229,8 @@ lib/（96 个 .dart 文件）
   主题偏好写入 `profile.json`，重启保持；可选「跟随系统」。
 - **封面可降级**：支持本地图片与网络图，无封面或加载失败时回退到 HSL 渐变 + 字标占位，断网也不破版。
 - **状态管理**：Provider（`ChangeNotifier`）作单一数据源，UI 只读 Provider，写操作由 Provider 统一落盘；
-  列表页用 `context.select` 收窄订阅，避免无关 rebuild。
+  列表页用 `context.select` 收窄订阅，避免无关 rebuild。跨模块消费走门面接口
+  （`LibraryFacade` / `DataSourceFacade`），依赖抽象而非兄弟实现。
 - **圆形进度环**：`CustomPainter` + `SweepGradient` + 900ms 缓动动画。
 - **联想式录入**：书籍分类与电影剧情类型均为「候选点选 + 自由输入」的多选标签；
   电影导演失焦后自动挂到演员区首位。
@@ -338,14 +289,15 @@ lib/（96 个 .dart 文件）
 - [ ] 年度目标设定：设定年度读书 / 观影目标并在统计仪表盘追踪完成度
   （图表统计与年报已实现，目标追踪尚未开始）
 - [ ] 仪表盘顶栏搜索 / 通知按钮接上功能（当前为空实现）
-- [ ] 业务模块解耦：拆分 `LibraryProvider` / `LibraryStore` 的 ViewModel + Repository + Store
-  三重职责，消除跨业务模块引用；编辑页抽出独立 Controller 以便单测
 
 ## 开发约定
 
 - **依赖方向**：严格遵守 `app → business → component → foundation` 单向依赖。
-  提交前可跑架构自检脚本核对反向依赖、命名与 `part` 残留。
-- **取色**：一律 `context.colors.xxx`，禁止静态常量色（主题切换时 const 子树不会重绘）。
+- **模块解耦**：业务模块间零直接引用——跨模块数据依赖走 `business/shared/`
+  （DTO / 仓储 / 门面接口），跨模块跳页走 `AppRoutes` 路由名（页面构建集中在 `app/router.dart`）；
+  禁止 import 兄弟模块的 page / view_model。
+- **取色**：一律 `context.colors.xxx`，禁止静态常量色（主题切换时 const 子树不会重绘）；
+  字号新代码用 `AppType` 常量。
 - **命名**：页面 `XxxPage` / `xxx_page.dart`；视图组件按功能命名，禁用 `widget` 关键字。
 - **同步改测试**：改动 `LibraryStore`、合并引擎、数据源解析等核心逻辑时同步补测试；
   查询类断言以 `flutter analyze`（0 issue）与全量 `flutter test` 全绿为准。
