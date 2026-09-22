@@ -9,7 +9,7 @@ import '../../../component/theme/app_palette.dart';
 import '../../../foundation/constants/app_strings.dart';
 import '../../../foundation/utils/date_format.dart';
 import '../../shared/model/data_source.dart';
-import '../../data_source/view_model/data_source_provider.dart';
+import '../../shared/data_source_facade.dart';
 import '../../shared/model/actor.dart';
 import '../model/edit_result.dart';
 import '../../shared/model/movie.dart';
@@ -241,8 +241,8 @@ class _MovieEditPageState extends State<MovieEditPage> {
       ),
       body: _c.isEditMode && _c.notFound
           ? Center(
-              child:
-                  Text('未找到该电影', style: TextStyle(color: context.colors.textMuted)),
+              child: Text('未找到该电影',
+                  style: TextStyle(color: context.colors.textMuted)),
             )
           : _buildFormContent(),
     );
@@ -364,10 +364,10 @@ class _MovieEditPageState extends State<MovieEditPage> {
   }
   // ---------- 快速检索（联网信息补全）----------
 
-  /// 检索区块：未注入 DataSourceProvider（部分测试只给 LibraryProvider）
+  /// 检索区块：未注入 DataSourceFacade（部分测试只给 LibraryProvider）
   /// 或无默认影视数据源时整块隐藏，不影响手动录入。
   List<Widget> _quickSearchBlocks() {
-    final DataSourceProvider? ds = _tryReadDataSource(context);
+    final DataSourceFacade? ds = _tryReadDataSource(context);
     final source = ds?.defaultMovieSource;
     if (ds == null || source == null) return const [];
     return [
@@ -414,12 +414,12 @@ class _MovieEditPageState extends State<MovieEditPage> {
   /// 从上下文读数据源 Provider；未注册时返回 null（不抛异常）。
   /// build 中用默认 listen: true（搜索状态变化触发整页 rebuild）；
   /// 事件回调（onChanged / Timer）中必须 listen: false。
-  DataSourceProvider? _tryReadDataSource(
+  DataSourceFacade? _tryReadDataSource(
     BuildContext context, {
     bool listen = true,
   }) {
     try {
-      return Provider.of<DataSourceProvider>(context, listen: listen);
+      return Provider.of<DataSourceFacade>(context, listen: listen);
     } on ProviderNotFoundException {
       return null;
     }
@@ -450,7 +450,7 @@ class _MovieEditPageState extends State<MovieEditPage> {
   /// 先尝试取详情补全导演/主演/片长/类型（失败回退搜索结果），再统一 setState。
   Future<void> _applyMovieResult(
     MovieSearchResult r,
-    DataSourceProvider ds,
+    DataSourceFacade ds,
   ) async {
     MovieSearchResult detail = r;
     final full = await ds.fetchMovieDetail(r);
@@ -791,7 +791,8 @@ class _MovieEditPageState extends State<MovieEditPage> {
         hintStyle: TextStyle(color: context.colors.textMuted, fontSize: 14),
         filled: true,
         fillColor: context.colors.surfaceHigh,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: context.colors.outline, width: 0.8),
@@ -890,7 +891,9 @@ class _MovieEditPageState extends State<MovieEditPage> {
               ),
               const Spacer(),
               Text(
-                _c.rating > 0 ? '${_c.rating.toStringAsFixed(1)} 分' : AppStrings.unrated,
+                _c.rating > 0
+                    ? '${_c.rating.toStringAsFixed(1)} 分'
+                    : AppStrings.unrated,
                 style: TextStyle(
                   color: _c.rating > 0
                       ? context.colors.star
@@ -1066,7 +1069,8 @@ class _MovieEditPageState extends State<MovieEditPage> {
         hintStyle: TextStyle(color: context.colors.textMuted, fontSize: 13),
         filled: true,
         fillColor: context.colors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: context.colors.outline, width: 0.8),
@@ -1144,7 +1148,8 @@ class _MovieEditPageState extends State<MovieEditPage> {
                 height: 28,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: coverGradient(MovieEditController.actorHue(actor.name)),
+                  gradient:
+                      coverGradient(MovieEditController.actorHue(actor.name)),
                 ),
                 alignment: Alignment.center,
                 child: Text(
@@ -1162,7 +1167,8 @@ class _MovieEditPageState extends State<MovieEditPage> {
                   actor.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
+                  style: TextStyle(
+                      color: context.colors.textPrimary, fontSize: 14),
                 ),
               ),
             ],

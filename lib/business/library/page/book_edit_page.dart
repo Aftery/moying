@@ -8,8 +8,8 @@ import '../../../component/theme/app_palette.dart';
 import '../../../foundation/constants/app_strings.dart';
 import '../../../foundation/utils/date_format.dart';
 import '../../shared/model/data_source.dart';
-import '../../data_source/service/book_category_mapper.dart';
-import '../../data_source/view_model/data_source_provider.dart';
+import '../../shared/book_category_mapper.dart';
+import '../../shared/data_source_facade.dart';
 import '../../shared/model/book.dart';
 import '../model/edit_result.dart';
 import '../view/edit_form_view.dart'
@@ -117,7 +117,8 @@ class _BookEditPageState extends State<BookEditPage> {
   Future<bool> _confirmBeforeSave() async {
     final error = _c.validate();
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error)));
       return false;
     }
     // 已读页数未填满但仍有完成记录 → 回退需二次确认（对应旧滑杆回退确认）
@@ -322,7 +323,8 @@ class _BookEditPageState extends State<BookEditPage> {
               borderRadius: BorderRadius.circular(18),
               onTap: _c.saving ? null : _save,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                 child: _c.saving
                     ? const SizedBox(
                         width: 16,
@@ -461,6 +463,7 @@ class _BookEditPageState extends State<BookEditPage> {
       ),
     );
   }
+
   /// 无边框输入装饰（卡片内书名 / 作者行）
   InputDecoration _borderless(String hint, double hintFontSize) {
     return InputDecoration(
@@ -597,7 +600,9 @@ class _BookEditPageState extends State<BookEditPage> {
               ),
               const Spacer(),
               Text(
-                _c.rating > 0 ? '${_c.rating.toStringAsFixed(1)} 分' : AppStrings.unrated,
+                _c.rating > 0
+                    ? '${_c.rating.toStringAsFixed(1)} 分'
+                    : AppStrings.unrated,
                 style: TextStyle(
                   color: _c.rating > 0
                       ? context.colors.star
@@ -659,7 +664,8 @@ class _BookEditPageState extends State<BookEditPage> {
               const Spacer(),
               // H4：状态胶囊只随两个页数输入重建
               ListenableBuilder(
-                listenable: Listenable.merge([_c.pagesCtrl, _c.currentPagesCtrl]),
+                listenable:
+                    Listenable.merge([_c.pagesCtrl, _c.currentPagesCtrl]),
                 builder: (_, __) => _statusPill(context, _c.statusFromProgress),
               ),
             ],
@@ -767,8 +773,9 @@ class _BookEditPageState extends State<BookEditPage> {
 
   /// 阅读时间区块（想读且无任何记录时返回空，整块隐藏）
   List<Widget> _readingTimeBlocks() {
-    final inReading =
-        _c.effectiveCurrentPages > 0 || _c.startedAt != null || _c.finishedAt != null;
+    final inReading = _c.effectiveCurrentPages > 0 ||
+        _c.startedAt != null ||
+        _c.finishedAt != null;
     if (!inReading) return const [];
 
     final blocks = <Widget>[
@@ -1175,12 +1182,12 @@ class _BookEditPageState extends State<BookEditPage> {
 
   // ---------- 快速检索（联网信息补全）----------
 
-  /// 检索区块：未注入 DataSourceProvider（部分测试只给 LibraryProvider）
+  /// 检索区块：未注入 DataSourceFacade（部分测试只给 LibraryProvider）
   /// 或无默认书籍数据源时整块隐藏，不影响手动录入。
   /// 呈现由 [QuickSearchPanel] 承担（M5 与 movie_edit 共用）；
   /// 搜索触发（debounce）与结果回填差异留在本 State。
   List<Widget> _quickSearchBlocks() {
-    final DataSourceProvider? ds = _tryReadDataSource(context);
+    final DataSourceFacade? ds = _tryReadDataSource(context);
     final source = ds?.defaultBookSource;
     if (ds == null || source == null) return const [];
     // 聚合检索时结果可能来自多个源（默认源 + 备用源），如实标注来源，
@@ -1251,12 +1258,12 @@ class _BookEditPageState extends State<BookEditPage> {
   /// 从上下文读数据源 Provider；未注册时返回 null（不抛异常）。
   /// build 中用默认 listen: true（搜索状态变化触发整页 rebuild）；
   /// 事件回调（onChanged / Timer）中必须 listen: false。
-  DataSourceProvider? _tryReadDataSource(
+  DataSourceFacade? _tryReadDataSource(
     BuildContext context, {
     bool listen = true,
   }) {
     try {
-      return Provider.of<DataSourceProvider>(context, listen: listen);
+      return Provider.of<DataSourceFacade>(context, listen: listen);
     } on ProviderNotFoundException {
       return null;
     }
@@ -1289,7 +1296,7 @@ class _BookEditPageState extends State<BookEditPage> {
   /// 简介 / 分类多数来自详情接口，失败时必须在提示里说明，不能静默。
   void _applyBookResult(
     BookSearchResult r,
-    DataSourceProvider ds, {
+    DataSourceFacade ds, {
     String? detailWarning,
   }) {
     final source = ds.defaultBookSource;

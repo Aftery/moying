@@ -17,7 +17,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:moying/business/shared/model/book.dart';
 import 'package:moying/business/shared/model/data_source.dart';
-import 'package:moying/business/data_source/service/book_category_mapper.dart';
+import 'package:moying/business/shared/book_category_mapper.dart';
 import 'package:moying/business/data_source/service/data_sources/custom_data_source.dart';
 import 'package:moying/business/data_source/service/data_sources/open_library_data_source.dart';
 

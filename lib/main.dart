@@ -11,9 +11,11 @@ import 'app/config/app_theme.dart';
 import 'business/library/repository/persistence.dart';
 import 'business/data_source/view_model/data_source_provider.dart';
 import 'business/library/view_model/library_provider.dart';
+import 'business/shared/data_source_facade.dart';
 import 'business/shared/library_facade.dart';
 import 'business/sync/view_model/sync_provider.dart';
 import 'app/pages/root_page.dart';
+import 'app/router.dart';
 import 'foundation/logger/app_logger.dart';
 import 'business/data_source/service/data_source_manager.dart';
 
@@ -153,6 +155,8 @@ class _MoYingAppState extends State<MoYingApp> {
         ListenableProvider<LibraryFacade>.value(value: _library),
         ChangeNotifierProvider.value(value: _sync),
         ChangeNotifierProvider.value(value: _dataSource),
+        // 数据源门面：library 编辑页（快速检索/找封面）与 sync 页依赖接口
+        ListenableProvider<DataSourceFacade>.value(value: _dataSource),
       ],
       child: const _AppShell(),
     );
@@ -233,6 +237,8 @@ class _AppShellState extends State<_AppShell> {
         darkTheme: buildAppTheme(AppPalette.dark),
         themeMode: themeMode,
         home: const RootPage(),
+        // P3：跨模块跳页走全局路由表（app 层构建页面，模块间不再 import 兄弟 Page）
+        onGenerateRoute: appOnGenerateRoute,
       ),
     );
   }

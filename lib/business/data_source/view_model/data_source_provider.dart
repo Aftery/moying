@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../shared/data_source_facade.dart';
 import '../../shared/model/data_source.dart';
 import '../../../foundation/logger/app_logger.dart';
 import '../service/book_result_merger.dart';
@@ -20,7 +21,7 @@ typedef _BookSearchOutcome = ({
 /// - debounce 由 UI 层负责（Timer 500ms），Provider 只收最终查询词。
 /// - 全局请求节流：同类型数据源（按 DataSourceType）最小间隔 3s，防止触发 API 速率限制。
 /// - **缓存层**：搜索与详情各有一层 TTL 缓存（见 [TtlCache]），命中即不发网络请求。
-class DataSourceProvider extends ChangeNotifier {
+class DataSourceProvider extends ChangeNotifier implements DataSourceFacade {
   /// 请求节流：每类数据源（DataSourceType）上次请求时间。
   /// 实例级即可——应用内 DataSourceProvider 为单例；static 会让测试间状态泄漏
   /// （前一个用例的记录拦截后一个用例的真实请求）。
@@ -117,10 +118,12 @@ class DataSourceProvider extends ChangeNotifier {
   List<DataSourceConfig> get configs => _manager.configs;
 
   /// 书籍默认源（null = 未配置，编辑页隐藏快速检索）
+  @override
   DataSourceConfig? get defaultBookSource =>
       _manager.defaultSourceOf(DataSourceCategory.book);
 
   /// 影视默认源
+  @override
   DataSourceConfig? get defaultMovieSource =>
       _manager.defaultSourceOf(DataSourceCategory.movie);
 
@@ -143,6 +146,7 @@ class DataSourceProvider extends ChangeNotifier {
   }
 
   /// 重载配置（云备份/本地导入恢复 data_sources.json 后调用）
+  @override
   Future<void> reload() async {
     await _manager.loadConfigs();
     _invalidateCaches();
@@ -151,6 +155,7 @@ class DataSourceProvider extends ChangeNotifier {
 
   /// 恢复备份后检查：返回必填凭据缺失的数据源名（提示用户重填）。
   /// 同设备恢复时凭据仍在安全存储中不会命中；跨设备恢复时逐个列出。
+  @override
   Future<List<String>> sourcesMissingCredentials() async {
     final missing = <String>[];
     for (final c in _manager.configs) {
@@ -178,18 +183,22 @@ class DataSourceProvider extends ChangeNotifier {
   // ---------- 搜索状态 ----------
 
   bool _isSearching = false;
+  @override
   bool get isSearching => _isSearching;
 
   /// 书籍搜索结果（null = 尚未搜索；空列表 = 无结果）
   List<BookSearchResult>? _bookResults;
+  @override
   List<BookSearchResult>? get bookResults => _bookResults;
 
   /// 电影搜索结果
   List<MovieSearchResult>? _movieResults;
+  @override
   List<MovieSearchResult>? get movieResults => _movieResults;
 
   /// 最近一次搜索错误（null = 无错误；空串 = 无结果不视为错误）
   String? _searchError;
+  @override
   String? get searchError => _searchError;
 
   /// 最近一次搜索的关键词（结果区标题与去重判断用）
@@ -202,6 +211,7 @@ class DataSourceProvider extends ChangeNotifier {
   /// 最近一次书籍搜索**实际取到结果**的源名（聚合时可能多个；空 = 未搜索）。
   /// 检索区标题据此如实标注来源，不让用户以为结果只来自默认源。
   List<String> _bookSearchSourceNames = const [];
+  @override
   List<String> get bookSearchSourceNames => _bookSearchSourceNames;
 
   /// 聚合适配：结果与源名在同一次 execute 里产出，但源名要等 `_search`
@@ -315,6 +325,7 @@ class DataSourceProvider extends ChangeNotifier {
   /// **结果缓存**（TTL [_searchCacheTtl]）：同一关键词在窗口内重复检索直接命中
   /// 缓存，省掉整次网络往返。缓存键含默认源 id，换默认源即自然失效；
   /// 改配置时显式清空（见 [_invalidateCaches]）。
+  @override
   Future<void> searchBooks(String query) => _search<BookSearchResult>(
         query: query,
         category: DataSourceCategory.book,
@@ -423,6 +434,7 @@ class DataSourceProvider extends ChangeNotifier {
   ///
   /// 恒以 `ignoreThrottle` 调聚合检索：这是用户的**显式点击**，而 3s 节流是
   /// 为了拦「打字过程中连发请求」；否则刚搜过一次再点「找封面」会静默无结果。
+  @override
   Future<String?> lookupBookCover({
     required String title,
     String? isbn,
@@ -453,6 +465,7 @@ class DataSourceProvider extends ChangeNotifier {
   }
 
   /// 按关键词搜索电影（用当前影视默认源；结果走缓存）
+  @override
   Future<void> searchMovies(String query) => _search<MovieSearchResult>(
         query: query,
         category: DataSourceCategory.movie,
@@ -474,6 +487,7 @@ class DataSourceProvider extends ChangeNotifier {
 
   /// 取电影详情（导演 / 主演 / 片长补全；失败返回 null——调用方回退搜索结果）；
   /// 同一部片在 TTL 内重复取详情命中缓存。
+  @override
   Future<MovieSearchResult?> fetchMovieDetail(
     MovieSearchResult result,
   ) async {
@@ -518,6 +532,7 @@ class DataSourceProvider extends ChangeNotifier {
   /// 调用方读本字段提示用户「补全失败」——但能力缺失（源不支持详情 /
   /// 未配置详情接口）不算失败，不会写入本字段（见 [DataSourceException.silent]）。
   String? _lastDetailError;
+  @override
   String? get lastDetailError => _lastDetailError;
 
   /// 取书籍详情（分类 / 简介 / 页数补全；失败返回 null——调用方回退搜索结果）
@@ -526,6 +541,7 @@ class DataSourceProvider extends ChangeNotifier {
   /// 1. **两跳压一跳**（[bookDetailIsRedundant]）：搜索响应已经把详情能补的
   ///    字段全带回来了 → 直接返回 null，省掉这次注定冗余的往返；
   /// 2. **详情缓存**：同一本书在 TTL 内重复取详情命中缓存。
+  @override
   Future<BookSearchResult?> fetchBookDetail(
     BookSearchResult result,
   ) async {
@@ -570,6 +586,7 @@ class DataSourceProvider extends ChangeNotifier {
     }
   }
 
+  @override
   void clearResults() {
     // 递增请求序号，使已发出的网络响应在清空后失效。
     for (final category in DataSourceCategory.values) {

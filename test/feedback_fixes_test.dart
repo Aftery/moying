@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'package:moying/business/shared/repository/library_store.dart';
 import 'package:moying/business/shared/model/user_profile.dart';
 import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/app/router.dart';
 import 'package:moying/business/shared/library_facade.dart';
 import 'package:moying/business/library/page/book_edit_page.dart';
 import 'package:moying/business/stats/page/dashboard_page.dart';
@@ -29,7 +30,11 @@ Widget _wrap(LibraryProvider provider, Widget home) {
       ChangeNotifierProvider<LibraryProvider>.value(value: provider),
       ListenableProvider<LibraryFacade>.value(value: provider),
     ],
-    child: MaterialApp(home: home),
+    child: MaterialApp(
+      home: home,
+      // P3：跨模块跳页走全局路由表，测试与真实装配一致
+      onGenerateRoute: appOnGenerateRoute,
+    ),
   );
 }
 
@@ -183,8 +188,7 @@ void main() {
     testWidgets('长按阅读列表卡片进入图书编辑页', (tester) async {
       final p = LibraryProvider();
       // 仪表盘依赖外层 Scaffold 的 Material（RootPage 提供），测试里补齐
-      await tester
-          .pumpWidget(_wrap(p, const Scaffold(body: DashboardPage())));
+      await tester.pumpWidget(_wrap(p, const Scaffold(body: DashboardPage())));
       await tester.pumpAndSettle();
 
       final book = p.readingList.first;
@@ -211,8 +215,7 @@ void main() {
 
     testWidgets('长按电影卡片进入电影编辑页', (tester) async {
       final p = LibraryProvider();
-      await tester
-          .pumpWidget(_wrap(p, const Scaffold(body: DashboardPage())));
+      await tester.pumpWidget(_wrap(p, const Scaffold(body: DashboardPage())));
       await tester.pumpAndSettle();
 
       final movie = p.movieList.first;
@@ -306,8 +309,7 @@ void main() {
       ))!;
       addTearDown(() => tester.runAsync(() => dir.delete(recursive: true)));
       final p = await emptyLibrary(tester, dir);
-      await tester
-          .pumpWidget(_wrap(p, const Scaffold(body: DashboardPage())));
+      await tester.pumpWidget(_wrap(p, const Scaffold(body: DashboardPage())));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -331,8 +333,7 @@ void main() {
       ))!;
       addTearDown(() => tester.runAsync(() => dir.delete(recursive: true)));
       final p = await emptyLibrary(tester, dir);
-      await tester
-          .pumpWidget(_wrap(p, const Scaffold(body: DashboardPage())));
+      await tester.pumpWidget(_wrap(p, const Scaffold(body: DashboardPage())));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 

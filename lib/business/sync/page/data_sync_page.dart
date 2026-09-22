@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import '../../../component/theme/app_palette.dart';
 import '../../../foundation/constants/app_strings.dart';
 import '../../shared/model/sync_settings.dart';
-import '../../data_source/view_model/data_source_provider.dart';
+import '../../shared/data_source_facade.dart';
 import '../view_model/sync_provider.dart';
 import '../service/backup_service.dart';
 import '../service/merge_engine.dart';
@@ -206,9 +206,9 @@ class _DataSyncPageState extends State<DataSyncPage> {
   /// 恢复完成后的收尾：数据源配置可能被备份覆盖 → 重载内存列表；
   /// 必填凭据缺失的源（跨设备恢复场景）集中提示重填
   Future<void> _afterRestoreReload() async {
-    DataSourceProvider? ds;
+    DataSourceFacade? ds;
     try {
-      ds = context.read<DataSourceProvider>();
+      ds = context.read<DataSourceFacade>();
     } on ProviderNotFoundException {
       return;
     }

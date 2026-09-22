@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../component/theme/app_palette.dart';
+import '../../../foundation/constants/app_routes.dart';
 import '../../shared/model/book.dart';
 import '../../shared/model/movie.dart';
 import '../../../component/common/grid_item_card.dart';
 import '../../../component/media/media_tile.dart';
-import '../../library/page/book_detail_page.dart';
-import '../../library/page/book_edit_page.dart';
-import '../../library/page/movie_detail_page.dart';
-import '../../library/page/movie_edit_page.dart';
 
 class HeaderLink extends StatelessWidget {
   const HeaderLink({super.key, required this.label, this.onTap});
@@ -201,9 +198,7 @@ class BookGrid extends StatelessWidget {
           icon: Icons.menu_book_outlined,
           title: '书库空空',
           subtitle: '点击这里直接添加你的第一本书',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const BookEditPage()),
-          ),
+          onTap: () => Navigator.of(context).pushNamed(AppRoutes.bookEdit),
         ),
       );
     }
@@ -219,12 +214,10 @@ class BookGrid extends StatelessWidget {
             rating: b.rating,
             statusLabel: b.status.label,
             // 与书籍模块一致：单击进详情、长按进编辑
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => BookDetailPage(bookId: b.id)),
-            ),
-            onLongPress: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => BookEditPage(bookId: b.id)),
-            ),
+            onTap: () => Navigator.of(context)
+                .pushNamed(AppRoutes.bookDetail, arguments: b.id),
+            onLongPress: () => Navigator.of(context)
+                .pushNamed(AppRoutes.bookEdit, arguments: b.id),
           ),
       ],
     );
@@ -246,9 +239,7 @@ class MovieGrid extends StatelessWidget {
           icon: Icons.movie_outlined,
           title: '还没有电影记录',
           subtitle: '点击这里直接添加你的第一部电影',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const MovieEditPage()),
-          ),
+          onTap: () => Navigator.of(context).pushNamed(AppRoutes.movieEdit),
         ),
       );
     }
@@ -264,13 +255,10 @@ class MovieGrid extends StatelessWidget {
             rating: m.rating,
             statusLabel: m.status.label,
             // 与书籍模块一致：单击进详情、长按进编辑
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                  builder: (_) => MovieDetailPage(movieId: m.id)),
-            ),
-            onLongPress: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => MovieEditPage(movieId: m.id)),
-            ),
+            onTap: () => Navigator.of(context)
+                .pushNamed(AppRoutes.movieDetail, arguments: m.id),
+            onLongPress: () => Navigator.of(context)
+                .pushNamed(AppRoutes.movieEdit, arguments: m.id),
           ),
       ],
     );

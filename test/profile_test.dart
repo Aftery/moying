@@ -10,6 +10,7 @@ import 'package:moying/business/library/model/mock_data.dart';
 import 'package:moying/component/media/model/media_ref.dart';
 import 'package:moying/business/shared/model/user_profile.dart';
 import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/app/router.dart';
 import 'package:moying/business/shared/library_facade.dart';
 import 'package:moying/business/profile/page/profile_page.dart';
 import 'package:provider/provider.dart';
@@ -160,7 +161,11 @@ void main() {
             ChangeNotifierProvider<LibraryProvider>.value(value: p),
             ListenableProvider<LibraryFacade>.value(value: p),
           ],
-          child: const MaterialApp(home: ProfilePage()),
+          child: const MaterialApp(
+            home: ProfilePage(),
+            // P3：跨模块跳页走全局路由表，测试与真实装配一致
+            onGenerateRoute: appOnGenerateRoute,
+          ),
         ),
       );
       await tester.pumpAndSettle();

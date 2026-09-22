@@ -3,16 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../component/common/sheet_grabber.dart';
+import '../../../foundation/constants/app_routes.dart';
 import '../../../component/theme/app_palette.dart';
 import '../../../component/media/model/media_ref.dart';
 import '../../shared/model/stats.dart';
 import '../../shared/model/user_profile.dart';
 import '../../shared/library_facade.dart';
 import '../../../component/media/media_cover.dart';
-import '../../data_source/page/data_source_page.dart';
-import '../../sync/page/data_sync_page.dart';
 import 'error_log_page.dart';
-import '../../stats/page/personal_stats_page.dart';
 import '../view/profile_view.dart';
 
 /// 个人中心 —— 档案（昵称/签名/头像）、主题偏好、个人统计入口
@@ -79,9 +77,7 @@ class ProfilePage extends StatelessWidget {
       SettingItem(
         icon: Icons.data_usage_rounded,
         label: '数据统计',
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const PersonalStatsPage()),
-        ),
+        onTap: () => Navigator.of(context).pushNamed(AppRoutes.personalStats),
       ),
       SettingItem(
         icon: Icons.dark_mode_rounded,
@@ -94,16 +90,13 @@ class ProfilePage extends StatelessWidget {
         SettingItem(
           icon: Icons.cloud_download_outlined,
           label: '数据源管理',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const DataSourcePage()),
-          ),
+          onTap: () =>
+              Navigator.of(context).pushNamed(AppRoutes.dataSourceManage),
         ),
         SettingItem(
           icon: Icons.sync_rounded,
           label: '数据同步',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const DataSyncPage()),
-          ),
+          onTap: () => Navigator.of(context).pushNamed(AppRoutes.dataSync),
         ),
         SettingItem(
           icon: Icons.bug_report_rounded,

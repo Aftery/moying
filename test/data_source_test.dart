@@ -15,6 +15,7 @@ import 'package:moying/business/shared/repository/library_store.dart';
 import 'package:moying/business/shared/model/book.dart';
 import 'package:moying/business/shared/model/data_source.dart';
 import 'package:moying/business/data_source/view_model/data_source_provider.dart';
+import 'package:moying/business/shared/data_source_facade.dart';
 import 'package:moying/business/library/view_model/library_provider.dart';
 import 'package:moying/business/library/page/book_edit_page.dart';
 import 'package:moying/business/data_source/page/data_source_page.dart';
@@ -719,6 +720,8 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: library),
           ChangeNotifierProvider.value(value: provider),
+          // 编辑页依赖 DataSourceFacade 门面（P4）
+          ListenableProvider<DataSourceFacade>.value(value: provider),
         ],
         child: MaterialApp(
           home: Builder(
@@ -804,6 +807,8 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: library),
           ChangeNotifierProvider.value(value: provider),
+          // 编辑页依赖 DataSourceFacade 门面（P4）
+          ListenableProvider<DataSourceFacade>.value(value: provider),
         ],
         child: MaterialApp(
           home: Builder(
