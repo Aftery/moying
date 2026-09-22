@@ -11,6 +11,7 @@ import 'app/config/app_theme.dart';
 import 'business/library/repository/persistence.dart';
 import 'business/data_source/view_model/data_source_provider.dart';
 import 'business/library/view_model/library_provider.dart';
+import 'business/shared/library_facade.dart';
 import 'business/sync/view_model/sync_provider.dart';
 import 'app/pages/root_page.dart';
 import 'foundation/logger/app_logger.dart';
@@ -32,7 +33,7 @@ Future<void> main() async {
   // L-6: presentError 会打印更完整的 widget 树诊断信息（含 informationCollector），
   // 并触发 debug 下红屏；只打 own line 的话，这些诊断信息就丢失了。
   FlutterError.onError = (details) {
-    FlutterError.presentError(details);  // 保留默认行为（完整诊断 + debug 红屏）
+    FlutterError.presentError(details); // 保留默认行为（完整诊断 + debug 红屏）
     AppLogger.instance.fatal(
       'flutter',
       'Flutter 框架错误',
@@ -146,6 +147,10 @@ class _MoYingAppState extends State<MoYingApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: _library),
+        // 跨模块门面：同一实例再注册为 LibraryFacade，供 stats/profile/sync
+        // 依赖接口而非 library 实现（同级引用清零）。用 ListenableProvider
+        // 而非 Provider，才会订阅 ChangeNotifier 的通知、select 才会重建。
+        ListenableProvider<LibraryFacade>.value(value: _library),
         ChangeNotifierProvider.value(value: _sync),
         ChangeNotifierProvider.value(value: _dataSource),
       ],

@@ -5,7 +5,7 @@ import '../../../component/theme/app_palette.dart';
 import '../model/statistics.dart';
 import '../../shared/model/book.dart';
 import '../../shared/model/movie.dart';
-import '../../library/view_model/library_provider.dart';
+import '../../shared/library_facade.dart';
 import '../../../component/media/cover_placeholder.dart';
 
 /// 年度读书年报 —— 这一年阅读与观影的快照总结
@@ -21,11 +21,10 @@ class AnnualReportPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final books = context.select<LibraryProvider, List<Book>>((p) => p.books);
+    final books = context.select<LibraryFacade, List<Book>>((p) => p.books);
     final movies =
-        context.select<LibraryProvider, List<Movie>>((p) => p.movieList);
-    final h = computeAnnualHighlights(
-        books: books, movies: movies, year: year);
+        context.select<LibraryFacade, List<Movie>>((p) => p.movieList);
+    final h = computeAnnualHighlights(books: books, movies: movies, year: year);
 
     return Scaffold(
       appBar: AppBar(title: Text('$year 年度报告')),
@@ -76,8 +75,7 @@ class AnnualReportPage extends StatelessWidget {
           Text(
             '年报数据为实时快照 · 完成记录变化后自动更新',
             textAlign: TextAlign.center,
-            style: TextStyle(
-                fontSize: 11, color: context.colors.textMuted),
+            style: TextStyle(fontSize: 11, color: context.colors.textMuted),
           ),
         ],
       ),
@@ -124,8 +122,7 @@ class _OverviewHeader extends StatelessWidget {
           if (h.topCategory != null) ...[
             const SizedBox(height: 10),
             Text('你的年度偏好是「${h.topCategory}」',
-                style: const TextStyle(
-                    fontSize: 12.5, color: Colors.white)),
+                style: const TextStyle(fontSize: 12.5, color: Colors.white)),
           ],
         ],
       ),

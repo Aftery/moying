@@ -13,6 +13,7 @@ import '../../../component/media/model/media_ref.dart';
 import '../../shared/model/movie.dart';
 import '../../shared/model/stats.dart';
 import '../../shared/model/user_profile.dart';
+import '../../shared/library_facade.dart';
 import '../../../foundation/utils/image_compress_service.dart';
 import '../../../foundation/utils/image_pick_service.dart';
 
@@ -26,7 +27,7 @@ import '../../../foundation/utils/image_pick_service.dart';
 ///   （见 [LibraryStore]），内存先更新、磁盘异步追赶，UI 无感。
 ///
 /// UI 层只通过 getter 消费，两种模式对外接口一致。
-class LibraryProvider extends ChangeNotifier {
+class LibraryProvider extends ChangeNotifier implements LibraryFacade {
   LibraryProvider({LibraryStore? store, ImagePickService? picker})
       : _store = store,
         _picker = picker,
@@ -50,6 +51,7 @@ class LibraryProvider extends ChangeNotifier {
   bool get isPersistent => _store != null;
 
   /// 是否可唤起系统选图（持久模式 + 已注入 picker）
+  @override
   bool get canPickImage => _picker != null;
 
   /// 全量书库（图书模块唯一可变数据源，支持增删改）
@@ -80,9 +82,11 @@ class LibraryProvider extends ChangeNotifier {
   }
 
   /// 立即把未落盘的合并写冲盘（App 生命周期挂起/退出前调用）
+  @override
   Future<void> flush() async => _store?.flush();
 
   /// 云端恢复覆盖磁盘后重新从存储加载（SyncProvider 恢复完成后调用）
+  @override
   Future<void> reloadFromStore() => init();
 
   /// 最近一次持久化失败的错误信息（UI 可通过 listen 读取并向用户提示）
@@ -124,9 +128,11 @@ class LibraryProvider extends ChangeNotifier {
   // ==================== 用户档案与主题偏好 ====================
 
   /// 当前用户档案（单例，profile.json）
+  @override
   UserProfile get userProfile => _userProfile;
 
   /// 更新用户档案（头像变更时回收旧图；持久模式落盘 profile.json）
+  @override
   Future<void> updateProfile(UserProfile updated) async {
     _recycleImage(_userProfile.avatar, updated.avatar);
     _userProfile = updated;
@@ -135,9 +141,11 @@ class LibraryProvider extends ChangeNotifier {
   }
 
   /// 主题偏好（'dark' / 'light' / 'system'，随档案持久化）
+  @override
   String get themeMode => _userProfile.themeMode;
 
   /// 切换主题偏好（内部复用 updateProfile 落盘）
+  @override
   Future<void> setThemeMode(String mode) async {
     if (mode == _userProfile.themeMode) return;
     await updateProfile(_userProfile.copyWith(themeMode: mode));
@@ -146,6 +154,7 @@ class LibraryProvider extends ChangeNotifier {
   // ==================== 图片管线（P4） ====================
 
   /// 唤起系统选图（无 picker 返回 null）
+  @override
   Future<File?> pickImageFile() async => _picker?.pickImage();
 
   /// 复制图片进 `images/<entryId><ext>`，返回 [MediaRef.localFile] 相对名。
@@ -154,6 +163,7 @@ class LibraryProvider extends ChangeNotifier {
   ///
   /// M9：超 5MB 直接抛 StoreException；通过后经压缩（如可行）以 .jpg 落盘，
   /// 压缩不可行时回退原字节 + 原始扩展名。
+  @override
   Future<String?> attachImage(File source, String entryId) async {
     final s = _store;
     if (s == null) return null;
@@ -283,9 +293,11 @@ class LibraryProvider extends ChangeNotifier {
   // ==================== 书库查询 ====================
 
   /// 全量书库（图书模块列表页/筛选/搜索的数据源）
+  @override
   List<Book> get books => _booksCache ??= List.unmodifiable(_books);
 
   /// 仪表盘「阅读列表」展示的书目（读完优先，最多 6 本，保持旧观感）
+  @override
   List<Book> get readingList {
     if (_readingListCache != null) return _readingListCache!;
     const order = {
@@ -299,6 +311,7 @@ class LibraryProvider extends ChangeNotifier {
   }
 
   /// 当前在读书籍（仪表盘横向任务卡，最多 2 本）
+  @override
   List<Book> get currentlyReadingBooks => _currentlyReadingCache ??=
       _books.where((b) => b.status == BookStatus.reading).take(2).toList();
 
@@ -311,6 +324,7 @@ class LibraryProvider extends ChangeNotifier {
       _books.where((b) => b.status == BookStatus.finished).toList();
 
   /// 想读书籍
+  @override
   List<Book> get planToReadBooks =>
       _books.where((b) => b.status == BookStatus.planToRead).toList();
 
@@ -318,6 +332,7 @@ class LibraryProvider extends ChangeNotifier {
   ///
   /// - pagesRead：`finished` 的 `totalPages` 之和 + `reading` 的 `currentPage` 之和（想读不贡献）
   /// - progress：在读 + 已读 书的 `progress` 算术平均（想读不参与，避免 0 拉低）
+  @override
   BookStats get bookStats {
     if (_bookStatsCache != null) return _bookStatsCache!;
     final finished = _books.where((b) => b.status == BookStatus.finished);
@@ -427,10 +442,12 @@ class LibraryProvider extends ChangeNotifier {
       _movieList.where((m) => m.rating != null).toList();
 
   /// 全部电影（仪表盘网格/电影库）
+  @override
   List<Movie> get movieList =>
       _movieListCache ??= List.unmodifiable(_movieList);
 
   /// 想看电影（仪表盘横向任务卡）—— 来自电影库真实 watchlist，前 2 部
+  @override
   List<Movie> get upcomingMovies =>
       _upcomingMoviesCache ??= List.unmodifiable(_movieList
           .where((m) => m.status == MovieStatus.watchlist)
@@ -441,6 +458,7 @@ class LibraryProvider extends ChangeNotifier {
   ///
   /// - rated：`rating != null` 计数
   /// - averageRating：已评分电影的平均评分（0-5；无已评分时为 0）
+  @override
   MovieStats get movieStats {
     if (_movieStatsCache != null) return _movieStatsCache!;
     final rated = _movieList.where((m) => m.rating != null).toList();
@@ -571,6 +589,7 @@ class LibraryProvider extends ChangeNotifier {
   ///
   /// 缓存引用（H6/M6）：UI 层 select 依赖引用稳定性；
   /// 演员 写操作 走 [_invalidateCache] 失效。
+  @override
   List<Actor> get actors => _actorsCache ??= List.unmodifiable(_actors);
 
   /// 新增演员

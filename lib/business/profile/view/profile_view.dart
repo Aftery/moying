@@ -9,7 +9,7 @@ import '../../../component/media/model/media_ref.dart';
 import '../../../foundation/constants/app_strings.dart';
 import '../../shared/model/stats.dart';
 import '../../shared/model/user_profile.dart';
-import '../../library/view_model/library_provider.dart';
+import '../../shared/library_facade.dart';
 import '../../../component/media/media_cover.dart';
 
 class ThemeModeLabel extends StatelessWidget {
@@ -257,7 +257,7 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
   /// 是否点了「清除头像」（与 URL 输入互斥）
   bool _cleared = false;
 
-  bool get _canPick => context.read<LibraryProvider>().canPickImage;
+  bool get _canPick => context.read<LibraryFacade>().canPickImage;
 
   /// 头像是否被改动：选了本地图 / 显式清除 / 输入了不同 URL
   bool get _avatarTouched {
@@ -293,7 +293,7 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
   }
 
   Future<void> _pickFromGallery() async {
-    final lib = context.read<LibraryProvider>();
+    final lib = context.read<LibraryFacade>();
     final picked = await lib.pickImageFile();
     if (picked == null || !mounted) return;
     setState(() {

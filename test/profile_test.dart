@@ -10,6 +10,7 @@ import 'package:moying/business/library/model/mock_data.dart';
 import 'package:moying/component/media/model/media_ref.dart';
 import 'package:moying/business/shared/model/user_profile.dart';
 import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/business/shared/library_facade.dart';
 import 'package:moying/business/profile/page/profile_page.dart';
 import 'package:provider/provider.dart';
 
@@ -154,8 +155,11 @@ void main() {
     Future<LibraryProvider> pumpScreen(WidgetTester tester) async {
       final p = LibraryProvider();
       await tester.pumpWidget(
-        ChangeNotifierProvider<LibraryProvider>.value(
-          value: p,
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<LibraryProvider>.value(value: p),
+            ListenableProvider<LibraryFacade>.value(value: p),
+          ],
           child: const MaterialApp(home: ProfilePage()),
         ),
       );

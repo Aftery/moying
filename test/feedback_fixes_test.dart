@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'package:moying/business/shared/repository/library_store.dart';
 import 'package:moying/business/shared/model/user_profile.dart';
 import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/business/shared/library_facade.dart';
 import 'package:moying/business/library/page/book_edit_page.dart';
 import 'package:moying/business/stats/page/dashboard_page.dart';
 import 'package:moying/business/library/page/movie_edit_page.dart';
@@ -21,8 +22,13 @@ import 'package:moying/component/common/grid_item_card.dart';
 
 /// 单屏包裹：注入内存模式 provider，home 作为可 pop 的根路由
 Widget _wrap(LibraryProvider provider, Widget home) {
-  return ChangeNotifierProvider.value(
-    value: provider,
+  // DashboardPage 等跨模块页面 select 的是 LibraryFacade 门面；
+  // 同一实例双类型注册（ListenableProvider 负责订阅通知）。
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<LibraryProvider>.value(value: provider),
+      ListenableProvider<LibraryFacade>.value(value: provider),
+    ],
     child: MaterialApp(home: home),
   );
 }

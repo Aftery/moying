@@ -5,7 +5,7 @@ import '../../../component/theme/app_palette.dart';
 import '../model/statistics.dart';
 import '../../shared/model/book.dart';
 import '../../shared/model/movie.dart';
-import '../../library/view_model/library_provider.dart';
+import '../../shared/library_facade.dart';
 import '../view/chart_view.dart';
 import '../../../component/media/cover_placeholder.dart';
 import '../view/heatmap_calendar.dart';
@@ -30,9 +30,9 @@ class _PersonalStatsPageState extends State<PersonalStatsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final books = context.select<LibraryProvider, List<Book>>((p) => p.books);
+    final books = context.select<LibraryFacade, List<Book>>((p) => p.books);
     final movies =
-        context.select<LibraryProvider, List<Movie>>((p) => p.movieList);
+        context.select<LibraryFacade, List<Movie>>((p) => p.movieList);
 
     final now = DateTime.now();
     final annual =

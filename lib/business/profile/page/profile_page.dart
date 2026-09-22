@@ -7,7 +7,7 @@ import '../../../component/theme/app_palette.dart';
 import '../../../component/media/model/media_ref.dart';
 import '../../shared/model/stats.dart';
 import '../../shared/model/user_profile.dart';
-import '../../library/view_model/library_provider.dart';
+import '../../shared/library_facade.dart';
 import '../../../component/media/media_cover.dart';
 import '../../data_source/page/data_source_page.dart';
 import '../../sync/page/data_sync_page.dart';
@@ -27,14 +27,13 @@ class ProfilePage extends StatelessWidget {
     // H6/M6：select 收窄订阅——书库数据变化不再触发个人页 rebuild，
     // 仅档案/主题/统计摘要变化时重建；回调用 read 即可。
     final profile =
-        context.select<LibraryProvider, UserProfile>((p) => p.userProfile);
-    final themeMode =
-        context.select<LibraryProvider, String>((p) => p.themeMode);
+        context.select<LibraryFacade, UserProfile>((p) => p.userProfile);
+    final themeMode = context.select<LibraryFacade, String>((p) => p.themeMode);
     final bookStats =
-        context.select<LibraryProvider, BookStats>((p) => p.bookStats);
+        context.select<LibraryFacade, BookStats>((p) => p.bookStats);
     final movieStats =
-        context.select<LibraryProvider, MovieStats>((p) => p.movieStats);
-    final library = context.read<LibraryProvider>();
+        context.select<LibraryFacade, MovieStats>((p) => p.movieStats);
+    final library = context.read<LibraryFacade>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('个人')),
@@ -70,7 +69,7 @@ class ProfilePage extends StatelessWidget {
 
   /// 设置入口列表：编辑资料 / 数据统计 / 深色模式 / 数据源 / 同步 / 错误日志。
   List<Widget> _buildSettingItems(
-      BuildContext context, LibraryProvider library, String themeMode) {
+      BuildContext context, LibraryFacade library, String themeMode) {
     return [
       SettingItem(
         icon: Icons.edit_note_rounded,
@@ -143,7 +142,7 @@ class ProfilePage extends StatelessWidget {
 
   Future<void> _openProfileEditor(
     BuildContext context,
-    LibraryProvider lib,
+    LibraryFacade lib,
   ) async {
     final profile = lib.userProfile;
     final messenger = ScaffoldMessenger.of(context);
@@ -198,7 +197,7 @@ class ProfilePage extends StatelessWidget {
 
   Future<void> _chooseThemeMode(
     BuildContext context,
-    LibraryProvider lib,
+    LibraryFacade lib,
   ) async {
     final current = lib.themeMode;
     const options = [

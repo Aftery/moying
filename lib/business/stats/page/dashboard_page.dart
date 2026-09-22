@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../shared/model/book.dart';
 import '../../shared/model/movie.dart';
 import '../../shared/model/stats.dart';
-import '../../library/view_model/library_provider.dart';
+import '../../shared/library_facade.dart';
 import '../view/section_header.dart';
 import '../view/stats_card.dart';
 import '../view/dashboard_view.dart';
@@ -25,19 +25,19 @@ class DashboardPage extends StatelessWidget {
     // 触发仪表盘整页 rebuild；仅本页消费的派生数据引用变化时重建。
     // 依赖的 getter 均有 provider 侧缓存（引用稳定），select 才有意义。
     final bookStats =
-        context.select<LibraryProvider, BookStats>((p) => p.bookStats);
+        context.select<LibraryFacade, BookStats>((p) => p.bookStats);
     final movieStats =
-        context.select<LibraryProvider, MovieStats>((p) => p.movieStats);
+        context.select<LibraryFacade, MovieStats>((p) => p.movieStats);
     final planToReadCount =
-        context.select<LibraryProvider, int>((p) => p.planToReadBooks.length);
+        context.select<LibraryFacade, int>((p) => p.planToReadBooks.length);
     final readingList =
-        context.select<LibraryProvider, List<Book>>((p) => p.readingList);
-    final currentlyReading = context.select<LibraryProvider, List<Book>>(
-        (p) => p.currentlyReadingBooks);
+        context.select<LibraryFacade, List<Book>>((p) => p.readingList);
+    final currentlyReading = context
+        .select<LibraryFacade, List<Book>>((p) => p.currentlyReadingBooks);
     final movieList =
-        context.select<LibraryProvider, List<Movie>>((p) => p.movieList);
-    final upcoming = context
-        .select<LibraryProvider, List<Movie>>((p) => p.upcomingMovies);
+        context.select<LibraryFacade, List<Movie>>((p) => p.movieList);
+    final upcoming =
+        context.select<LibraryFacade, List<Movie>>((p) => p.upcomingMovies);
 
     return SafeArea(
       bottom: false,

@@ -13,7 +13,7 @@ import '../service/merge_engine.dart';
 import '../service/secure_storage_service.dart';
 import '../service/snapshot_service.dart';
 import '../service/webdav_client.dart';
-import '../../library/view_model/library_provider.dart';
+import '../../shared/library_facade.dart';
 
 /// 云端待恢复项（[fetchLatestBackup] 的返回，确认弹窗 → [confirmRestore]）
 class PendingRestore {
@@ -38,7 +38,7 @@ class PendingRestore {
 class SyncProvider extends ChangeNotifier {
   SyncProvider({
     required LibraryStore? store,
-    required LibraryProvider library,
+    required LibraryFacade library,
     SecureStorageService? secureStorage,
     WebDavClient Function(SyncSettings settings, String password)?
         clientFactory,
@@ -52,7 +52,7 @@ class SyncProvider extends ChangeNotifier {
         _connectivity = connectivity;
 
   final LibraryStore? _store;
-  final LibraryProvider _library;
+  final LibraryFacade _library;
   final SecureStorageService _secure;
   final WebDavClient Function(SyncSettings, String) _clientFactory;
   final Future<bool> Function(String, Uint8List) _saveFile;
@@ -142,8 +142,7 @@ class SyncProvider extends ChangeNotifier {
   /// （id 并集 + updatedAt 新者胜），合并结果落盘后随包上传——
   /// 保证双端各自的修改都不会被整包覆盖。云端无备份 / 包损坏时
   /// 退化为原全量上传行为。
-  Future<void> uploadNow() =>
-      _runExclusive<void>(_uploadNowInner);
+  Future<void> uploadNow() => _runExclusive<void>(_uploadNowInner);
 
   Future<void> _uploadNowInner() async {
     final store = _store;

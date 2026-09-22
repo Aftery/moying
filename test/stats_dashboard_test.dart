@@ -9,11 +9,15 @@ import 'package:moying/business/stats/view/heatmap_calendar.dart';
 import 'package:provider/provider.dart';
 
 import 'package:moying/business/library/view_model/library_provider.dart';
+import 'package:moying/business/shared/library_facade.dart';
 
 Widget _wrap(Widget child, {LibraryProvider? provider}) {
   final p = provider ?? LibraryProvider();
-  return ChangeNotifierProvider<LibraryProvider>.value(
-    value: p,
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<LibraryProvider>.value(value: p),
+      ListenableProvider<LibraryFacade>.value(value: p),
+    ],
     child: MaterialApp(home: child),
   );
 }
