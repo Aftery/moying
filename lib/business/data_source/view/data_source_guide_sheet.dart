@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../component/common/sheet_grabber.dart';
 import '../../../component/theme/app_palette.dart';
 import '../model/deploy_guide.dart';
 
@@ -66,15 +67,7 @@ class _GuideSheet extends StatelessWidget {
       child: Column(
         children: [
           // 拖拽指示条
-          Container(
-            width: 36,
-            height: 4,
-            margin: const EdgeInsets.only(top: 10, bottom: 10),
-            decoration: BoxDecoration(
-              color: c.outline,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
+          const SheetGrabber(margin: EdgeInsets.only(top: 10, bottom: 10)),
           // 标题栏
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 6, 6),

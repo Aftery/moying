@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../component/common/sheet_grabber.dart';
 import '../../../component/theme/app_palette.dart';
 import '../../../component/media/model/media_ref.dart';
 import '../../../foundation/constants/app_strings.dart';
@@ -89,8 +90,7 @@ class ProfileCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded,
-                color: context.colors.textMuted),
+            Icon(Icons.chevron_right_rounded, color: context.colors.textMuted),
           ],
         ),
       ),
@@ -99,7 +99,8 @@ class ProfileCard extends StatelessWidget {
 }
 
 class StatSummary extends StatelessWidget {
-  const StatSummary({super.key, required this.bookStats, required this.movieStats});
+  const StatSummary(
+      {super.key, required this.bookStats, required this.movieStats});
 
   final BookStats bookStats;
   final MovieStats movieStats;
@@ -170,7 +171,8 @@ class _StatCell extends StatelessWidget {
 }
 
 class SettingItem extends StatelessWidget {
-  const SettingItem({super.key,
+  const SettingItem({
+    super.key,
     required this.icon,
     required this.label,
     this.trailing,
@@ -204,8 +206,7 @@ class SettingItem extends StatelessWidget {
           ),
         ),
         trailing: trailing ??
-            Icon(Icons.chevron_right_rounded,
-                color: context.colors.textMuted),
+            Icon(Icons.chevron_right_rounded, color: context.colors.textMuted),
       ),
     );
   }
@@ -335,8 +336,7 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
       hintStyle: TextStyle(color: context.colors.textMuted, fontSize: 13),
       filled: true,
       fillColor: context.colors.surface,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: context.colors.outline, width: 0.8),
@@ -393,7 +393,7 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _SheetGrabber(),
+              const Center(child: SheetGrabber()),
               // 标题
               Text(
                 AppStrings.editProfile,
@@ -423,26 +423,6 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 底部弹层顶部拖拽指示条（36×4 圆条）
-class _SheetGrabber extends StatelessWidget {
-  const _SheetGrabber();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 36,
-        height: 4,
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: context.colors.outline,
-          borderRadius: BorderRadius.circular(2),
         ),
       ),
     );

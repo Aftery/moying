@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../component/common/sheet_grabber.dart';
 import '../../../component/theme/app_palette.dart';
 import '../../../foundation/constants/app_strings.dart';
 import '../model/data_source.dart';
@@ -160,7 +161,6 @@ class SourceTile extends StatelessWidget {
           )
         : Icon(Icons.chevron_right_rounded, size: 20, color: c.textMuted);
   }
-
 }
 
 /// 状态圆点 + 文字徽标
@@ -491,7 +491,7 @@ class _SourceEditSheetState extends State<SourceEditSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildDragHandle(context),
+              const Center(child: SheetGrabber()),
               ..._buildTitleSection(context),
               const SizedBox(height: 14),
               _buildNameField(context),
@@ -505,22 +505,6 @@ class _SourceEditSheetState extends State<SourceEditSheet> {
               ],
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  // 拖拽指示条（与编辑资料/查看资料统一风格）
-  Widget _buildDragHandle(BuildContext context) {
-    final c = context.colors;
-    return Center(
-      child: Container(
-        width: 36,
-        height: 4,
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: c.outline,
-          borderRadius: BorderRadius.circular(2),
         ),
       ),
     );
@@ -579,9 +563,8 @@ class _SourceEditSheetState extends State<SourceEditSheet> {
             style: TextStyle(color: c.textPrimary, fontSize: 14),
             cursorColor: c.accent,
             decoration: _dec(f).copyWith(
-              helperText: (_secretFilled[f.key] ?? false)
-                  ? '已保存（重新输入可覆盖）'
-                  : null,
+              helperText:
+                  (_secretFilled[f.key] ?? false) ? '已保存（重新输入可覆盖）' : null,
             ),
           ),
         const SizedBox(height: 10),
@@ -623,8 +606,8 @@ class _SourceEditSheetState extends State<SourceEditSheet> {
             ),
             child: Text(
               widget.isNew ? '添加' : '保存',
-              style: const TextStyle(
-                  fontSize: 13.5, fontWeight: FontWeight.w700),
+              style:
+                  const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
             ),
           ),
         ),

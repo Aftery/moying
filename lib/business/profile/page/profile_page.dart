@@ -1,8 +1,8 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../component/common/sheet_grabber.dart';
 import '../../../component/theme/app_palette.dart';
 import '../../../component/media/model/media_ref.dart';
 import '../../stats/model/stats.dart';
@@ -26,8 +26,8 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     // H6/M6：select 收窄订阅——书库数据变化不再触发个人页 rebuild，
     // 仅档案/主题/统计摘要变化时重建；回调用 read 即可。
-    final profile = context
-        .select<LibraryProvider, UserProfile>((p) => p.userProfile);
+    final profile =
+        context.select<LibraryProvider, UserProfile>((p) => p.userProfile);
     final themeMode =
         context.select<LibraryProvider, String>((p) => p.themeMode);
     final bookStats =
@@ -220,15 +220,7 @@ class ProfilePage extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // 拖拽指示条
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: context.colors.outline,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+              const SheetGrabber(),
               for (final (mode, label, icon) in options)
                 ListTile(
                   leading: Container(
@@ -282,15 +274,7 @@ class _ProfileInfoSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // 拖拽指示条
-            Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: context.colors.outline,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
+            const SheetGrabber(),
             // 头像
             SizedBox(
               width: 80,
@@ -319,8 +303,8 @@ class _ProfileInfoSheet extends StatelessWidget {
             if (signature.isNotEmpty) ...[
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: context.colors.surface,
                   borderRadius: BorderRadius.circular(12),

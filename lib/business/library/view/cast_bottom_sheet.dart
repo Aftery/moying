@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../component/common/sheet_grabber.dart';
 import '../../../component/theme/app_palette.dart';
 import '../model/cast_item.dart';
 
@@ -82,8 +83,7 @@ class _CastSheetState extends State<_CastSheet> {
   @override
   Widget build(BuildContext context) {
     final all = _filtered;
-    final directors =
-        all.where((c) => c.isDirector).toList(growable: false);
+    final directors = all.where((c) => c.isDirector).toList(growable: false);
     final actors = all.where((c) => !c.isDirector).toList(growable: false);
     // 弹层高度：屏高 85%，键盘弹起时由 MediaQuery 自动挤压
     final maxHeight = MediaQuery.of(context).size.height * 0.85;
@@ -107,15 +107,7 @@ class _CastSheetState extends State<_CastSheet> {
   List<Widget> _buildHeader(BuildContext context) {
     return [
       // ---------- 拖拽条 ----------
-      Container(
-        margin: const EdgeInsets.only(top: 10, bottom: 16),
-        width: 36,
-        height: 4,
-        decoration: BoxDecoration(
-          color: context.colors.outline,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
+      const SheetGrabber(margin: EdgeInsets.only(top: 10, bottom: 16)),
       // ---------- 标题行 ----------
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -127,7 +119,7 @@ class _CastSheetState extends State<_CastSheet> {
                 children: [
                   Text(
                     '演职员表 (${widget.cast.length})',
-                    style:  TextStyle(
+                    style: TextStyle(
                       color: context.colors.textPrimary,
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
@@ -140,7 +132,7 @@ class _CastSheetState extends State<_CastSheet> {
                       widget.movieTitle!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style:  TextStyle(
+                      style: TextStyle(
                         color: context.colors.textMuted,
                         fontSize: 12,
                       ),
@@ -151,8 +143,7 @@ class _CastSheetState extends State<_CastSheet> {
             ),
             IconButton(
               tooltip: '关闭',
-              icon:  Icon(Icons.close_rounded,
-                  color: context.colors.textMuted),
+              icon: Icon(Icons.close_rounded, color: context.colors.textMuted),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ],
@@ -167,27 +158,26 @@ class _CastSheetState extends State<_CastSheet> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: TextField(
         controller: _searchCtrl,
-        style:  TextStyle(color: context.colors.textPrimary, fontSize: 14),
+        style: TextStyle(color: context.colors.textPrimary, fontSize: 14),
         cursorColor: context.colors.accent,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
           hintText: '搜索演员或角色姓名…',
-          hintStyle:
-               TextStyle(color: context.colors.textMuted, fontSize: 13.5),
-          prefixIcon:  Icon(Icons.search_rounded,
+          hintStyle: TextStyle(color: context.colors.textMuted, fontSize: 13.5),
+          prefixIcon: Icon(Icons.search_rounded,
               size: 19, color: context.colors.textMuted),
           suffixIcon: _query.isEmpty
               ? null
               : IconButton(
-                  icon:  Icon(Icons.close_rounded,
+                  icon: Icon(Icons.close_rounded,
                       size: 17, color: context.colors.textMuted),
                   onPressed: _searchCtrl.clear,
                 ),
           filled: true,
           fillColor: context.colors.surface,
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14, vertical: 11),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -207,8 +197,8 @@ class _CastSheetState extends State<_CastSheet> {
                 padding: const EdgeInsets.all(28),
                 child: Text(
                   _query.isEmpty ? '暂无演职员信息' : '没有匹配的演员',
-                  style: TextStyle(
-                      color: context.colors.textMuted, fontSize: 13),
+                  style:
+                      TextStyle(color: context.colors.textMuted, fontSize: 13),
                 ),
               ),
             )
@@ -234,7 +224,8 @@ class _CastSheetState extends State<_CastSheet> {
                 ],
                 if (actors.isNotEmpty) ...[
                   SliverPadding(
-                    padding: EdgeInsets.fromLTRB(20, directors.isEmpty ? 4 : 0, 20, 0),
+                    padding: EdgeInsets.fromLTRB(
+                        20, directors.isEmpty ? 4 : 0, 20, 0),
                     sliver: SliverToBoxAdapter(
                       child: _groupTitle(context, '主要演员'),
                     ),
@@ -257,7 +248,7 @@ class _CastSheetState extends State<_CastSheet> {
       padding: const EdgeInsets.only(top: 8, bottom: 6),
       child: Text(
         text,
-        style:  TextStyle(
+        style: TextStyle(
           color: context.colors.textMuted,
           fontSize: 12,
           fontWeight: FontWeight.w700,
@@ -288,7 +279,7 @@ class _CastSheetState extends State<_CastSheet> {
                       item.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style:  TextStyle(
+                      style: TextStyle(
                         color: context.colors.textPrimary,
                         fontSize: 14.5,
                         fontWeight: FontWeight.w600,
@@ -300,7 +291,7 @@ class _CastSheetState extends State<_CastSheet> {
                         item.characterText,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style:  TextStyle(
+                        style: TextStyle(
                           color: context.colors.textMuted,
                           fontSize: 12,
                         ),
@@ -310,7 +301,7 @@ class _CastSheetState extends State<_CastSheet> {
                 ),
               ),
               if (item.canOpen)
-                 Icon(Icons.chevron_right_rounded,
+                Icon(Icons.chevron_right_rounded,
                     size: 20, color: context.colors.textMuted),
             ],
           ),
