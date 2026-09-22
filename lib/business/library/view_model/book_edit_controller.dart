@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../../component/media/model/media_ref.dart';
 import '../../../foundation/utils/date_format.dart';
-import '../model/book.dart';
+import '../../shared/model/book.dart';
 import 'library_provider.dart';
 
 /// 图书编辑页的表单状态与业务逻辑（M-5）。

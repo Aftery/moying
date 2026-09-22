@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../component/theme/app_palette.dart';
 import '../../../foundation/constants/app_strings.dart';
 import '../model/edit_result.dart';
-import '../model/book.dart';
+import '../../shared/model/book.dart';
 import '../view_model/library_provider.dart';
 import '../view/detail_common.dart';
 import '../../../component/media/media_cover.dart';

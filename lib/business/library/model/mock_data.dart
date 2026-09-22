@@ -1,6 +1,6 @@
-import 'actor.dart';
-import 'book.dart';
-import 'movie.dart';
+import '../../shared/model/actor.dart';
+import '../../shared/model/book.dart';
+import '../../shared/model/movie.dart';
 
 /// 完整书库（图书模块数据源，12 本）
 ///

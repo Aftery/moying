@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import '../model/data_source.dart';
+import '../../shared/model/data_source.dart';
 import '../../../foundation/logger/app_logger.dart';
 import '../service/book_result_merger.dart';
 import '../service/data_source_interface.dart';

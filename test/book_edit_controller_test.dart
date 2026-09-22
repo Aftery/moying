@@ -5,7 +5,7 @@
 // Widget 树，也不启动网络。
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:moying/business/library/model/book.dart';
+import 'package:moying/business/shared/model/book.dart';
 import 'package:moying/business/library/view_model/book_edit_controller.dart';
 import 'package:moying/business/library/view_model/library_provider.dart';
 import 'package:moying/component/media/model/media_ref.dart';

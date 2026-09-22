@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moying/business/library/model/actor.dart';
-import 'package:moying/business/library/model/book.dart';
+import 'package:moying/business/shared/model/actor.dart';
+import 'package:moying/business/shared/model/book.dart';
 import 'package:moying/component/media/model/media_ref.dart';
-import 'package:moying/business/library/model/movie.dart';
+import 'package:moying/business/shared/model/movie.dart';
 
 /// P1 序列化 round-trip 测试
 ///

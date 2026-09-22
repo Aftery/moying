@@ -3,11 +3,11 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:moying/business/library/repository/library_store.dart';
-import 'package:moying/business/library/model/actor.dart';
-import 'package:moying/business/library/model/book.dart';
-import 'package:moying/business/library/model/movie.dart';
-import 'package:moying/business/sync/model/sync_settings.dart';
+import 'package:moying/business/shared/repository/library_store.dart';
+import 'package:moying/business/shared/model/actor.dart';
+import 'package:moying/business/shared/model/book.dart';
+import 'package:moying/business/shared/model/movie.dart';
+import 'package:moying/business/shared/model/sync_settings.dart';
 import 'package:moying/business/sync/view_model/sync_provider.dart';
 import 'package:moying/business/sync/service/backup_service.dart';
 import 'package:moying/business/sync/service/merge_engine.dart';

@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../../component/theme/app_palette.dart';
 import '../model/statistics.dart';
-import '../../library/model/book.dart';
-import '../../library/model/movie.dart';
+import '../../shared/model/book.dart';
+import '../../shared/model/movie.dart';
 import '../../library/view_model/library_provider.dart';
 import '../../../component/media/cover_placeholder.dart';
 

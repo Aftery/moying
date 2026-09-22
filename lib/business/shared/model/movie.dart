@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart' show listEquals;
 
-import '../../data_source/model/data_source.dart' show CastMember;
+import './data_source.dart' show CastMember;
 import '../../../component/media/model/media_ref.dart';
 
 /// 观影状态

@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 
 import 'package:moying/business/library/model/mock_data.dart';
 import 'package:moying/main.dart';
-import 'package:moying/business/library/model/book.dart';
+import 'package:moying/business/shared/model/book.dart';
 import 'package:moying/business/library/view_model/library_provider.dart';
 import 'package:moying/business/library/page/book_detail_page.dart';
 import 'package:moying/business/library/page/book_edit_page.dart';

@@ -7,8 +7,8 @@ import '../../../component/common/sheet_grabber.dart';
 import '../../../component/theme/app_palette.dart';
 import '../../../component/media/model/media_ref.dart';
 import '../../../foundation/constants/app_strings.dart';
-import '../../stats/model/stats.dart';
-import '../model/user_profile.dart';
+import '../../shared/model/stats.dart';
+import '../../shared/model/user_profile.dart';
 import '../../library/view_model/library_provider.dart';
 import '../../../component/media/media_cover.dart';
 

@@ -6,10 +6,10 @@ import 'package:path/path.dart' as p;
 
 import '../model/actor.dart';
 import '../model/book.dart';
-import '../../data_source/model/data_source.dart';
+import '../model/data_source.dart';
 import '../model/movie.dart';
-import '../../sync/model/sync_settings.dart';
-import '../../profile/model/user_profile.dart';
+import '../model/sync_settings.dart';
+import '../model/user_profile.dart';
 
 /// 三集合数据快照（内存形态与磁盘形态之间的统一载体）
 ///

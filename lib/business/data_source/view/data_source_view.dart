@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../component/common/sheet_grabber.dart';
 import '../../../component/theme/app_palette.dart';
 import '../../../foundation/constants/app_strings.dart';
-import '../model/data_source.dart';
+import '../../shared/model/data_source.dart';
 import '../view_model/data_source_provider.dart';
 import '../service/data_source_interface.dart';
 

@@ -5,8 +5,8 @@
 // - 不同实体同一天累加；
 // - count == 0 → 未打卡；count == 1 → 浅色微光；count >= 3 → 高亮。
 
-import '../../library/model/book.dart';
-import '../../library/model/movie.dart';
+import '../../shared/model/book.dart';
+import '../../shared/model/movie.dart';
 
 // ==================== 数据模型 ====================
 

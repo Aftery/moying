@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../component/theme/app_palette.dart';
 import '../../../foundation/constants/app_strings.dart';
-import '../model/book.dart';
+import '../../shared/model/book.dart';
 import '../../../component/media/media_cover.dart';
 import 'rating_stars.dart';
 

@@ -24,10 +24,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
-import 'package:moying/business/library/model/actor.dart';
-import 'package:moying/business/data_source/model/data_source.dart';
+import 'package:moying/business/shared/model/actor.dart';
+import 'package:moying/business/shared/model/data_source.dart';
 import 'package:moying/component/media/model/media_ref.dart';
-import 'package:moying/business/library/model/movie.dart';
+import 'package:moying/business/shared/model/movie.dart';
 import 'package:moying/business/library/view_model/library_provider.dart';
 import 'package:moying/business/library/page/movie_detail_page.dart';
 import 'package:moying/business/library/page/movie_stills_page.dart';

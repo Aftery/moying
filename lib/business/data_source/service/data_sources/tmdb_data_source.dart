@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../../../foundation/constants/app_strings.dart';
-import '../../model/data_source.dart';
+import '../../../shared/model/data_source.dart';
 import '../data_source_interface.dart';
 
 /// TMDB（The Movie Database）影视数据源

@@ -5,7 +5,7 @@
 // 任何一次多余的往返都是用户实打实多等的几秒。回归时最容易被改坏，所以单列。
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moying/business/data_source/model/data_source.dart';
+import 'package:moying/business/shared/model/data_source.dart';
 import 'package:moying/business/data_source/view_model/data_source_provider.dart';
 import 'package:moying/business/data_source/service/data_source_interface.dart';
 import 'package:moying/business/data_source/service/data_source_manager.dart';

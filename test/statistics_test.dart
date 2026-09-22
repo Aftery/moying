@@ -5,8 +5,8 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moying/business/stats/model/statistics.dart';
-import 'package:moying/business/library/model/book.dart';
-import 'package:moying/business/library/model/movie.dart';
+import 'package:moying/business/shared/model/book.dart';
+import 'package:moying/business/shared/model/movie.dart';
 
 Book _book({
   required String id,

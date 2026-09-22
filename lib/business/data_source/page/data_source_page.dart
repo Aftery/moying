@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../component/theme/app_palette.dart';
-import '../model/data_source.dart';
+import '../../shared/model/data_source.dart';
 import '../view_model/data_source_provider.dart';
 import '../service/data_source_interface.dart';
 import '../view/data_source_guide_sheet.dart';

@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:moying/business/library/model/actor.dart';
+import 'package:moying/business/shared/model/actor.dart';
 import 'package:moying/business/library/view_model/library_provider.dart';
 import 'package:moying/business/library/page/actor_detail_page.dart';
 import 'package:moying/business/library/page/movie_detail_page.dart';

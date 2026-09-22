@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../component/theme/app_palette.dart';
-import '../../library/model/book.dart';
-import '../../library/model/movie.dart';
+import '../../shared/model/book.dart';
+import '../../shared/model/movie.dart';
 import '../../../component/common/grid_item_card.dart';
 import '../../../component/media/media_tile.dart';
 import '../../library/page/book_detail_page.dart';

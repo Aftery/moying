@@ -5,14 +5,14 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
-import '../repository/library_store.dart';
+import '../../shared/repository/library_store.dart';
 import '../model/mock_data.dart';
-import '../model/actor.dart';
-import '../model/book.dart';
+import '../../shared/model/actor.dart';
+import '../../shared/model/book.dart';
 import '../../../component/media/model/media_ref.dart';
-import '../model/movie.dart';
-import '../../stats/model/stats.dart';
-import '../../profile/model/user_profile.dart';
+import '../../shared/model/movie.dart';
+import '../../shared/model/stats.dart';
+import '../../shared/model/user_profile.dart';
 import '../../../foundation/utils/image_compress_service.dart';
 import '../../../foundation/utils/image_pick_service.dart';
 

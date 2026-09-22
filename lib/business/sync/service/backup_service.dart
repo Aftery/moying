@@ -5,10 +5,10 @@ import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
-import '../../library/repository/library_store.dart';
-import '../../library/model/actor.dart';
-import '../../library/model/book.dart';
-import '../../library/model/movie.dart';
+import '../../shared/repository/library_store.dart';
+import '../../shared/model/actor.dart';
+import '../../shared/model/book.dart';
+import '../../shared/model/movie.dart';
 
 /// 备份清单（恢复确认弹窗展示条目数；schemaVersion 校验入口）
 class BackupManifest {

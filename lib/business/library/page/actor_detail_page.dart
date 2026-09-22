@@ -4,9 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../../../component/theme/app_palette.dart';
 import '../../../foundation/constants/app_strings.dart';
-import '../model/actor.dart';
+import '../../shared/model/actor.dart';
 import '../../../component/media/model/media_ref.dart';
-import '../model/movie.dart';
+import '../../shared/model/movie.dart';
 import '../view_model/library_provider.dart';
 import '../../../component/media/media_cover.dart';
 import 'movie_detail_page.dart';

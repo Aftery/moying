@@ -1,4 +1,4 @@
-import '../model/data_source.dart';
+import '../../shared/model/data_source.dart';
 
 /// 数据源操作配置项描述（管理页配置弹窗动态生成输入框）
 class ConfigField {

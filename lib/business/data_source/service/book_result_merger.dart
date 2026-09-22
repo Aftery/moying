@@ -13,7 +13,7 @@
 /// 同名书也能对上。
 library;
 
-import '../model/data_source.dart';
+import '../../shared/model/data_source.dart';
 
 /// 搜索结果去重 / 合并（纯函数、无状态，便于单测）
 class BookResultMerger {

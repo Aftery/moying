@@ -5,11 +5,11 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:moying/business/library/model/actor.dart';
-import 'package:moying/business/library/model/movie.dart';
+import 'package:moying/business/shared/model/actor.dart';
+import 'package:moying/business/shared/model/movie.dart';
 import 'package:moying/business/library/view_model/library_provider.dart';
 import 'package:moying/business/library/view_model/movie_edit_controller.dart';
-import 'package:moying/business/data_source/model/data_source.dart'
+import 'package:moying/business/shared/model/data_source.dart'
     show CastMember;
 import 'package:moying/component/media/model/media_ref.dart';
 

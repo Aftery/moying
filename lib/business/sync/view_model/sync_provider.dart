@@ -5,8 +5,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../library/repository/library_store.dart';
-import '../model/sync_settings.dart';
+import '../../shared/repository/library_store.dart';
+import '../../shared/model/sync_settings.dart';
 import '../../../foundation/logger/app_logger.dart';
 import '../service/backup_service.dart';
 import '../service/merge_engine.dart';

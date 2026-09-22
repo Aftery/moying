@@ -7,10 +7,10 @@ import '../../../component/media/media_cover.dart';
 import '../../../component/theme/app_palette.dart';
 import '../../../foundation/constants/app_strings.dart';
 import '../../../foundation/utils/date_format.dart';
-import '../../data_source/model/data_source.dart';
+import '../../shared/model/data_source.dart';
 import '../../data_source/service/book_category_mapper.dart';
 import '../../data_source/view_model/data_source_provider.dart';
-import '../model/book.dart';
+import '../../shared/model/book.dart';
 import '../model/edit_result.dart';
 import '../view/edit_form_view.dart'
     show TextPromptDialog, showCoverActionSheet;

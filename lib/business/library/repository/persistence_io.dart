@@ -4,7 +4,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../view_model/library_provider.dart';
 import '../../../foundation/utils/image_pick_service.dart';
-import 'library_store.dart';
+import '../../shared/repository/library_store.dart';
 import 'persistence.dart';
 
 /// 手机 / 桌面启动装配：接入本地 JSON 持久化。

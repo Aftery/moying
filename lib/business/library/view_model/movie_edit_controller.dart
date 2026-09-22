@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 
 import '../../../component/media/model/media_ref.dart';
-import '../../data_source/model/data_source.dart' show CastMember;
-import '../model/actor.dart';
-import '../model/movie.dart';
+import '../../shared/model/data_source.dart' show CastMember;
+import '../../shared/model/actor.dart';
+import '../../shared/model/movie.dart';
 import 'library_provider.dart';
 
 /// 电影编辑页的表单状态与业务逻辑（M-5b，与 [BookEditController] 同构）。

@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../component/theme/app_palette.dart';
-import '../model/sync_settings.dart';
+import '../../shared/model/sync_settings.dart';
 
 class SyncCard extends StatelessWidget {
   const SyncCard({super.key,

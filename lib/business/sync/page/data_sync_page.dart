@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../../component/theme/app_palette.dart';
 import '../../../foundation/constants/app_strings.dart';
-import '../model/sync_settings.dart';
+import '../../shared/model/sync_settings.dart';
 import '../../data_source/view_model/data_source_provider.dart';
 import '../view_model/sync_provider.dart';
 import '../service/backup_service.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../component/theme/app_palette.dart';
-import '../model/stats.dart';
+import '../../shared/model/stats.dart';
 import '../../../component/common/progress_ring.dart';
 
 /// 渐变卡上的白色叠加层不透明度（L-7：语义化命名，避免 0.16/0.18/0.22/0.35 靠猜）。

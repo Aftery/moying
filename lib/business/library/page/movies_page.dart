@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../component/theme/app_palette.dart';
 import '../../../foundation/constants/app_strings.dart';
 import '../model/edit_result.dart';
-import '../model/movie.dart';
+import '../../shared/model/movie.dart';
 import '../view_model/library_provider.dart';
 import '../view/filter_dropdown.dart';
 import '../../../component/common/grid_item_card.dart';

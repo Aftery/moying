@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../library/model/book.dart';
-import '../../library/model/movie.dart';
-import '../model/stats.dart';
+import '../../shared/model/book.dart';
+import '../../shared/model/movie.dart';
+import '../../shared/model/stats.dart';
 import '../../library/view_model/library_provider.dart';
 import '../view/section_header.dart';
 import '../view/stats_card.dart';

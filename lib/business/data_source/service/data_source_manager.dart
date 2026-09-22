@@ -1,7 +1,7 @@
 import 'dart:collection';
 
-import '../../library/repository/library_store.dart';
-import '../model/data_source.dart';
+import '../../shared/repository/library_store.dart';
+import '../../shared/model/data_source.dart';
 import 'data_source_interface.dart';
 import 'data_sources/custom_data_source.dart';
 import 'data_sources/google_books_data_source.dart';
